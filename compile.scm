@@ -1,0 +1,379 @@
+;;
+;; fcompile.scm - Re-written bootstrap compiler
+;;
+
+(use srfi-1)
+(use srfi-9)
+(use util.match)
+(use gauche.lazy)
+(use gauche.parameter)
+
+;;
+;; Gauche lazy sequence library extention
+;;
+
+(define (lconcatenate lst) (fold-left lappend (x->lseq '()) lst))
+(define (make-lseq . x) (x->lseq x))
+
+;;
+;; Resolve variable/function names and allocate numeric id
+;;
+
+(define *local-level* (make-parameter 0))
+(define *local-variables* (make-parameter '() ))
+(define *local-variables-max* (make-parameter 0))
+(define *local-variables-top* (make-parameter 0))
+(define *local-functions* (make-parameter '() ))
+(define *local-functions-max* (make-parameter 0))
+(define *local-functions-top* (make-parameter 0))
+
+(define (ignore-null fn x) (if (null? x) x (fn x)))
+
+(define (bind-variables names)
+  (let lp ([xs names] [alis (*local-variables*)])
+    (if (null? xs)
+      alis
+      (let1 variable-id (*local-variables-top*)
+        (*local-variables-top* (+ variable-id 1))
+        (*local-variables-max* (max (*local-variables-top*) (*local-variables-max*)))
+        (lp (cdr xs) (acons (car xs) (cons (*local-level*) variable-id) alis))))))
+
+(define (bind-functions names)
+  (let lp ([xs names] [alis (*local-functions*)])
+    (if (null? xs)
+      alis
+      (let1 function-id (*local-functions-top*)
+        (*local-functions-top* (+ function-id 1))
+        (*local-functions-max* (max (*local-functions-top*) (*local-functions-max*)))
+        (lp (cdr xs) (acons (car xs) (cons (*local-level*) function-id) alis))))))
+
+(define *global-closure-count* 0)
+
+(define (generate-global-closure-name name)
+  (begin0
+    (string-append "!" name "!" (number->string *global-closure-count*))
+    (inc! *global-closure-count*)))
+
+;;
+;; Reference sequence
+;; Rhein reference representation and its utilities
+;;
+
+(define (refseq-most-inner x)
+  (cond
+   [(eq? (car x) 'var)
+    (let1 local-offset (assoc (cadr x) (*local-variables*))
+      (if local-offset
+        `(var-ref-s1 (local ,(cons (- (*local-level*) (cadr local-offset)) (cddr local-offset))))
+        `(var-ref-s1 (global ,(cadr x)))))]
+   [else (error "Unknown reference type")]))
+
+(define (compile-refseq-ref-s1 refsq)
+  (when (null? refsq) (error "Invalid reference sequence"))
+  (let lp ([xs (reverse (cdr refsq))])
+    (cond
+     [(null? xs) (refseq-most-inner (car refsq))])))
+
+(define (compile-refseq-set-s1 refsq)
+  (when (null? refsq) (error "Invalid reference sequence"))
+  (let1 xs (reverse refsq)
+    (cond
+     [(and (eq? (caar xs) 'var) (null? (cdr xs)))
+      (let1 local-offset (assoc (cadar xs) (*local-variables*))
+        (if local-offset
+          `(var-ref-s1 (local ,(cons (- (*local-level*) (cadr local-offset)) (cddr local-offset))))
+          `(var-ref-s1 (global ,(cadr x)))))]
+     [else
+      (let1 getref (ex-compile-refseq-ref (reverse (cdr xs)))
+        (cond
+         [(null? refsq) (error "Null reference sequence")]))])))
+
+(define (compile-all-s1 ast)
+  (define (fn x)
+    (match x
+      [('defun-s0 _ _ _ _) (compile-func-s1 x)]))
+  (map fn ast))
+
+(define (compile-func-s1 ast)
+  (match-let1 ('defun-s0 name label params code) ast
+    (parameterize ([*local-level* (+ (*local-level*) 1)]
+                   [*local-variables-top* 0]
+                   [*local-variables-max* 0]
+                   [*local-functions-top* 0]
+                   [*local-functions-max* 0])
+      (parameterize ([*local-variables* (bind-variables params)])
+        (let1 compiled-code (compile-code-s1 code)
+          `(defun-s1 ,name ,label ,params
+                     ,(*local-variables-max*) ,(*local-functions-max*)
+                     ,compiled-code))))))
+
+(define (compile-closures-s1 ast)
+  (define (defun-name x) (match-let1 ('defun-s0 name _ _ _) x name))
+  (define (defun-name-replace x name)
+    (match-let1 ('defun-s0 _ label params code) x `(defun-s0 ,name ,label ,params ,code)))
+  (define (defun-cons-offset local-name x)
+    (list (cdr (assoc local-name (*local-functions*))) x))
+  (let* ([local-names (map defun-name ast)]
+         [global-names (map generate-global-closure-name local-names)])
+    (parameterize ([*local-functions* (bind-functions local-names)])
+      (let1 replaced-defuns (map defun-name-replace ast global-names)
+        (let1 compiled-defuns (map compile-func-s1 replaced-defuns)
+          (values (*local-functions*) (map defun-cons-offset local-names compiled-defuns)))))))
+
+(define (compile-code-s1 ast)
+  (match ast
+    [('block-s0 vars funcs code)
+     (parameterize ([*local-variables* (bind-variables vars)])
+       (receive (function-bind fcode) (compile-closures-s1 funcs)
+         (parameterize ([*local-functions* function-bind])
+           `(block-s1 ,vars ,fcode ,(map compile-code-s1 code)))))]
+    [('cond-branch-s0 cond-clause else-clause)
+     (let ([cond-clause-s1
+             (map (match-lambda [(cnd code) `(,(compile-code-s1 cnd) ,(compile-code-s1 code))])
+                  cond-clause)]
+           [else-clause-s1 (ignore-null compile-code-s1 else-clause)])
+       `(cond-branch-s1 ,cond-clause-s1 ,else-clause-s1))]
+    [('loop-s0 label cnd code)
+     `(loop-s1 ,label ,(compile-code-s1 cnd) ,(compile-code-s1 code))]
+    [('label-break-s0 name expr)
+     `(label-break-s1 ,name ,(compile-code-s1 expr))]
+    [('ref-s0 refsq) (compile-refseq-ref-s1 refsq)]
+    [('set-s0 refsqs expr) `(set-s1 ,(map compile-refseq-set-s1 refsqs) ,(compile-code-s1 expr))]
+    [('uni-op-s0 op expr) `(uni-op-s1 ,op ,(compile-code-s1 expr))]
+    [('bin-op-s0 op lft rht) `(bin-op-s1 ,op ,(compile-code-s1 lft) ,(compile-code-s1 rht))]
+    [('funcall-name-s0 name args)
+     (let ([local-function-id (assoc name (*local-functions*))]
+           [args-s1 (map compile-code-s1 args)])
+       (if local-function-id 
+         `(funcall-local-s1 ,(cdr local-function-id) ,args-s1)
+         `(funcall-global-s1 ,name ,args-s1)))]
+    [('funcall-expr-s0 name args)
+     `(funcall-expression-s1 ,(compile-code-s1 expr) ,(map compile-code-s1 args))]
+    [('int-literal-s0 v) `(int-literal-s1 ,v)]))
+
+;;
+;; Generate Rhein virtual machine code
+;;
+
+(define-record-type rhein-environment #t #t
+  (functions))
+
+(define (make-null-rhein-environment)
+  (make-rhein-environment (make-hash-table 'string=?)))
+
+(define (rhein-install-function name code params varnum funnum regnum)
+  (hash-table-put! (~ (*global-environment*) 'functions) name
+                   (list code params varnum funnum regnum)))
+
+(define (rhein-generate-output)
+  (define (output-function name body)
+    (match-let1 (code params varnum funnum regnum) body
+      `(function ,name (,regnum ,varnum ,funnum ,(length params)) ,(force code))))
+  (hash-table-map (~ (*global-environment*) 'functions) output-function))
+
+(define *registers-top* (make-parameter 0))
+(define *registers-max* (make-parameter 1))
+(define *labels-top* (make-parameter 0))
+(define *labels* (make-parameter '() ))
+(define *global-environment* (make-parameter '() ))
+
+(define (generate-tag)
+  (rlet1 label-id (*labels-top*)
+    (*labels-top* (+ label-id 1))))
+
+(define (bind-label name)
+  (acons name (cons (*registers-top*) (generate-tag)) (*labels*)))
+
+(define label-register car)
+(define label-destination cdr)
+
+(define (renew-registers-max) (*registers-max* (max (+ (*registers-top*) 1) (*registers-max*))))
+
+(define (compile-all-s2 ast)
+  (for-each compile-func-s2 ast))
+
+(define (compile-func-s2 ast)
+  (match-let1 ('defun-s1 name label params varnum funnum code) ast
+    (parameterize ([*labels-top* 0]
+                   [*registers-top* 0]
+                   [*registers-max* 0]
+                   [*labels* '()])
+      (parameterize ([*labels* (bind-label label)])
+        (let1 function-code (decorate-epilogue (compile-code-s2 code))
+          (rhein-install-function name function-code params varnum funnum (*registers-max*)))))))
+
+(define (decorate-epilogue x)
+  (lappend x
+           (make-lseq `(ret 0))))
+
+(define (compile-closures-s2 ast)
+  (define (enclose x)
+    (match-let1 (offset (and definition ('defun-s1 name _ _ _ _ _))) x
+      (compile-func-s2 definition)
+      (x->lseq (list `(enclose ,(*registers-top*) ,name)
+                     `(lfset ,(car offset) ,(cdr offset) ,(*registers-top*))))))
+  (lconcatenate (map enclose ast)))
+
+(define (compile-code-s2 ast)
+  (match ast
+    [('block-s1 _ funcs code) (generate-code-block funcs code)]
+    [('cond-branch-s1 cond-clause else-clause) (generate-code-branch cond-clause else-clause)]
+    [('loop-s1 label cnd code) (generate-code-loop label cnd code)]
+    [('label-break-s1 name expr) (generate-code-break name expr)]
+    [('var-ref-s1 (kind vinfo)) (generate-code-var-ref kind vinfo)]
+    [('set-s1 reftrs expr) (generate-code-set reftrs expr)]
+    [('uni-op-s1 op expr) (generate-code-uni-op op expr)]
+    [('bin-op-s1 op lft rht) (generate-code-bin-op op lft rht)]
+    [('funcall-global-s1 name args) (generate-code-funcall-global name args)]
+    [('funcall-local-s1 offset args) (generate-code-funcall-local offset args)]
+    [('funcall-expression-s1 expr args) (generate-code-funcall-expression expr args)]
+    [('int-literal-s1 v) (generate-code-load-int v)]))
+
+(define (generate-code-block funcs code)
+  (lappend (compile-closures-s2 funcs) (lconcatenate (map compile-code-s2 code))))
+
+(define (generate-code-branch cond-clause else-clause)
+  (define (compile-cond exit-tag ast)
+    (let ([next-tag (generate-tag)]
+          [condition-register (+ (*registers-top*) 1)])
+      (match-let1 (cnd code) ast
+        (lappend (parameterize ([*registers-top* condition-register])
+                   (renew-registers-max)
+                   (compile-code-s2 cnd))
+                 (make-lseq `(nif-jump ,condition-register ,next-tag))
+                 (compile-code-s2 code)
+                 (make-lseq `(jump ,exit-tag)
+                            next-tag)))))
+  (define (compile-else exit-tag ast)
+    (let1 exit-tag-lseq (make-lseq exit-tag)
+      (if (null? ast)
+        exit-tag-lseq
+        (lappend (compile-code-s2 ast) exit-tag-lseq))))
+  (let* ([exit-tag (generate-tag)]
+         [cond-code (lconcatenate (map (^x (compile-cond exit-tag x)) cond-clause))]
+         [else-code (compile-else exit-tag else-clause)])
+    (lappend cond-code else-code)))
+
+(define (generate-code-loop label cnd code)
+  (parameterize ([*labels* (bind-label label)])
+    (let ([loop-tag (generate-tag)]
+          [exit-label (cdr (assoc label (*labels*)))]
+          [result-register (*registers-top*)]
+          [condition-register (+ (*registers-top*) 1)])
+      (lappend (make-lseq `(undef ,result-register)
+                          loop-tag)
+               (parameterize ([*registers-top* condition-register])
+                 (renew-registers-max)
+                 (compile-code-s2 cnd))
+               (make-lseq `(nif-jump ,condition-register ,(label-destination exit-label)))
+               (compile-code-s2 code)
+               (make-lseq `(jump ,loop-tag)
+                          (label-destination exit-label))))))
+
+(define (generate-code-break name expr)
+  (let1 exit-label-pair (assoc name (*labels*))
+    (unless exit-label-pair
+      (error "Label not found"))
+    (let1 exit-label (cdr exit-label-pair)
+      (lappend (compile-code-s2 expr)
+               (make-lseq `(move ,(label-register exit-label) ,(*registers-top*))
+                          `(jump ,(label-destination exit-label)))))))
+
+(define (generate-code-var-ref kind vinfo)
+  (let1 destination (*registers-top*)
+    (make-lseq (case kind
+                 [(global) `(gvref ,destination ,vinfo)]
+                 [(local) `(lvref ,destination ,(car vinfo) ,(cdr vinfo))]))))
+
+(define (generate-code-set reftrs expr)
+  (define (compile-set ast)
+    (let1 source (*registers-top*)
+      (match-let1 ('var-ref-s1 (kind vinfo)) ast
+        (make-lseq (case kind
+                     [(global) `(gvset ,vinfo ,source)]
+                     [(local) `(lvset ,(car vinfo) ,(cdr vinfo) ,source)])))))
+  (lappend (compile-code-s2 expr)
+           (lconcatenate (map compile-set reftrs))))
+
+(define (generate-code-uni-op op expr)
+  (let1 register (*registers-top*)
+    (lappend (compile-code-s2 expr)
+             (make-lseq `(,(get-uni-op op) ,register ,register)))))
+
+(define (generate-code-bin-op op lft rht)
+  (let ([destination (*registers-top*)]
+        [temporary (+ (*registers-top*) 1)])
+    (lappend (compile-code-s2 lft)
+             (parameterize ([*registers-top* temporary])
+               (renew-registers-max)
+               (compile-code-s2 rht))
+             (make-lseq `(,(get-bin-op op) ,destination ,destination ,temporary)))))
+
+(define (generate-code-argument args)
+  (let1 buffer (x->lseq '() )
+    (do ([argument-count (*registers-top*) (+ argument-count 1)] [xs args (cdr xs)])
+      [(null? xs) buffer]
+      (parameterize ([*registers-top* argument-count])
+        (renew-registers-max)
+        (set! buffer (lappend buffer (compile-code-s2 (car xs))))))))
+
+(define (generate-code-funcall-global name args)
+  (let ([args-count (length args)]
+        [destination (*registers-top*)]
+        [argument-begin (*registers-top*)])
+    (lappend (generate-code-argument args)
+             (make-lseq `(gcall ,name ,destination ,argument-begin ,args-count)))))
+
+(define (generate-code-funcall-local offset args)
+  (let ([args-count (length args)]
+        [destination (*registers-top*)]
+        [argument-begin (*registers-top*)])
+    (lappend (generate-code-argument args)
+             (make-lseq
+               `(lcall ,(car offset) ,(cdr offset) ,destination ,argument-begin ,args-count)))))
+
+(define (generate-code-funcall-expression expr args)
+  (let* ([args-count (length args)]
+         [destination (*registers-top*)]
+         [argument-begin (*registers-top*)]
+         [function (+ (*registers-top*) args-count)])
+    (lappend (generate-code-argument args)
+             (parameterize ([*registers-top* function])
+               (renew-registers-max)
+               (compile-code-s2 expr))
+             (make-lseq 
+               `(ecall ,function ,destination ,argument-begin ,args-count)))))
+
+(define (generate-code-load-int v)
+  (make-lseq `(load-int ,(*registers-top*) ,v)))
+
+(define (get-bin-op op)
+  (cond
+   [(string=? op "is") 'bin-is]
+   [(string=? op "isnot") 'bin-isnot]
+   [(string=? op ">") 'bin-gt]
+   [(string=? op "<") 'bin-lt]
+   [(string=? op ">=") 'bin-ge]
+   [(string=? op "<=") 'bin-le]
+   [(string=? op "+") 'bin-add]
+   [(string=? op "-") 'bin-sub]
+   [(string=? op "*") 'bin-mul]
+   [(string=? op "/") 'bin-div]
+   [else (error "Unknown operator")]))
+
+(define (get-uni-op op)
+  (cond
+   [(string=? op "-") 'uni-neg]
+   [(string=? op "+") 'uni-plus]
+   [(string=? op "not") 'uni-not]
+   [else (error "Unknown operator")]))
+
+;;
+;; Compiler interface
+;;
+
+(define (rhein-compile ast)
+  (parameterize ([*global-environment* (make-null-rhein-environment)])
+    (compile-all-s2 (compile-all-s1 ast))
+    (rhein-generate-output)))
+
