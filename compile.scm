@@ -1,5 +1,5 @@
 ;;
-;; fcompile.scm - Re-written bootstrap compiler
+;; compile.scm - Re-written bootstrap compiler
 ;;
 
 (use srfi-1)
@@ -112,7 +112,8 @@
   (define (defun-name-replace x name)
     (match-let1 ('defun-s0 _ label params code) x `(defun-s0 ,name ,label ,params ,code)))
   (define (defun-cons-offset local-name x)
-    (list (cdr (assoc local-name (*local-functions*))) x))
+    (let1 label (cdr (assoc local-name (*local-functions*)))
+      (list (cons (- (*local-level*) (car label)) (cdr label)) x)))
   (let* ([local-names (map defun-name ast)]
          [global-names (map generate-global-closure-name local-names)])
     (parameterize ([*local-functions* (bind-functions local-names)])
@@ -145,7 +146,8 @@
      (let ([local-function-id (assoc name (*local-functions*))]
            [args-s1 (map compile-code-s1 args)])
        (if local-function-id 
-         `(funcall-local-s1 ,(cdr local-function-id) ,args-s1)
+         (let1 offset (cdr local-function-id)
+           `(funcall-local-s1 ,(cons (- (*local-level*) (car offset)) (cdr offset)) ,args-s1))
          `(funcall-global-s1 ,name ,args-s1)))]
     [('funcall-expr-s0 name args)
      `(funcall-expression-s1 ,(compile-code-s1 expr) ,(map compile-code-s1 args))]
@@ -196,7 +198,7 @@
   (match-let1 ('defun-s1 name label params varnum funnum code) ast
     (parameterize ([*labels-top* 0]
                    [*registers-top* 0]
-                   [*registers-max* 0]
+                   [*registers-max* 1]
                    [*labels* '()])
       (parameterize ([*labels* (bind-label label)])
         (let1 function-code (decorate-epilogue (compile-code-s2 code))
