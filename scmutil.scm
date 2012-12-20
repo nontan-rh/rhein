@@ -1,10 +1,6 @@
 ;;
 ;; scmutil.scm - Common utility on scheme
 ;;
-;; Written for gauche
-;;
-;; Requires srfi-9,23
-;;
 
 (use srfi-1)
 (use srfi-9)

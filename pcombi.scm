@@ -405,12 +405,12 @@
 (define-syntax pkeyword
   (syntax-rules ()
     [(_ str)
-     (peval string->symbol (pskipw (pseqn 0 (ps str) (p! palphanum))))]))
+     (peval string->symbol (pskipwl (pseqn 0 (ps str) (p! palphanum))))]))
 
 (define-syntax pkeysym
   (syntax-rules ()
     [(_ str)
-     (peval string->symbol (pskipw (pseqn 0 (ps str) (p! psymbol))))]))
+     (peval string->symbol (pskipwl (pseqn 0 (ps str) (p! psymbol))))]))
 
 (define pnothing (pign (pseq)))
 

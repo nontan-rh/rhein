@@ -1,4 +1,3 @@
-#!/usr/bin/env gosh
 ;;
 ;; Rhein VM bootstrap
 ;;

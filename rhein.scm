@@ -1,10 +1,6 @@
 ;;
 ;; rhein.scm - Programming language Rhein
 ;;
-;; Requires srfi-22 or other similar scripting extension
-;;
-;; Written for gauche
-;;
 
 (require "./parse")
 (require "./compile")

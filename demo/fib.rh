@@ -1,14 +1,14 @@
-defun entry()
+defun entry() {
     local a, b, c, i
     a = 1
     b = c = 0
     i = 0
-    while i < 20
+    while i < 20 {
         c = a + b
         a = b
         b = c 
         print(c)
         i = i + 1
-    end
-end
+    }
+}
 
