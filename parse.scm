@@ -31,6 +31,13 @@
         [vars  (remove func? lis)])
     (list (concatenate vars) funcs)))
 
+(define (make-binary-expr lis)
+  (define (combine-exprs lft rht)
+    (match-let1 (op rhtexpr) rht
+      (list 'bin-op-s0 op lft rhtexpr)))
+  (match-let1 (lft rhts) lis
+    (fold-left combine-exprs lft rhts)))
+
 (define (make-asgn-expr lis)
   (match-let1 (lft rht) lis
     (list 'set-s0 lft rht)))
@@ -59,6 +66,11 @@
   (match-let1 (_ label expr) lis
     (list 'label-break-s0 label expr)))
 
+(define (report-statement-error ph)
+  (receive [lineno column] (lineno-and-column ph)
+    (format #t "line:~A col:~A Syntax error, Invalid statement\n" lineno column)
+    (exit 1)))
+
 (define (make-rvalue-ref lis) (list 'ref-s0 lis))
 
 (define gr-keyw-local (pkeyword "local"))
@@ -75,13 +87,14 @@
                     gr-keyw-else
                     gr-keyw-while
                     gr-keyw-break))
-(define gr-lp (pskipwl (pc #\( )))
-(define gr-rp (pskipwl (pc #\) )))
-(define gr-lb (pskipwl (pc #\{ )))
-(define gr-rb (pskipwl (pc #\} )))
-(define gr-at (pskipwl (pc #\@)))
-(define gr-delim (pskipwl (p/ (pc #\;) (pseq))))
-(define gr-comma (pskipwl (pc #\,)))
+(define gr-lp (pskipwl (pc #[\u0028] )))
+(define gr-rp (pskipwl (pc #[\u0029] )))
+(define gr-lb (pskipwl (pc #[\u007b] )))
+(define gr-rb (pskipwl (pc #[\u007d] )))
+(define gr-at (pskipwl (pc #[@])))
+(define gr-delim-symbol (pskipwl (p/ (pc #[\u003b]))))
+(define gr-delim (pskipwl (p/ (pc #[\u003b]) (pseq))))
+(define gr-comma (pskipwl (pc #[,])))
 (define gr-mul-op (p/ (pkeysym "*") (pkeysym "/")))
 (define gr-add-op (p/ (pkeysym "+") (pkeysym "-")))
 (define gr-relat-op (p/ (pkeyword "is")
@@ -111,33 +124,37 @@
                          (pbetween gr-lp gr-relat-expr gr-rp)))
 (define gr-ref-seq (pseq (peval make-varref gr-ident)))
 (define gr-digit (pskipwl (psn (p+ pdigit))))
-(define gr-mul-expr (pchainl1 gr-prim-expr gr-mul-op chain-bin-op))
-(define gr-add-expr (pchainl1 gr-mul-expr gr-add-op chain-bin-op))
-(define gr-relat-expr (pchainl1 gr-add-expr gr-relat-op chain-bin-op))
+(define gr-mul-expr (peval make-binary-expr (pseq gr-prim-expr (p* (pseq gr-mul-op gr-prim-expr)))))
+(define gr-add-expr (peval make-binary-expr (pseq gr-mul-expr (p* (pseq gr-add-op gr-mul-expr)))))
+(define gr-relat-expr (peval make-binary-expr (pseq gr-add-expr (p* (pseq gr-relat-op gr-add-expr)))))
 (define gr-asgn-expr (peval make-asgn-expr
                             (pseq (p+ (pseqn 0 gr-ref-seq gr-asgn-op)) gr-relat-expr)))
 (define gr-break-stmt (peval make-break-stmt
                              (pseq gr-keyw-break (popt gr-label-decl)
                                    (popt gr-relat-expr))))
-(define gr-skip-indent (pskipm pwhite))
-(define gr-blank-stmt pnothing)
-(define gr-stmt (p/ (pseqn 0 gr-skip-indent gr-break-stmt)
-                    (pseqn 0 gr-skip-indent gr-asgn-expr)
-                    (pseqn 0 gr-skip-indent gr-relat-expr)))
-(define gr-stmt-seq (peval make-stmt-seq (psependby gr-stmt gr-delim)))
-(define gr-vdecl (p/ (pseqn 1 gr-skip-indent gr-keyw-local (psependby gr-ident gr-comma))))
-(define gr-lfdef (pseqn 0 (pskipm pwhite) gr-func-def))
+(define gr-skip-indent (p* pwhite))
+(define gr-stmt (p/ (pseqn 1 gr-skip-indent gr-break-stmt)
+                    (pseqn 1 gr-skip-indent gr-asgn-expr)
+                    (pseqn 1 gr-skip-indent gr-relat-expr)))
+(define gr-stmt-seq
+  (peval make-stmt-seq
+         (psependby (perror-if report-statement-error
+                               gr-stmt
+                               (p! (p/ gr-delim-symbol gr-rb)))
+                    gr-delim)))
+(define gr-vdecl (p/ (pseqn 2 gr-skip-indent gr-keyw-local (psependby gr-ident gr-comma))))
+(define gr-lfdef (pseqn 2 gr-skip-indent gr-func-def))
 (define gr-decl-seq (peval make-decl-seq (psependby (p/ gr-lfdef gr-vdecl) gr-delim)))
 (define gr-block (peval make-block (pbetween gr-lb (pseq gr-decl-seq gr-stmt-seq) gr-rb)))
 (define gr-param-list (pbetween gr-lp (psependby gr-ident gr-comma) gr-rp))
 (define gr-func-def (peval make-func-def
                            (pseq gr-keyw-defun gr-ident (popt gr-label-decl)
                                  gr-param-list gr-block)))
-(define gr-prog (pseqn 1 (p* (p/ pwhite pnl)) (p* (pskipwl gr-func-def)) peof))
+(define gr-prog (pseqn 1 (p* (p/ pwhite pnew-line)) (p* (pskipwl gr-func-def)) peof))
 
 (define (parse str)
-  (let1 r (gr-prog (make-pobj str 0))
-    (if (pres-result r)
-        (pres-pdata r)
-        (error "Parse error!!"))))
+  (receive [succ _ data] (gr-prog (make-parser-head str 0))
+    (if succ
+      data
+      (error "Parse error!!"))))
 

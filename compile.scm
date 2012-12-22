@@ -350,24 +350,24 @@
   (make-lseq `(load-int ,(*registers-top*) ,v)))
 
 (define (get-bin-op op)
-  (cond
-   [(string=? op "is") 'bin-is]
-   [(string=? op "isnot") 'bin-isnot]
-   [(string=? op ">") 'bin-gt]
-   [(string=? op "<") 'bin-lt]
-   [(string=? op ">=") 'bin-ge]
-   [(string=? op "<=") 'bin-le]
-   [(string=? op "+") 'bin-add]
-   [(string=? op "-") 'bin-sub]
-   [(string=? op "*") 'bin-mul]
-   [(string=? op "/") 'bin-div]
-   [else (error "Unknown operator")]))
+  (case op
+    ['is 'bin-is]
+    ['isnot 'bin-isnot]
+    ['> 'bin-gt]
+    ['< 'bin-lt]
+    ['>= 'bin-ge]
+    ['<= 'bin-le]
+    ['+ 'bin-add]
+    ['- 'bin-sub]
+    ['* 'bin-mul]
+    ['/ 'bin-div]
+    [else (error "Unknown operator")]))
 
 (define (get-uni-op op)
-  (cond
-   [(string=? op "-") 'uni-neg]
-   [(string=? op "+") 'uni-plus]
-   [(string=? op "not") 'uni-not]
+  (case op
+   ['- 'uni-neg]
+   ['+ 'uni-plus]
+   ['not 'uni-not]
    [else (error "Unknown operator")]))
 
 ;;
