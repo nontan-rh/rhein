@@ -59,34 +59,29 @@
 ;; Rhein reference representation and its utilities
 ;;
 
-(define (refseq-most-inner x)
-  (cond
-   [(eq? (car x) 'var)
-    (let1 local-offset (assoc (cadr x) (*local-variables*))
-      (if local-offset
-        `(var-ref-s1 (local ,(cons (- (*local-level*) (cadr local-offset)) (cddr local-offset))))
-        `(var-ref-s1 (global ,(cadr x)))))]
-   [else (error "Unknown reference type")]))
+(define (get-variable-reference name)
+  (let1 local-offset (assoc name (*local-variables*))
+    (if local-offset
+      `(var-ref-s1 (local ,(cons (- (*local-level*) (cadr local-offset)) (cddr local-offset))))
+      `(var-ref-s1 (global ,name)))))
+ 
+(define (get-function-reference name)
+  (let1 local-offset (assoc name (*local-functions*))
+    (if local-offset
+      `(func-ref-s1 (local ,(cons (- (*local-level*) (cadr local-offset)) (cddr local-offset))))
+      `(func-ref-s1 (global ,name)))))
+
+(define (refseq-refer-start x)
+  (match x
+    [('variable name) (get-variable-reference name)]
+    [('function name) (get-function-reference name)]))
 
 (define (compile-refseq-ref-s1 refsq)
-  (when (null? refsq) (error "Invalid reference sequence"))
-  (let lp ([xs (reverse (cdr refsq))])
-    (cond
-     [(null? xs) (refseq-most-inner (car refsq))])))
-
-(define (compile-refseq-set-s1 refsq)
-  (when (null? refsq) (error "Invalid reference sequence"))
-  (let1 xs (reverse refsq)
-    (cond
-     [(and (eq? (caar xs) 'var) (null? (cdr xs)))
-      (let1 local-offset (assoc (cadar xs) (*local-variables*))
-        (if local-offset
-          `(var-ref-s1 (local ,(cons (- (*local-level*) (cadr local-offset)) (cddr local-offset))))
-          `(var-ref-s1 (global ,(cadr x)))))]
-     [else
-      (let1 getref (ex-compile-refseq-ref (reverse (cdr xs)))
-        (cond
-         [(null? refsq) (error "Null reference sequence")]))])))
+  (match-let1 (start cont ...) refsq
+    (let lp ([xs cont])
+      (cond
+        [(null? xs) (refseq-refer-start start)]
+        [else (error "Unknown reference type")]))))
 
 (define (compile-all-s1 ast)
   (define (fn x)
@@ -139,7 +134,7 @@
     [('label-break-s0 name expr)
      `(label-break-s1 ,name ,(compile-code-s1 expr))]
     [('ref-s0 refsq) (compile-refseq-ref-s1 refsq)]
-    [('set-s0 refsqs expr) `(set-s1 ,(map compile-refseq-set-s1 refsqs) ,(compile-code-s1 expr))]
+    [('set-s0 refsqs expr) `(set-s1 ,(map compile-refseq-ref-s1 refsqs) ,(compile-code-s1 expr))]
     [('uni-op-s0 op expr) `(uni-op-s1 ,op ,(compile-code-s1 expr))]
     [('bin-op-s0 op lft rht) `(bin-op-s1 ,op ,(compile-code-s1 lft) ,(compile-code-s1 rht))]
     [('funcall-name-s0 name args)
@@ -149,9 +144,14 @@
          (let1 offset (cdr local-function-id)
            `(funcall-local-s1 ,(cons (- (*local-level*) (car offset)) (cdr offset)) ,args-s1))
          `(funcall-global-s1 ,name ,args-s1)))]
-    [('funcall-expr-s0 name args)
+    [('funcall-expr-s0 expr args)
      `(funcall-expression-s1 ,(compile-code-s1 expr) ,(map compile-code-s1 args))]
+    [('proc-literal-s0 params code) `(proc-literal-s1 ,(compile-proc-literal-s1 params code))]
     [('int-literal-s0 v) `(int-literal-s1 ,v)]))
+
+(define (compile-proc-literal-s1 params code)
+  (let1 proc-literal-defun (list 'defun-s0 (generate-global-closure-name "") "" params code)
+    (compile-func-s1 proc-literal-defun)))
 
 ;;
 ;; Generate Rhein virtual machine code
@@ -223,12 +223,14 @@
     [('loop-s1 label cnd code) (generate-code-loop label cnd code)]
     [('label-break-s1 name expr) (generate-code-break name expr)]
     [('var-ref-s1 (kind vinfo)) (generate-code-var-ref kind vinfo)]
+    [('func-ref-s1 (kind vinfo)) (generate-code-func-ref kind vinfo)]
     [('set-s1 reftrs expr) (generate-code-set reftrs expr)]
     [('uni-op-s1 op expr) (generate-code-uni-op op expr)]
     [('bin-op-s1 op lft rht) (generate-code-bin-op op lft rht)]
     [('funcall-global-s1 name args) (generate-code-funcall-global name args)]
     [('funcall-local-s1 offset args) (generate-code-funcall-local offset args)]
     [('funcall-expression-s1 expr args) (generate-code-funcall-expression expr args)]
+    [('proc-literal-s1 func) (generate-code-load-proc func)]
     [('int-literal-s1 v) (generate-code-load-int v)]))
 
 (define (generate-code-block funcs code)
@@ -286,6 +288,12 @@
     (make-lseq (case kind
                  [(global) `(gvref ,destination ,vinfo)]
                  [(local) `(lvref ,destination ,(car vinfo) ,(cdr vinfo))]))))
+
+(define (generate-code-func-ref kind vinfo)
+  (let1 destination (*registers-top*)
+    (make-lseq (case kind
+                 [(global) `(gfref ,destination ,vinfo)]
+                 [(local) `(lfref ,destination ,(car vinfo) ,(cdr vinfo))]))))
 
 (define (generate-code-set reftrs expr)
   (define (compile-set ast)
@@ -345,6 +353,11 @@
                (compile-code-s2 expr))
              (make-lseq 
                `(ecall ,function ,destination ,argument-begin ,args-count)))))
+
+(define (generate-code-load-proc func)
+  (match-let1 (and definition ('defun-s1 name _ _ _ _ _)) func
+    (compile-func-s2 definition)
+    (make-lseq `(enclose ,(*registers-top*) ,name))))
 
 (define (generate-code-load-int v)
   (make-lseq `(load-int ,(*registers-top*) ,v)))

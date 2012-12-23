@@ -81,7 +81,7 @@
                                        (list code
                                              (hash-table-get (~ env 'function-name) func)
                                              dst arg0 argc)]))
-                         ([enclose]
+                         ([enclose gfref]
                           (match-let1 (code dst func) insn
                             (list code dst (hash-table-get (~ env 'function-name) func))))
                          ([jump]
@@ -147,8 +147,10 @@
             [('move dst src) (instruction-move dst src)] 
             [('undef dst) (instruction-undef dst)]
             [('enclose dst func) (instruction-enclose dst func)]
+            [('gfref dst func) (instruction-gfref dst func)]
             [('gvref dst src) (instruction-gvref dst src)]
             [('lvref dst src-layer src-offset) (instruction-lvref dst src-layer src-offset)]
+            [('lfref dst src-layer src-offset) (instruction-lfref dst src-layer src-offset)]
             [('gvset dst src) (instruction-gvset dst src)]
             [('lvset dst-layer dst-offset src) (instruction-lvset dst-layer dst-offset src)]
             [('lfset dst-layer dst-offset src) (instruction-lfset dst-layer dst-offset src)]
@@ -158,6 +160,7 @@
             [('gcall func-id dst arg0 argc) (instruction-gcall func-id dst arg0 argc)]
             [('lcall func-layer func-offset dst arg0 argc)
              (instruction-lcall func-layer func-offset dst arg0 argc)]
+            [('ecall func-reg dst arg0 argc) (instruction-ecall func-reg dst arg0 argc)]
             [('ret return-value) 
              (when (null? (*call-stack*))
                (br (register-ref return-value))) ;; Break the loop
@@ -191,6 +194,9 @@
                                        (~ (*current-frame*) 'function-bindings))
       (register-set! dst closure))))
 
+(define (instruction-gfref dst func)
+  (register-set! dst (hash-table-get (~ (*environment*) 'functions) func)))
+
 (define (instruction-gvref dst src)
   (register-set! dst (hash-table-get (~ (*environment*) 'variables) src)))
 
@@ -198,6 +204,11 @@
   (register-set!
     dst
     (vector-ref (list-ref (~ (*current-frame*) 'variable-bindings) src-layer) src-offset)))
+
+(define (instruction-lfref dst src-layer src-offset)
+  (register-set!
+    dst
+    (vector-ref (list-ref (~ (*current-frame*) 'function-bindings) src-layer) src-offset)))
 
 (define (instruction-gvset dst src)
   (hash-table-put! (~ (*environment*) 'variables) dst (register-ref src)))
@@ -247,6 +258,10 @@
 (define (instruction-lcall func-layer func-offset dst arg0 argc)
   (let1 new-func (vector-ref
                    (list-ref (~ (*current-frame*) 'function-bindings) func-layer) func-offset)
+    (call-function new-func dst arg0 argc)))
+
+(define (instruction-ecall func-reg dst arg0 argc)
+  (let1 new-func (register-ref func-reg)
     (call-function new-func dst arg0 argc)))
 
 (define (instruction-ret return-value)

@@ -19,6 +19,10 @@
   (match-let1 (name args) lis
     (list 'funcall-name-s0 name args)))
 
+(define (make-funcall-expr lis)
+  (match-let1 (expr args) lis
+    (list 'funcall-expr-s0 expr args)))
+
 (define (make-stmt-seq lis)
   (filter (^x (not (null? x))) lis))
 
@@ -62,6 +66,10 @@
   (match-let1 (_ label cnd code) lis
     (list 'loop-s0 label cnd code)))
 
+(define (make-proc-literal lis)
+  (match-let1 (args code) lis
+    (list 'proc-literal-s0 (if (char? args) '() args) code)))
+
 (define (make-break-stmt lis)
   (match-let1 (_ label expr) lis
     (list 'label-break-s0 label expr)))
@@ -71,7 +79,14 @@
     (format #t "line:~A col:~A Syntax error, Invalid statement\n" lineno column)
     (exit 1)))
 
-(define (make-rvalue-ref lis) (list 'ref-s0 lis))
+(define (make-ref-seq lis)
+  (match-let1 (hat ident) lis
+    (if (null? hat)
+      `((variable ,ident))
+      `((function ,ident)))))
+
+(define (make-rvalue-ref lis)
+  (list 'ref-s0 lis))
 
 (define gr-keyw-local (pkeyword "local"))
 (define gr-keyw-defun (pkeyword "defun"))
@@ -87,11 +102,13 @@
                     gr-keyw-else
                     gr-keyw-while
                     gr-keyw-break))
-(define gr-lp (pskipwl (pc #[\u0028] )))
-(define gr-rp (pskipwl (pc #[\u0029] )))
-(define gr-lb (pskipwl (pc #[\u007b] )))
-(define gr-rb (pskipwl (pc #[\u007d] )))
+(define gr-lp (pskipwl (pc #[\u0028])))
+(define gr-rp (pskipwl (pc #[\u0029])))
+(define gr-lb (pskipwl (pc #[\u007b])))
+(define gr-rb (pskipwl (pc #[\u007d])))
 (define gr-at (pskipwl (pc #[@])))
+(define gr-hat (pskipwl (pc #[\^])))
+(define gr-hatlp (pskipwl (ps "^(")))
 (define gr-delim-symbol (pskipwl (p/ (pc #[\u003b]))))
 (define gr-delim (pskipwl (p/ (pc #[\u003b]) (pseq))))
 (define gr-comma (pskipwl (pc #[,])))
@@ -107,7 +124,9 @@
 (define gr-ident
   (pskipwl (pseqn 1 (p! gr-keyw) (psc (pseq palpha (p* palphanum))))))
 (define gr-label-decl (pseqn 1 gr-at gr-ident))
-(define gr-arg-list (pbetween gr-lp (psependby gr-relat-expr gr-comma) gr-rp))
+(define gr-fname-arg-list (pbetween gr-lp (psependby gr-relat-expr gr-comma) gr-rp))
+(define gr-fexpr-param-list (pbetween gr-hatlp (psependby gr-ident gr-comma) gr-rp))
+(define gr-fexpr-arg-list (pbetween gr-hatlp (psependby gr-relat-expr gr-comma) gr-rp))
 (define gr-if-expr
   (peval make-if-expr
          (pseq (pseq gr-keyw-if gr-relat-expr gr-block)
@@ -116,13 +135,17 @@
 (define gr-while-expr
   (peval make-while-expr
          (pseq gr-keyw-while (popt gr-label-decl) gr-relat-expr gr-block)))
+(define gr-proc-literal (peval make-proc-literal (pseq (p/ gr-fexpr-param-list gr-hat) gr-block)))
+(define gr-paren-expr (pbetween gr-lp gr-relat-expr gr-rp))
 (define gr-prim-expr (p/ gr-if-expr
                          gr-while-expr
+                         gr-proc-literal
                          (peval make-literal gr-digit)
-                         (peval make-funcall-name (pseq gr-ident gr-arg-list))
+                         (peval make-funcall-name (pseq gr-ident gr-fname-arg-list))
+                         (peval make-funcall-expr (pseq gr-paren-expr gr-fexpr-arg-list))
                          (peval make-rvalue-ref gr-ref-seq)
-                         (pbetween gr-lp gr-relat-expr gr-rp)))
-(define gr-ref-seq (pseq (peval make-varref gr-ident)))
+                         gr-paren-expr))
+(define gr-ref-seq (peval make-ref-seq (pseq (popt gr-hat) gr-ident)))
 (define gr-digit (pskipwl (psn (p+ pdigit))))
 (define gr-mul-expr (peval make-binary-expr (pseq gr-prim-expr (p* (pseq gr-mul-op gr-prim-expr)))))
 (define gr-add-expr (peval make-binary-expr (pseq gr-mul-expr (p* (pseq gr-add-op gr-mul-expr)))))
@@ -143,7 +166,7 @@
                                (p! (p/ gr-delim-symbol gr-rb)))
                     gr-delim)))
 (define gr-vdecl (p/ (pseqn 2 gr-skip-indent gr-keyw-local (psependby gr-ident gr-comma))))
-(define gr-lfdef (pseqn 2 gr-skip-indent gr-func-def))
+(define gr-lfdef (pseqn 1 gr-skip-indent gr-func-def))
 (define gr-decl-seq (peval make-decl-seq (psependby (p/ gr-lfdef gr-vdecl) gr-delim)))
 (define gr-block (peval make-block (pbetween gr-lb (pseq gr-decl-seq gr-stmt-seq) gr-rb)))
 (define gr-param-list (pbetween gr-lp (psependby gr-ident gr-comma) gr-rp))
