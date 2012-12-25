@@ -8,6 +8,7 @@
 (use gauche.record)
 (use gauche.parameter)
 
+(require "./genseq")
 (require "./rhein-prelude")
 
 (define-record-type rhein-environment #t #t
@@ -77,19 +78,18 @@
           (vector-set! out cnt
                        (case (first insn)
                          ([gcall]
-                          (match insn [(code func dst arg0 argc)
-                                       (list code
-                                             (hash-table-get (~ env 'function-name) func)
-                                             dst arg0 argc)]))
+                          (match-let1 (code func dst arg0 argc) insn
+                            (list code (hash-table-get (~ env 'function-name) func)
+                                  dst arg0 argc)))
                          ([enclose gfref]
                           (match-let1 (code dst func) insn
                             (list code dst (hash-table-get (~ env 'function-name) func))))
                          ([jump]
-                          (match insn [(code target)
-                                       (list code (hash-table-get tag-list target))]))
+                          (match-let1 (code target) insn
+                            (list code (hash-table-get tag-list target))))
                          ([if-jump nif-jump]
-                          (match insn [(code jcond target)
-                                       (list code jcond (hash-table-get tag-list target))]))
+                          (match-let1 (code jcond target) insn
+                            (list code jcond (hash-table-get tag-list target))))
                          (else insn))))))))
 
 (define (correct-tags env code)
@@ -151,9 +151,11 @@
             [('gvref dst src) (instruction-gvref dst src)]
             [('lvref dst src-layer src-offset) (instruction-lvref dst src-layer src-offset)]
             [('lfref dst src-layer src-offset) (instruction-lfref dst src-layer src-offset)]
+            [('iref dst seq index) (instruction-iref dst seq index)]
             [('gvset dst src) (instruction-gvset dst src)]
             [('lvset dst-layer dst-offset src) (instruction-lvset dst-layer dst-offset src)]
             [('lfset dst-layer dst-offset src) (instruction-lfset dst-layer dst-offset src)]
+            [('iset seq index src) (instruction-iset seq index src)]
             [('jump dst) (instruction-jump dst)]
             [('if-jump con dst) (instruction-if-jump con dst)]
             [('nif-jump con dst) (instruction-nif-jump con dst)]
@@ -166,6 +168,7 @@
                (br (register-ref return-value))) ;; Break the loop
              (instruction-ret return-value)]
             [('load-int dst value) (instruction-load-int dst value)]
+            [('load-str dst value) (instruction-load-str dst value)]
             [('bin-is dst src1 src2) (instruction-bin-is dst src1 src2)]
             [('bin-isnot dst src1 src2) (instruction-bin-not dst src1 src2)]
             [('bin-gt dst src1 src2) (instruction-bin-gt dst src1 src2)]
@@ -207,8 +210,13 @@
 
 (define (instruction-lfref dst src-layer src-offset)
   (register-set!
-    dst
+    dst (register-ref index)
     (vector-ref (list-ref (~ (*current-frame*) 'function-bindings) src-layer) src-offset)))
+
+(define (instruction-iref dst seq index)
+  (register-set!
+    dst
+    (generic-sequence-ref (register-ref seq) (register-ref index))))
 
 (define (instruction-gvset dst src)
   (hash-table-put! (~ (*environment*) 'variables) dst (register-ref src)))
@@ -220,6 +228,11 @@
 (define (instruction-lfset dst-layer dst-offset src)
   (vector-set! (list-ref (~ (*current-frame*) 'function-bindings) dst-layer) dst-offset
                (register-ref src)))
+
+(define (instruction-iset seq index src)
+  (register-set!
+    seq
+    (generic-sequence-set (register-ref seq) index (register-ref src))))
 
 (define (instruction-jump dst)
   (set! (~ (*current-frame*) 'program-counter) dst))
@@ -273,6 +286,9 @@
 
 (define (instruction-load-int dst value)
   (register-set! dst value))
+
+(define (instruction-load-str dst value)
+  (register-set! dst (string->generic-sequence value)))
 
 (define (instruction-bin-is dst src1 src2)
   (register-set! dst (eqv? (register-ref src1) (register-ref src2))))

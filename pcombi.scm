@@ -258,6 +258,7 @@
                  (receive [succ next data] (grm px)
                    (unless succ
                      (br #f p '() ))
+                   (set! px next)
                    (push! buf data))))))]))
 
 ;;

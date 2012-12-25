@@ -3,7 +3,6 @@
 ;;
 
 (require "./pcombi")
-(require "./scmutil")
 
 (use srfi-1)
 (use util.match)
@@ -79,14 +78,34 @@
     (format #t "line:~A col:~A Syntax error, Invalid statement\n" lineno column)
     (exit 1)))
 
-(define (make-ref-seq lis)
+(define (make-ref-ident lis)
   (match-let1 (hat ident) lis
     (if (null? hat)
-      `((variable ,ident))
-      `((function ,ident)))))
+      (list 'variable ident)
+      (list 'function ident))))
+
+(define (make-ref-index lis)
+  (list 'index lis))
+
+(define (make-ref-seq lis)
+  (match-let1 (base (cont ...)) lis
+    (cons base cont)))
 
 (define (make-rvalue-ref lis)
   (list 'ref-s0 lis))
+
+(define (last-and-other lis)
+  (let1 rlis (reverse lis)
+    (values (car rlis) (reverse (cdr rlis)))))
+
+(define (make-string-literal lis)
+  (match-let1 (_ (strbody ...)) lis
+    (receive [_ xs] (last-and-other strbody)
+      (list 'string-literal-s0 (list->string xs)))))
+
+(define (xdigit->char lis)
+  (match-let1 (x1 x2) lis
+    (integer->char (+ (* 16 (digit->integer x1)) (digit->integer x2)))))
 
 (define gr-keyw-local (pkeyword "local"))
 (define gr-keyw-defun (pkeyword "defun"))
@@ -106,7 +125,10 @@
 (define gr-rp (pskipwl (pc #[\u0029])))
 (define gr-lb (pskipwl (pc #[\u007b])))
 (define gr-rb (pskipwl (pc #[\u007d])))
+(define gr-lbracket (pskipwl (pc #[\u005b])))
+(define gr-rbracket (pskipwl (pc #[\u005d])))
 (define gr-at (pskipwl (pc #[@])))
+(define gr-dq (pskipwl (pc #[\"])))
 (define gr-hat (pskipwl (pc #[\^])))
 (define gr-hatlp (pskipwl (ps "^(")))
 (define gr-delim-symbol (pskipwl (p/ (pc #[\u003b]))))
@@ -140,6 +162,7 @@
 (define gr-prim-expr (p/ gr-if-expr
                          gr-while-expr
                          gr-proc-literal
+                         gr-string
                          (peval make-literal gr-digit)
                          (peval make-funcall-name (pseq gr-ident gr-fname-arg-list))
                          (peval make-funcall-expr (pseq gr-prim-expr-but-fe gr-fexpr-arg-list))
@@ -152,8 +175,14 @@
                                 (peval make-funcall-name (pseq gr-ident gr-fname-arg-list))
                                 (peval make-rvalue-ref gr-ref-seq)
                                 gr-paren-expr))
-(define gr-ref-seq (peval make-ref-seq (pseq (popt gr-hat) gr-ident)))
+(define gr-ref-ident (peval make-ref-ident (pseq (popt gr-hat) gr-ident)))
+(define gr-ref-index (peval make-ref-index (pbetween gr-lbracket gr-relat-expr gr-rbracket)))
+(define gr-ref-seq (peval make-ref-seq (pseq gr-ref-ident (p* gr-ref-index))))
 (define gr-digit (pskipwl (psn (p+ pdigit))))
+(define gr-string-char (p/ (peval xdigit->char (pseqn 1 (ps "\\x") (pcount 2 (pc #[[:xdigit:]]))))
+                           (pseqn 1 (pc #[\\]) gr-dq)
+                           panyc))
+(define gr-string (peval make-string-literal (pseq gr-dq (pmtill gr-string-char gr-dq))))
 (define gr-mul-expr (peval make-binary-expr (pseq gr-prim-expr (p* (pseq gr-mul-op gr-prim-expr)))))
 (define gr-add-expr (peval make-binary-expr (pseq gr-mul-expr (p* (pseq gr-add-op gr-mul-expr)))))
 (define gr-relat-expr (peval make-binary-expr (pseq gr-add-expr (p* (pseq gr-relat-op gr-add-expr)))))

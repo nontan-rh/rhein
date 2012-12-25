@@ -77,11 +77,11 @@
     [('function name) (get-function-reference name)]))
 
 (define (compile-refseq-ref-s1 refsq)
+  (define (combine-cont lft rht)
+    (match lft
+      [('index expr) `(index-ref-s1 ,rht ,(compile-code-s1 expr))]))
   (match-let1 (start cont ...) refsq
-    (let lp ([xs cont])
-      (cond
-        [(null? xs) (refseq-refer-start start)]
-        [else (error "Unknown reference type")]))))
+    (fold-right combine-cont (refseq-refer-start start) cont)))
 
 (define (compile-all-s1 ast)
   (define (fn x)
@@ -147,6 +147,7 @@
     [('funcall-expr-s0 expr args)
      `(funcall-expression-s1 ,(compile-code-s1 expr) ,(map compile-code-s1 args))]
     [('proc-literal-s0 params code) `(proc-literal-s1 ,(compile-proc-literal-s1 params code))]
+    [('string-literal-s0 v) `(string-literal-s1 ,v)]
     [('int-literal-s0 v) `(int-literal-s1 ,v)]))
 
 (define (compile-proc-literal-s1 params code)
@@ -224,6 +225,7 @@
     [('label-break-s1 name expr) (generate-code-break name expr)]
     [('var-ref-s1 (kind vinfo)) (generate-code-var-ref kind vinfo)]
     [('func-ref-s1 (kind vinfo)) (generate-code-func-ref kind vinfo)]
+    [('index-ref-s1 expr index) (generate-code-index-ref expr index)]
     [('set-s1 reftrs expr) (generate-code-set reftrs expr)]
     [('uni-op-s1 op expr) (generate-code-uni-op op expr)]
     [('bin-op-s1 op lft rht) (generate-code-bin-op op lft rht)]
@@ -231,6 +233,7 @@
     [('funcall-local-s1 offset args) (generate-code-funcall-local offset args)]
     [('funcall-expression-s1 expr args) (generate-code-funcall-expression expr args)]
     [('proc-literal-s1 func) (generate-code-load-proc func)]
+    [('string-literal-s1 v) (generate-code-load-string v)]
     [('int-literal-s1 v) (generate-code-load-int v)]))
 
 (define (generate-code-block funcs code)
@@ -295,13 +298,33 @@
                  [(global) `(gfref ,destination ,vinfo)]
                  [(local) `(lfref ,destination ,(car vinfo) ,(cdr vinfo))]))))
 
+(define (generate-code-index-ref expr index)
+  (let ([destination (*registers-top*)]
+        [expr-reg (*registers-top*)]
+        [index-reg (+ (*registers-top*) 1)])
+    (lappend (compile-code-s2 expr)
+             (parameterize ([*registers-top* index-reg])
+               (renew-registers-max)
+               (compile-code-s2 index))
+             (make-lseq `(iref ,destination ,expr-reg ,index-reg)))))
+
 (define (generate-code-set reftrs expr)
+  (define (compile-set-index-ref expr index)
+    (let ([source (*registers-top*)]
+          [expr-reg (+ (*registers-top*) 1)]
+          [index-reg (+ (*registers-top*) 2)])
+      (lappend (parameterize ([*registers-top* expr-reg])
+                 (compile-code-s2 expr))
+               (parameterize ([*registers-top* index-reg])
+                 (renew-registers-max)
+                 (compile-code-s2 index))
+               (make-lseq `(iset ,expr-reg ,index-reg ,source)))))
   (define (compile-set ast)
     (let1 source (*registers-top*)
-      (match-let1 ('var-ref-s1 (kind vinfo)) ast
-        (make-lseq (case kind
-                     [(global) `(gvset ,vinfo ,source)]
-                     [(local) `(lvset ,(car vinfo) ,(cdr vinfo) ,source)])))))
+      (match ast
+        [('var-ref-s1 ('global name)) (make-lseq `(gvset ,name ,source))]
+        [('var-ref-s1 ('local (layer . offset))) (make-lseq `(lvset ,layer ,offset ,source))]
+        [('index-ref-s1 expr index) (compile-set-index-ref expr index)])))
   (lappend (compile-code-s2 expr)
            (lconcatenate (map compile-set reftrs))))
 
@@ -358,6 +381,9 @@
   (match-let1 (and definition ('defun-s1 name _ _ _ _ _)) func
     (compile-func-s2 definition)
     (make-lseq `(enclose ,(*registers-top*) ,name))))
+
+(define (generate-code-load-string v)
+  (make-lseq `(load-str ,(*registers-top*) ,v)))
 
 (define (generate-code-load-int v)
   (make-lseq `(load-int ,(*registers-top*) ,v)))
