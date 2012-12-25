@@ -142,9 +142,16 @@
                          gr-proc-literal
                          (peval make-literal gr-digit)
                          (peval make-funcall-name (pseq gr-ident gr-fname-arg-list))
-                         (peval make-funcall-expr (pseq gr-paren-expr gr-fexpr-arg-list))
+                         (peval make-funcall-expr (pseq gr-prim-expr-but-fe gr-fexpr-arg-list))
                          (peval make-rvalue-ref gr-ref-seq)
                          gr-paren-expr))
+(define gr-prim-expr-but-fe (p/ gr-if-expr
+                                gr-while-expr
+                                gr-proc-literal
+                                (peval make-literal gr-digit)
+                                (peval make-funcall-name (pseq gr-ident gr-fname-arg-list))
+                                (peval make-rvalue-ref gr-ref-seq)
+                                gr-paren-expr))
 (define gr-ref-seq (peval make-ref-seq (pseq (popt gr-hat) gr-ident)))
 (define gr-digit (pskipwl (psn (p+ pdigit))))
 (define gr-mul-expr (peval make-binary-expr (pseq gr-prim-expr (p* (pseq gr-mul-op gr-prim-expr)))))

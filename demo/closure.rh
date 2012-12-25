@@ -14,15 +14,14 @@ defun entry() {
     print(x)
 
     varf = ^fun
-    (varf)^(2)
+    varf^(2)
     print(x)
 
     flit = ^(k){ x = k }
-    (flit)^(3)
+    flit^(3)
     print(x)
 
     vare = ^extfun
-    (vare)^(4)
-
+    vare^(4)
 }
 
