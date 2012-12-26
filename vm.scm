@@ -77,19 +77,18 @@
           (vector-set! out cnt
                        (case (first insn)
                          ([gcall]
-                          (match insn [(code func dst arg0 argc)
-                                       (list code
-                                             (hash-table-get (~ env 'function-name) func)
-                                             dst arg0 argc)]))
+                          (match-let1 (code func dst arg0 argc) insn
+                            (list code (hash-table-get (~ env 'function-name) func)
+                                  dst arg0 argc)))
                          ([enclose gfref]
                           (match-let1 (code dst func) insn
                             (list code dst (hash-table-get (~ env 'function-name) func))))
                          ([jump]
-                          (match insn [(code target)
-                                       (list code (hash-table-get tag-list target))]))
+                          (match-let1 (code target) insn
+                            (list code (hash-table-get tag-list target))))
                          ([if-jump nif-jump]
-                          (match insn [(code jcond target)
-                                       (list code jcond (hash-table-get tag-list target))]))
+                          (match-let1 (code jcond target) insn
+                            (list code jcond (hash-table-get tag-list target))))
                          (else insn))))))))
 
 (define (correct-tags env code)
@@ -166,6 +165,7 @@
                (br (register-ref return-value))) ;; Break the loop
              (instruction-ret return-value)]
             [('load-int dst value) (instruction-load-int dst value)]
+            [('load-str dst value) (instruction-load-str dst value)]
             [('bin-is dst src1 src2) (instruction-bin-is dst src1 src2)]
             [('bin-isnot dst src1 src2) (instruction-bin-not dst src1 src2)]
             [('bin-gt dst src1 src2) (instruction-bin-gt dst src1 src2)]
@@ -273,6 +273,9 @@
 
 (define (instruction-load-int dst value)
   (register-set! dst value))
+
+(define (instruction-load-str dst value)
+  (register-set! dst (string->generic-sequence value)))
 
 (define (instruction-bin-is dst src1 src2)
   (register-set! dst (eqv? (register-ref src1) (register-ref src2))))
