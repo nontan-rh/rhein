@@ -3,7 +3,6 @@
 ;;
 
 (require "./pcombi")
-(require "./scmutil")
 
 (use srfi-1)
 (use util.match)

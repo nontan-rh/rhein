@@ -52,7 +52,7 @@
     0
     (+ (%sum-weight (~ node 'left) (~ node 'right)) 1)))
 
-(define (generic-sequence-refer node index)
+(define (generic-sequence-ref node index)
   (let lp ([cnt 0] [n node])
     (let1 pos (+ (generic-sequence-size (%safe-left n)) cnt)
       (cond
@@ -115,6 +115,9 @@
 
 (define (generic-sequence-push node value)
   (generic-sequence-insert node 0 value))
+
+(define (string->generic-sequence lis)
+  (list->generic-sequence (string->list lis)))
 
 (define (list->generic-sequence lis)
   (fold (^(x s) (generic-sequence-append s x)) '() lis))

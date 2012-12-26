@@ -8,6 +8,7 @@
 (use gauche.record)
 (use gauche.parameter)
 
+(require "./genseq")
 (require "./rhein-prelude")
 
 (define-record-type rhein-environment #t #t
@@ -150,9 +151,11 @@
             [('gvref dst src) (instruction-gvref dst src)]
             [('lvref dst src-layer src-offset) (instruction-lvref dst src-layer src-offset)]
             [('lfref dst src-layer src-offset) (instruction-lfref dst src-layer src-offset)]
+            [('iref dst seq index) (instruction-iref dst seq index)]
             [('gvset dst src) (instruction-gvset dst src)]
             [('lvset dst-layer dst-offset src) (instruction-lvset dst-layer dst-offset src)]
             [('lfset dst-layer dst-offset src) (instruction-lfset dst-layer dst-offset src)]
+            [('iset seq index src) (instruction-iset seq index src)]
             [('jump dst) (instruction-jump dst)]
             [('if-jump con dst) (instruction-if-jump con dst)]
             [('nif-jump con dst) (instruction-nif-jump con dst)]
@@ -207,8 +210,13 @@
 
 (define (instruction-lfref dst src-layer src-offset)
   (register-set!
-    dst
+    dst (register-ref index)
     (vector-ref (list-ref (~ (*current-frame*) 'function-bindings) src-layer) src-offset)))
+
+(define (instruction-iref dst seq index)
+  (register-set!
+    dst
+    (generic-sequence-ref (register-ref seq) (register-ref index))))
 
 (define (instruction-gvset dst src)
   (hash-table-put! (~ (*environment*) 'variables) dst (register-ref src)))
@@ -220,6 +228,11 @@
 (define (instruction-lfset dst-layer dst-offset src)
   (vector-set! (list-ref (~ (*current-frame*) 'function-bindings) dst-layer) dst-offset
                (register-ref src)))
+
+(define (instruction-iset seq index src)
+  (register-set!
+    seq
+    (generic-sequence-set (register-ref seq) index (register-ref src))))
 
 (define (instruction-jump dst)
   (set! (~ (*current-frame*) 'program-counter) dst))
