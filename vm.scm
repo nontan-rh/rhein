@@ -329,22 +329,12 @@
 (define (instruction-uni-not dst src)
   (register-set! dst (not (register-ref src))))
 
-(define (main args)
-  (unless (= (length args) 2)
-    (display "Usage: vm.scm <VM-code-file>") (newline) (exit 1))
-  (let ([env (primary-rhein-environment)]
-        [code (call-with-input-file (list-ref args 1) read)])
-    (compile-all env code)
-    (run-function-with-name env "entry")))
-
 (define (instruction-uni-neg dst src)
   (register-set! dst (- (register-ref src))))
 
 (define (main args)
-  (unless (= (length args) 2)
-    (display "Usage: vm.scm <VM-code-file>") (newline) (exit 1))
   (let ([env (primary-rhein-environment)]
-        [code (call-with-input-file (list-ref args 1) read)])
+        [code (read)])
     (compile-all env code)
     (run-function-with-name env "entry")))
 
