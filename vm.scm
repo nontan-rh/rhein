@@ -210,7 +210,7 @@
 
 (define (instruction-lfref dst src-layer src-offset)
   (register-set!
-    dst (register-ref index)
+    dst
     (vector-ref (list-ref (~ (*current-frame*) 'function-bindings) src-layer) src-offset)))
 
 (define (instruction-iref dst seq index)
