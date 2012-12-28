@@ -30,7 +30,10 @@
 
 (define (primary-rhein-environment)
   (rlet1 env (null-rhein-environment)
-    (add-function env "print" rhein-print)))
+    (add-function env "print" rhein-print)
+    (add-function env "append" rhein-append)
+    (add-function env "push" rhein-push)
+    (add-function env "copy" rhein-copy)))
 
 (define-record-type rhein-function #t #t
   (name) (regc) (varc) (func) (argc) (code) (variable-bindings) (function-bindings))
@@ -232,7 +235,7 @@
 (define (instruction-iset seq index src)
   (register-set!
     seq
-    (generic-sequence-set (register-ref seq) index (register-ref src))))
+    (generic-sequence-set! (register-ref seq) index (register-ref src))))
 
 (define (instruction-jump dst)
   (set! (~ (*current-frame*) 'program-counter) dst))

@@ -1,6 +1,12 @@
 defun entry() {
     local x
     x = "Hello world!"
-    print(x[0])
+    x.push(1)
+    x.push(2)
+    x.push(3)
+    x.push(4)
+    x.push(5)
+    x[0] = 1
+    print(x)
 }
 
