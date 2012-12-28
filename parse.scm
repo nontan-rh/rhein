@@ -104,6 +104,10 @@
     (receive [_ xs] (last-and-other strbody)
       (list 'string-literal-s0 (list->string xs)))))
 
+(define (make-char-literal lis)
+  (match-let1 (_ ch) lis
+    (list 'char-literal-s0 ch)))
+
 (define (xdigit->char lis)
   (match-let1 (x1 x2) lis
     (integer->char (+ (* 16 (digit->integer x1)) (digit->integer x2)))))
@@ -137,6 +141,7 @@
 (define gr-dq (pskipwl (pc #[\"])))
 (define gr-hat (pskipwl (pc #[\^])))
 (define gr-hatlp (pskipwl (ps "^(")))
+(define gr-question (pc #[?]))
 (define gr-delim-symbol (pskipwl (p/ (pc #[\u003b]))))
 (define gr-delim (pskipwl (p/ (pc #[\u003b]) (pseq))))
 (define gr-dot (pskipwl (pc #[\.])))
@@ -174,7 +179,11 @@
 (define gr-digit (peval make-literal (pskipwl (psn (p+ pdigit)))))
 (define gr-string-char (p/ (peval xdigit->char (pseqn 1 (ps "\\x") (pcount 2 (pc #[[:xdigit:]]))))
                            (pseqn 1 (pc #[\\]) gr-dq)
-                           panyc))
+                           pprint))
+(define gr-char (p/ (peval xdigit->char (pseqn 1 (ps "\\x") (pcount 2 (pc #[[:xdigit:]]))))
+                    (pseqn 1 (pc #[\\]) gr-dq)
+                    pgraph))
+(define gr-char-literal (peval make-char-literal (pseq gr-question gr-char)))
 (define gr-string (peval make-string-literal (pseq gr-dq (pmtill gr-string-char gr-dq))))
 (define gr-paren-expr (pbetween gr-lp gr-relat-expr gr-rp))
 
@@ -186,6 +195,7 @@
 (define gr-prim-expr (p/ gr-if-expr
                          gr-while-expr
                          gr-proc-literal
+                         gr-char-literal
                          gr-string
                          gr-ref-ident
                          gr-digit

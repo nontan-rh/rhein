@@ -285,6 +285,8 @@
 (define pupper (pc #[[:upper:]]))
 (define plower (pc #[[:lower:]]))
 (define pdigit (pc #[[:digit:]]))
+(define pgraph (pc #[[:graph:]]))
+(define pprint (pc #[[:print:]]))
 
 (define pnothing (pseq))
 

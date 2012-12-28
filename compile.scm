@@ -159,6 +159,7 @@
     [('funcall-expr-s0 expr args)
      `(funcall-expression-s1 ,(compile-code-s1 expr) ,(map compile-code-s1 args))]
     [('proc-literal-s0 params code) `(proc-literal-s1 ,(compile-proc-literal-s1 params code))]
+    [('char-literal-s0 ch) `(char-literal-s1 ,ch)]
     [('string-literal-s0 v) `(string-literal-s1 ,v)]
     [('int-literal-s0 v) `(int-literal-s1 ,v)]))
 
@@ -245,6 +246,7 @@
     [('funcall-local-s1 offset args) (generate-code-funcall-local offset args)]
     [('funcall-expression-s1 expr args) (generate-code-funcall-expression expr args)]
     [('proc-literal-s1 func) (generate-code-load-proc func)]
+    [('char-literal-s1 ch) (generate-code-load-char ch)]
     [('string-literal-s1 v) (generate-code-load-string v)]
     [('int-literal-s1 v) (generate-code-load-int v)]))
 
@@ -393,6 +395,9 @@
   (match-let1 (and definition ('defun-s1 name _ _ _ _ _)) func
     (compile-func-s2 definition)
     (make-lseq `(enclose ,(*registers-top*) ,name))))
+
+(define (generate-code-load-char ch)
+  (make-lseq `(load-char ,(*registers-top*) ,ch)))
 
 (define (generate-code-load-string v)
   (make-lseq `(load-str ,(*registers-top*) ,v)))

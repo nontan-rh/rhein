@@ -171,6 +171,7 @@
                (br (register-ref return-value))) ;; Break the loop
              (instruction-ret return-value)]
             [('load-int dst value) (instruction-load-int dst value)]
+            [('load-char dst value) (instruction-load-char dst value)]
             [('load-str dst value) (instruction-load-str dst value)]
             [('bin-is dst src1 src2) (instruction-bin-is dst src1 src2)]
             [('bin-isnot dst src1 src2) (instruction-bin-not dst src1 src2)]
@@ -288,6 +289,9 @@
                    (vector-ref (~ old-frame 'registers) return-value))))
 
 (define (instruction-load-int dst value)
+  (register-set! dst value))
+
+(define (instruction-load-char dst value)
   (register-set! dst value))
 
 (define (instruction-load-str dst value)
