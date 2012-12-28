@@ -84,6 +84,10 @@
 (define (make-ref-index lis)
   (list 'index lis))
 
+(define (make-funcall-meth lis)
+  (match-let1 (_ name args) lis
+    (list 'funcall-meth-s0 name args)))
+
 (define (make-post-expr lis)
   (match-let1 (base (cont ...)) lis
     (list 'post-expr-s0 base cont)))
@@ -135,6 +139,7 @@
 (define gr-hatlp (pskipwl (ps "^(")))
 (define gr-delim-symbol (pskipwl (p/ (pc #[\u003b]))))
 (define gr-delim (pskipwl (p/ (pc #[\u003b]) (pseq))))
+(define gr-dot (pskipwl (pc #[\.])))
 (define gr-comma (pskipwl (pc #[,])))
 (define gr-mul-op (p/ (pkeysym "*") (pkeysym "/")))
 (define gr-add-op (p/ (pkeysym "+") (pkeysym "-")))
@@ -190,7 +195,8 @@
 (define gr-postfix-index (peval make-ref-index (pbetween gr-lbracket gr-relat-expr gr-rbracket)))
 (define gr-postfix-fname (peval make-funcall-name gr-fname-arg-list))
 (define gr-postfix-fexpr (peval make-funcall-expr gr-fexpr-arg-list))
-(define gr-postfixs (p/ gr-postfix-index gr-postfix-fname gr-postfix-fexpr))
+(define gr-postfix-fmeth (peval make-funcall-meth (pseq gr-dot gr-ref-ident gr-fname-arg-list)))
+(define gr-postfixs (p/ gr-postfix-index gr-postfix-fname gr-postfix-fexpr gr-postfix-fmeth))
 (define gr-post-expr (peval make-post-expr (pseq gr-prim-expr (p* gr-postfixs))))
 
 ; Binary

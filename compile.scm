@@ -71,18 +71,13 @@
       `(func-ref-s1 (local ,(cons (- (*local-level*) (cadr local-offset)) (cddr local-offset))))
       `(func-ref-s1 (global ,name)))))
 
-(define (refseq-refer-start x)
-  (match x
-    [('variable name) (get-variable-reference name)]
-    [('function name) (get-function-reference name)]))
-
 (define (compile-post-expr-s1 base cont)
   (let1 buf (undefined)
     (match base
       [('raw-ident name)
        (match cont
          [(('funcall-name-s0 args) contx ...)
-          (set! buf (compile-funcall-name-s1 name args))
+          (set! buf (compile-funcall-name-s1 name (map compile-code-s1 args)))
           (set! cont contx)]
          [x (set! buf (get-variable-reference name))])]
       [('hat-ident name)
@@ -93,15 +88,16 @@
         [('index expr)
          (set! buf `(index-ref-s1 ,buf ,(compile-code-s1 expr)))]
         [('funcall-expr-s0 args)
-         (set! buf `(funcall-expression-s1 ,buf ,(map compile-code-s1 args)))]))))
+         (set! buf `(funcall-expression-s1 ,buf ,(map compile-code-s1 args)))]
+        [('funcall-meth-s0 ('raw-ident name) args)
+         (set! buf (compile-funcall-name-s1 name (cons buf (map compile-code-s1 args))))]))))
 
 (define (compile-funcall-name-s1 name args)
-  (let ([local-function-id (assoc name (*local-functions*))]
-        [args-s1 (map compile-code-s1 args)])
+  (let1 local-function-id (assoc name (*local-functions*))
     (if local-function-id 
       (let1 offset (cdr local-function-id)
-        `(funcall-local-s1 ,(cons (- (*local-level*) (car offset)) (cdr offset)) ,args-s1))
-      `(funcall-global-s1 ,name ,args-s1))))
+        `(funcall-local-s1 ,(cons (- (*local-level*) (car offset)) (cdr offset)) ,args))
+      `(funcall-global-s1 ,name ,args))))
 
 (define (compile-post-expr-left-s1 base cont))
 

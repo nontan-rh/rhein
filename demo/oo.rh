@@ -1,0 +1,7 @@
+
+defun entry() {
+    local x
+    x = 4
+    x.print()
+}
+
