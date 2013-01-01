@@ -88,6 +88,10 @@
   (match-let1 (_ name args) lis
     (list 'funcall-meth-s0 name args)))
 
+(define (make-ref-member lis)
+  (match-let1 (_ ident) lis
+    (list 'member ident)))
+
 (define (make-post-expr lis)
   (match-let1 (base (cont ...)) lis
     (list 'post-expr-s0 base cont)))
@@ -112,6 +116,14 @@
   (match-let1 (x1 x2) lis
     (integer->char (+ (* 16 (digit->integer x1)) (digit->integer x2)))))
 
+(define (make-member-decl lis) lis)
+
+(define (make-class-block lis) lis)
+
+(define (make-class-def lis)
+  (match-let1 (_ name mem) lis
+    (list 'class-def-s0 name mem)))
+
 ; Lexical
 
 ; Keywords
@@ -122,6 +134,7 @@
 (define gr-keyw-else (pkeyword "else"))
 (define gr-keyw-while (pkeyword "while"))
 (define gr-keyw-break (pkeyword "break"))
+(define gr-keyw-class (pkeyword "class"))
 (define gr-keyw (p/ gr-keyw-local
                     gr-keyw-defun
                     gr-keyw-if
@@ -206,7 +219,12 @@
 (define gr-postfix-fname (peval make-funcall-name gr-fname-arg-list))
 (define gr-postfix-fexpr (peval make-funcall-expr gr-fexpr-arg-list))
 (define gr-postfix-fmeth (peval make-funcall-meth (pseq gr-dot gr-ref-ident gr-fname-arg-list)))
-(define gr-postfixs (p/ gr-postfix-index gr-postfix-fname gr-postfix-fexpr gr-postfix-fmeth))
+(define gr-postfix-member (peval make-ref-member (pseq gr-dot gr-ref-ident)))
+(define gr-postfixs (p/ gr-postfix-index
+                        gr-postfix-fname
+                        gr-postfix-fexpr
+                        gr-postfix-fmeth
+                        gr-postfix-member))
 (define gr-post-expr (peval make-post-expr (pseq gr-prim-expr (p* gr-postfixs))))
 
 ; Binary
@@ -231,6 +249,9 @@
                                gr-stmt
                                (p! (p/ gr-delim-symbol gr-rb)))
                     gr-delim)))
+
+; Function
+
 (define gr-vdecl (p/ (pseqn 2 gr-skip-indent gr-keyw-local (psependby gr-ident gr-comma))))
 (define gr-lfdef (pseqn 1 gr-skip-indent gr-func-def))
 (define gr-decl-seq (peval make-decl-seq (psependby (p/ gr-lfdef gr-vdecl) gr-delim)))
@@ -238,7 +259,17 @@
 (define gr-func-def (peval make-func-def
                            (pseq gr-keyw-defun gr-ident (popt gr-label-decl)
                                  gr-fname-param-list gr-block)))
-(define gr-prog (pseqn 1 (p* (p/ pwhite pnew-line)) (p* (pskipwl gr-func-def)) peof))
+
+; Class
+
+(define gr-member-decl (peval make-member-decl (psependby gr-ident gr-comma)))
+(define gr-class-block (peval make-class-block (pbetween gr-lb gr-member-decl gr-rb)))
+(define gr-class-def (peval make-class-def (pseq gr-keyw-class gr-ident gr-class-block)))
+
+; Program
+
+(define gr-define (p/ gr-class-def gr-func-def))
+(define gr-prog (pseqn 1 (p* (p/ pwhite pnew-line)) (p* (pskipwl gr-define)) peof))
 
 (define (parse str)
   (receive [succ _ data] (gr-prog (make-parser-head str 0))

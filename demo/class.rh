@@ -1,0 +1,15 @@
+
+class klass {
+    a,b,c
+}
+
+defun entry () {
+    local k
+    print(k.a)
+    k.a = "hello"
+}
+
+class kklass {
+    c,d,e
+}
+

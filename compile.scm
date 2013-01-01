@@ -87,6 +87,8 @@
       (match (car cx)
         [('index expr)
          (set! buf `(index-ref-s1 ,buf ,(compile-code-s1 expr)))]
+        [('member ('raw-ident name))
+         (set! buf `(member-ref-s1 ,buf ,name))]
         [('funcall-expr-s0 args)
          (set! buf `(funcall-expression-s1 ,buf ,(map compile-code-s1 args)))]
         [('funcall-meth-s0 ('raw-ident name) args)
@@ -104,8 +106,13 @@
 (define (compile-all-s1 ast)
   (define (fn x)
     (match x
-      [('defun-s0 _ _ _ _) (compile-func-s1 x)]))
+      [('defun-s0 _ _ _ _) (compile-func-s1 x)]
+      [('class-def-s0 _ _) (compile-class-s1 x)]))
   (map fn ast))
+
+(define (compile-class-s1 ast)
+  (match-let1 ('class-def-s0 name mem) ast
+    `(class-def-s1 ,name ,mem)))
 
 (define (compile-func-s1 ast)
   (match-let1 ('defun-s0 name label params code) ast
@@ -172,20 +179,28 @@
 ;;
 
 (define-record-type rhein-environment #t #t
-  (functions))
+  (functions) (classes))
 
 (define (make-null-rhein-environment)
-  (make-rhein-environment (make-hash-table 'string=?)))
+  (make-rhein-environment (make-hash-table 'string=?) (make-hash-table 'string=?)))
 
 (define (rhein-install-function name code params varnum funnum regnum)
   (hash-table-put! (~ (*global-environment*) 'functions) name
                    (list code params varnum funnum regnum)))
 
+(define (rhein-install-class name mem)
+  (hash-table-put! (~ (*global-environment*) 'classes) name
+                   (list mem)))
+
 (define (rhein-generate-output)
   (define (output-function name body)
     (match-let1 (code params varnum funnum regnum) body
       `(function ,name (,regnum ,varnum ,funnum ,(length params)) ,(force code))))
-  (hash-table-map (~ (*global-environment*) 'functions) output-function))
+  (define (output-class name body)
+    (match-let1 ((mem ...)) body
+      `(class ,name ,mem)))
+  (append (hash-table-map (~ (*global-environment*) 'classes) output-class)
+          (hash-table-map (~ (*global-environment*) 'functions) output-function)))
 
 (define *registers-top* (make-parameter 0))
 (define *registers-max* (make-parameter 1))
@@ -206,7 +221,15 @@
 (define (renew-registers-max) (*registers-max* (max (+ (*registers-top*) 1) (*registers-max*))))
 
 (define (compile-all-s2 ast)
-  (for-each compile-func-s2 ast))
+  (define (fn x)
+    (match x
+      [('defun-s1 _ _ _ _ _ _) (compile-func-s2 x)]
+      [('class-def-s1 _ _) (compile-class-s2 x)]))
+  (for-each fn ast))
+
+(define (compile-class-s2 ast)
+  (match-let1 ('class-def-s1 name mem) ast
+    (rhein-install-class name mem)))
 
 (define (compile-func-s2 ast)
   (match-let1 ('defun-s1 name label params varnum funnum code) ast
@@ -239,6 +262,7 @@
     [('var-ref-s1 (kind vinfo)) (generate-code-var-ref kind vinfo)]
     [('func-ref-s1 (kind vinfo)) (generate-code-func-ref kind vinfo)]
     [('index-ref-s1 expr index) (generate-code-index-ref expr index)]
+    [('member-ref-s1 expr mem) (generate-code-member-ref expr mem)]
     [('set-s1 reftrs expr) (generate-code-set reftrs expr)]
     [('uni-op-s1 op expr) (generate-code-uni-op op expr)]
     [('bin-op-s1 op lft rht) (generate-code-bin-op op lft rht)]
@@ -322,6 +346,12 @@
                (compile-code-s2 index))
              (make-lseq `(iref ,destination ,expr-reg ,index-reg)))))
 
+(define (generate-code-member-ref expr mem)
+  (let ([destination (*registers-top*)]
+        [expr-reg (*registers-top*)])
+    (lappend (compile-code-s2 expr)
+             (make-lseq `(mref ,destination ,expr-reg ,mem)))))
+
 (define (generate-code-set reftrs expr)
   (define (compile-set-index-ref expr index)
     (let ([source (*registers-top*)]
@@ -333,11 +363,19 @@
                  (renew-registers-max)
                  (compile-code-s2 index))
                (make-lseq `(iset ,expr-reg ,index-reg ,source)))))
+  (define (compile-set-member-ref expr mem)
+    (let ([source (*registers-top*)]
+          [expr-reg (+ (*registers-top*) 1)])
+      (lappend (parameterize ([*registers-top* expr-reg])
+                 (renew-registers-max)
+                 (compile-code-s2 expr))
+               (make-lseq `(mset ,expr-reg ,mem ,source)))))
   (define (compile-set ast)
     (let1 source (*registers-top*)
       (match ast
         [('var-ref-s1 ('global name)) (make-lseq `(gvset ,name ,source))]
         [('var-ref-s1 ('local (layer . offset))) (make-lseq `(lvset ,layer ,offset ,source))]
+        [('member-ref-s1 expr mem) (compile-set-member-ref expr mem)]
         [('index-ref-s1 expr index) (compile-set-index-ref expr index)])))
   (lappend (compile-code-s2 expr)
            (lconcatenate (map compile-set reftrs))))
