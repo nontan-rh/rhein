@@ -27,9 +27,15 @@
 (define (rhein-new type)
   (make-rhein-object type (make-vector (~ type 'slotc) 0)))
 
-(define (type-match? value type)
+(define (rhein-get-type value)
+  (cond
+    [(char? value) (get-type-by-id (*environment*) 'char)]
+    [(integer? value) (get-type-by-id (*environment*) 'int)]
+    [(rhein-object? value) (~ value 'type)]))
+
+(define (rhein-type-match? value type)
   (case type
-    ['everything #t]
-    ['character (char? value)]
-    ['integer (integer? value)]))
+    ['builtin-any #t]
+    ['builtin-nothing #f]
+    [else (eq? (rhein-get-type value) type)]))
 

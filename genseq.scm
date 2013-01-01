@@ -141,26 +141,26 @@
   (pseq) (type-restrict))
 
 (define (string->generic-sequence str)
-  (make-generic-sequence (string->pure-sequence str) 'character))
+  (make-generic-sequence (string->pure-sequence str) 'builtin-character))
 
 (define (list->generic-sequence lis)
-  (make-generic-sequence (list->pure-sequence str) 'everything))
+  (make-generic-sequence (list->pure-sequence str) 'builtin-any))
 
 (define (generic-sequence-ref seq index)
   (pure-sequence-ref (~ seq 'pseq) index))
 
 (define (generic-sequence-set! seq index value)
-  (unless (type-match? value (~ seq 'type-restrict))
+  (unless (rhein-type-match? value (~ seq 'type-restrict))
     (error "Type restriction unmatched"))
   (set! (~ seq 'pseq) (pure-sequence-set (~ seq 'pseq) index value)))
 
 (define (generic-sequence-push! seq value)
-  (unless (type-match? value (~ seq 'type-restrict))
+  (unless (rhein-type-match? value (~ seq 'type-restrict))
     (error "Type restriction unmatched"))
   (set! (~ seq 'pseq) (pure-sequence-push (~ seq 'pseq) value)))
 
 (define (generic-sequence-append! seq value)
-  (unless (type-match? value (~ seq 'type-restrict))
+  (unless (rhein-type-match? value (~ seq 'type-restrict))
     (error "Type restriction unmatched"))
   (set! (~ seq 'pseq) (pure-sequence-append (~ seq 'pseq) value)))
 

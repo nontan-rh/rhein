@@ -34,13 +34,23 @@
 (define (add-class env name body)
   (hash-table-put! (~ env 'classes) (string->symbol name) body))
 
+(define (get-type-by-id env name)
+  (hash-table-get (~ env 'classes) name))
+
 (define (primary-rhein-environment)
   (rlet1 env (null-rhein-environment)
+    ; Primary functions
     (add-function env "print" rhein-print)
     (add-function env "append" rhein-append)
     (add-function env "push" rhein-push)
     (add-function env "new" rhein-new)
-    (add-function env "copy" rhein-copy)))
+    (add-function env "copy" rhein-copy)
+    ; Primary types
+    (add-class env "char" 'builtin-character)
+    (add-class env "int" 'builtin-integer)
+    (add-class env "any" 'builtin-any)
+    (add-class env "nothing" 'builtin-nothing)
+    (add-class env "generic-sequence" 'builtin-generic-sequence)))
 
 (define-record-type rhein-function #t #t
   (name) (regc) (varc) (func) (argc) (code) (variable-bindings) (function-bindings))
