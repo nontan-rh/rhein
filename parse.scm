@@ -76,10 +76,11 @@
     (exit 1)))
 
 (define (make-ref-ident lis)
-  (match-let1 (hat ident) lis
-    (if (null? hat)
-      (list 'raw-ident ident)
-      (list 'hat-ident ident))))
+  (match-let1 (prefix ident) lis
+    (case prefix
+      [(#\^) (list 'hat-ident ident)]
+      [(#\~) (list 'tilde-ident ident)]
+      ['() (list 'raw-ident ident)])))
 
 (define (make-ref-index lis)
   (list 'index lis))
@@ -154,6 +155,7 @@
 (define gr-dq (pskipwl (pc #[\"])))
 (define gr-hat (pskipwl (pc #[\^])))
 (define gr-hatlp (pskipwl (ps "^(")))
+(define gr-tilde (pskipwl (pc #[\~])))
 (define gr-question (pc #[?]))
 (define gr-delim-symbol (pskipwl (p/ (pc #[\u003b]))))
 (define gr-delim (pskipwl (p/ (pc #[\u003b]) (pseq))))
@@ -201,7 +203,7 @@
 (define gr-paren-expr (pbetween gr-lp gr-relat-expr gr-rp))
 
 ; Identifier
-(define gr-ref-ident (peval make-ref-ident (pseq (popt gr-hat) gr-ident)))
+(define gr-ref-ident (peval make-ref-ident (pseq (popt (p/ gr-hat gr-tilde)) gr-ident)))
 
 ; Expressions
 

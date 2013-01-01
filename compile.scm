@@ -71,6 +71,9 @@
       `(func-ref-s1 (local ,(cons (- (*local-level*) (cadr local-offset)) (cddr local-offset))))
       `(func-ref-s1 (global ,name)))))
 
+(define (make-type-identifier name)
+  `(type-identifier-s1 ,name))
+
 (define (compile-post-expr-s1 base cont)
   (let1 buf (undefined)
     (match base
@@ -82,6 +85,8 @@
          [x (set! buf (get-variable-reference name))])]
       [('hat-ident name)
        (set! buf (get-function-reference name))]
+      [('tilde-ident name)
+       (set! buf (make-type-identifier name))]
       [x (set! buf (compile-code-s1 x))])
     (do [(cx cont (cdr cx))] [(null? cx) buf]
       (match (car cx)
@@ -269,6 +274,7 @@
     [('funcall-global-s1 name args) (generate-code-funcall-global name args)]
     [('funcall-local-s1 offset args) (generate-code-funcall-local offset args)]
     [('funcall-expression-s1 expr args) (generate-code-funcall-expression expr args)]
+    [('type-identifier-s1 name) (generate-code-load-tid name)]
     [('proc-literal-s1 func) (generate-code-load-proc func)]
     [('char-literal-s1 ch) (generate-code-load-char ch)]
     [('string-literal-s1 v) (generate-code-load-string v)]
@@ -428,6 +434,9 @@
                (compile-code-s2 expr))
              (make-lseq 
                `(ecall ,function ,destination ,argument-begin ,args-count)))))
+
+(define (generate-code-load-tid name)
+  (make-lseq `(load-tid ,(*registers-top*) ,name)))
 
 (define (generate-code-load-proc func)
   (match-let1 (and definition ('defun-s1 name _ _ _ _ _)) func

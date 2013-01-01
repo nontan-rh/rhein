@@ -5,6 +5,7 @@ class klass {
 
 defun entry () {
     local k
+    k = ~klass.new()
     print(k.a)
     k.a = "hello"
 }
