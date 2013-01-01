@@ -9,14 +9,17 @@
 (use gauche.parameter)
 
 (require "./genseq")
+(require "./typesys")
 (require "./rhein-prelude")
 
 (define-record-type rhein-environment #t #t
+  (classes)
   (function-name) (functions) (function-count)
   (variable-name) (variables) (variable-count))
 
 (define (null-rhein-environment)
   (make-rhein-environment
+    (make-hash-table 'eq?)
     (make-hash-table 'string=?)
     (make-hash-table 'eq?) 0
     (make-hash-table 'string=?)
@@ -28,11 +31,15 @@
     (hash-table-put! (~ env 'functions) function-id body)
     (inc! (~ env 'function-count))))
 
+(define (add-class env name body)
+  (hash-table-put! (~ env 'classes) (string->symbol name) body))
+
 (define (primary-rhein-environment)
   (rlet1 env (null-rhein-environment)
     (add-function env "print" rhein-print)
     (add-function env "append" rhein-append)
     (add-function env "push" rhein-push)
+    (add-function env "new" rhein-new)
     (add-function env "copy" rhein-copy)))
 
 (define-record-type rhein-function #t #t
@@ -57,7 +64,12 @@
 
 (define (install-rhein-object env obj)
   (case (car obj)
-    [(function) (install-rhein-function env obj)]))
+    [(function) (install-rhein-function env obj)]
+    [(class) (install-rhein-class env obj)]))
+
+(define (install-rhein-class env klass)
+  (match-let1 ('class name body) klass
+    (add-class env name (make-rhein-class body))))
 
 (define (install-rhein-function env func)
   (match func
@@ -93,6 +105,15 @@
                          ([if-jump nif-jump]
                           (match-let1 (code jcond target) insn
                             (list code jcond (hash-table-get tag-list target))))
+                         ([mref]
+                          (match-let1 (code dst obj mem) insn
+                            (list code dst obj (string->symbol mem))))
+                         ([mset]
+                          (match-let1 (code obj mem src) insn
+                            (list code obj (string->symbol mem) src)))
+                         ([load-tid]
+                          (match-let1 (code dst name) insn
+                            (list code dst (string->symbol name))))
                          (else insn))))))))
 
 (define (correct-tags env code)
@@ -155,10 +176,12 @@
             [('lvref dst src-layer src-offset) (instruction-lvref dst src-layer src-offset)]
             [('lfref dst src-layer src-offset) (instruction-lfref dst src-layer src-offset)]
             [('iref dst seq index) (instruction-iref dst seq index)]
+            [('mref dst obj mem) (instruction-mref dst obj mem)]
             [('gvset dst src) (instruction-gvset dst src)]
             [('lvset dst-layer dst-offset src) (instruction-lvset dst-layer dst-offset src)]
             [('lfset dst-layer dst-offset src) (instruction-lfset dst-layer dst-offset src)]
             [('iset seq index src) (instruction-iset seq index src)]
+            [('mset obj mem src) (instruction-mset obj mem src)]
             [('jump dst) (instruction-jump dst)]
             [('if-jump con dst) (instruction-if-jump con dst)]
             [('nif-jump con dst) (instruction-nif-jump con dst)]
@@ -170,6 +193,7 @@
              (when (null? (*call-stack*))
                (br (register-ref return-value))) ;; Break the loop
              (instruction-ret return-value)]
+            [('load-tid dst ident) (instruction-load-tid dst ident)]
             [('load-int dst value) (instruction-load-int dst value)]
             [('load-char dst value) (instruction-load-char dst value)]
             [('load-str dst value) (instruction-load-str dst value)]
@@ -222,6 +246,9 @@
     dst
     (generic-sequence-ref (register-ref seq) (register-ref index))))
 
+(define (instruction-mref dst obj mem)
+  (register-set! dst (rhein-member-ref (register-ref obj) mem)))
+
 (define (instruction-gvset dst src)
   (hash-table-put! (~ (*environment*) 'variables) dst (register-ref src)))
 
@@ -235,6 +262,9 @@
 
 (define (instruction-iset seq index src)
   (generic-sequence-set! (register-ref seq) (register-ref index) (register-ref src)))
+
+(define (instruction-mset obj mem src)
+  (rhein-member-set! (register-ref obj) mem (register-ref src)))
 
 (define (instruction-jump dst)
   (set! (~ (*current-frame*) 'program-counter) dst))
@@ -285,6 +315,9 @@
     (*call-stack* (cdr (*call-stack*)))
     (register-set! (~ old-frame 'return-register)
                    (vector-ref (~ old-frame 'registers) return-value))))
+
+(define (instruction-load-tid dst ident)
+  (register-set! dst (hash-table-get (~ (*environment*) 'classes) ident)))
 
 (define (instruction-load-int dst value)
   (register-set! dst value))

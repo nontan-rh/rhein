@@ -6,11 +6,9 @@ class klass {
 defun entry () {
     local k
     k = ~klass.new()
+    k.a = 3
     print(k.a)
-    k.a = "hello"
-}
-
-class kklass {
-    c,d,e
+    k.a = 4
+    print(k.a)
 }
 
