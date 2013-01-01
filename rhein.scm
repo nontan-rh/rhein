@@ -12,6 +12,9 @@
     (lambda (port) (compile (port->string port))))
   0)
 
+(define (string->vector s)
+  (list->vector (string->list s)))
+
 (define (compile str)
-  (write (rhein-compile (parse str))))
+  (write (rhein-compile (parse (string->vector str)))))
 

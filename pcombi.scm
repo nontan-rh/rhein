@@ -18,7 +18,7 @@
 (define (lineno-and-column ph)
   (let ([lineno 1]
         [column 1]
-        [str (string->list (~ ph 'text))])
+        [str (vector->list (~ ph 'text))])
     (dotimes [_ (~ ph 'position)]
       (cond
         [(null? str) (error "String index overflow")]
@@ -141,8 +141,8 @@
 
 (define (psatc pred?)
   (^(p)
-    (if (< (~ p 'position) (string-length (~ p 'text)))
-      (let1 ch (string-ref (~ p 'text) (~ p 'position))
+    (if (< (~ p 'position) (vector-length (~ p 'text)))
+      (let1 ch (vector-ref (~ p 'text) (~ p 'position))
         (if (pred? ch)
           (values #t (increment-position p 1) ch)
           (values #f p '() )))
@@ -154,11 +154,19 @@
 (define (pnc chset)
   (psatc (^x (not (char-set-contains? chset x)))))
 
+(define (vector-string=? vec start end str)
+  (let1 lis (string->list str)
+    (let/cc br
+      (do [(i start (+ i 1)) (xs lis (cdr xs))] [#f '()]
+        (cond
+          [(and (null? xs) (= i end)) (br #t)]
+          [(or (null? xs) (>= i end) (not (char=? (vector-ref vec i) (car xs)))) (br #f)])))))
+
 (define (ps str)
   (^(p) (let* ([start (~ p 'position)]
                [end (+ start (string-length str))]
                [target (~ p 'text)])
-          (if (and (<= end (string-length target)) (string=? (substring target start end) str))
+          (if (and (<= end (vector-length target)) (vector-string=? target start end str))
             (values #t (increment-position p (- end start)) str)
             (values #f p '() )))))
 
@@ -266,8 +274,8 @@
 ;;
 
 (define (panyc p)
-  (if (< (~ p 'position) (string-length (~ p 'text)))
-    (values #t (increment-position p 1) (string-ref (~ p 'text) (~ p 'position)))
+  (if (< (~ p 'position) (vector-length (~ p 'text)))
+    (values #t (increment-position p 1) (vector-ref (~ p 'text) (~ p 'position)))
     (values #f p '() )))
 
 (define peof (p! panyc))
