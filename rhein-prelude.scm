@@ -3,9 +3,16 @@
 ;;
 
 (require "./genseq")
+(require "./typesys")
 
 (define (rhein-print . objs)
-  (for-each (^x (display x) (display " ")) objs)
+  (define (print-obj obj)
+    (if (and (generic-sequence? obj) (generic-sequence-string? obj))
+      (generic-sequence-string-print obj)
+      (display obj)))
+  (if (not (null? objs))
+    (print-obj (car objs))
+    (for-each (^x (display " ") (print-obj x)) (cdr objs)))
   (newline))
 
 (define (rhein-append seq . objs)

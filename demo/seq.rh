@@ -1,7 +1,9 @@
 defun entry() {
     local x
     x = "Hello world!"
-    x[0] = ?1
-    print(x[0])
+    x[1] = ?3
+    x[2] = x[3] = x[9] = ?1
+    x[4] = x[7] = ?0
+    print(x)
 }
 

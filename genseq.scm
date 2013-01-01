@@ -132,7 +132,7 @@
 (define (pure-sequence-print x)
   (unless (null? x)
     (pure-sequence-print (~ x 'left))
-    (print (~ x 'value))
+    (display (~ x 'value))
     (pure-sequence-print (~ x 'right))))
 
 ;; Wrapper with side effect for Rhein
@@ -163,4 +163,10 @@
   (unless (rhein-type-match? value (~ seq 'type-restrict))
     (error "Type restriction unmatched"))
   (set! (~ seq 'pseq) (pure-sequence-append (~ seq 'pseq) value)))
+
+(define (generic-sequence-string? seq)
+  (eq? (~ seq 'type-restrict) 'builtin-character))
+
+(define (generic-sequence-string-print seq)
+  (pure-sequence-print (~ seq 'pseq)))
 
