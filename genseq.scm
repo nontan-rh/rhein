@@ -5,6 +5,8 @@
 (use gauche.record)
 (use srfi-27)
 
+(require "./typesys")
+
 ;; Internal structure for generic sequence
 
 (define-record-type pure-sequence #t #t
@@ -65,11 +67,14 @@
 
 (define (pure-sequence-set node index value)
   (let lp ([cnt 0] [n node])
-    (let1 pos (+ (pure-sequence-size (~ n 'left)) cnt)
+    (let1 pos (+ (pure-sequence-size (%safe-left n)) cnt)
       (cond
         [(null? n) (error "Index out of range")]
         [(< index pos) (%restruct-pure-sequence n (lp cnt (~ n 'left)) (~ n 'right))]
-        [(= index pos) (make-pure-sequence 1 '() '() value)]
+        [(= index pos)
+         (let ([lft (%safe-left n)]
+               [rht (%safe-right n)])
+           (make-pure-sequence (+ 1 (%sum-weight lft rht)) lft rht value))]
         [(> index pos) (%restruct-pure-sequence
                          n (~ n 'left) (lp (+ cnt (%get-weight (~ n 'left)) 1) (~ n 'right)))]))))
 
@@ -133,23 +138,29 @@
 ;; Wrapper with side effect for Rhein
 
 (define-record-type generic-sequence #t #t
-  (pseq))
+  (pseq) (type-restrict))
 
 (define (string->generic-sequence str)
-  (make-generic-sequence (string->pure-sequence str)))
+  (make-generic-sequence (string->pure-sequence str) 'character))
 
 (define (list->generic-sequence lis)
-  (make-generic-sequence (list->pure-sequence str)))
+  (make-generic-sequence (list->pure-sequence str) 'everything))
 
 (define (generic-sequence-ref seq index)
   (pure-sequence-ref (~ seq 'pseq) index))
 
 (define (generic-sequence-set! seq index value)
+  (unless (type-match? value (~ seq 'type-restrict))
+    (error "Type restriction unmatched"))
   (set! (~ seq 'pseq) (pure-sequence-set (~ seq 'pseq) index value)))
 
 (define (generic-sequence-push! seq value)
+  (unless (type-match? value (~ seq 'type-restrict))
+    (error "Type restriction unmatched"))
   (set! (~ seq 'pseq) (pure-sequence-push (~ seq 'pseq) value)))
 
 (define (generic-sequence-append! seq value)
+  (unless (type-match? value (~ seq 'type-restrict))
+    (error "Type restriction unmatched"))
   (set! (~ seq 'pseq) (pure-sequence-append (~ seq 'pseq) value)))
 

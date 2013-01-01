@@ -234,9 +234,9 @@
                (register-ref src)))
 
 (define (instruction-iset seq index src)
-  (register-set!
-    seq
-    (generic-sequence-set! (register-ref seq) index (register-ref src))))
+  (pure-sequence-print (~ (register-ref seq) 'pseq))
+  (generic-sequence-set! (register-ref seq) index (register-ref src))
+  (pure-sequence-print (~ (register-ref seq) 'pseq)))
 
 (define (instruction-jump dst)
   (set! (~ (*current-frame*) 'program-counter) dst))

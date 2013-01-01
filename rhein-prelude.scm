@@ -9,10 +9,10 @@
   (newline))
 
 (define (rhein-append seq . objs)
-  (set! (~ seq 'pseq) (fold (^(x s) (pure-sequence-append s x)) (~ seq 'pseq) objs)))
+  (fold (^(x s) (generic-sequence-append! s x)) seq objs))
 
 (define (rhein-push seq . objs)
-  (set! (~ seq 'pseq) (fold (^(x s) (pure-sequence-push s x)) (~ seq 'pseq) objs)))
+  (fold (^(x s) (generic-sequence-push! s x)) seq objs))
 
 (define (rhein-copy seq . objs)
   (make-generic-sequence (~ seq 'pseq)))
