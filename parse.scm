@@ -125,6 +125,18 @@
   (match-let1 (_ name mem) lis
     (list 'class-def-s0 name mem)))
 
+(define (make-array-literal lis)
+  (match-let1 (exprs ...) lis
+    (list 'array-literal-s0 exprs)))
+
+(define (make-hash-pair lis)
+  (match-let1 (key _ value) lis
+    (cons key value)))
+
+(define (make-hash-literal lis)
+  (match-let1 (pairs ...) lis
+    (list 'hash-literal-s0 pairs)))
+
 ; Lexical
 
 ; Keywords
@@ -152,10 +164,13 @@
 (define gr-lbracket (pskipwl (pc #[\u005b])))
 (define gr-rbracket (pskipwl (pc #[\u005d])))
 (define gr-at (pskipwl (pc #[@])))
+(define gr-colon (pskipwl (pc #[:])))
 (define gr-dq (pskipwl (pc #[\"])))
 (define gr-hat (pskipwl (pc #[\^])))
 (define gr-hatlp (pskipwl (ps "^(")))
 (define gr-tilde (pskipwl (pc #[\~])))
+(define gr-dlbracket (pskipwl (ps "$[")))
+(define gr-dlb (pskipwl (ps "${")))
 (define gr-question (pc #[?]))
 (define gr-delim-symbol (pskipwl (p/ (pc #[\u003b]))))
 (define gr-delim (pskipwl (p/ (pc #[\u003b]) (pseq))))
@@ -199,6 +214,13 @@
                     (pseqn 1 (pc #[\\]) gr-dq)
                     pgraph))
 (define gr-char-literal (peval make-char-literal (pseq gr-question gr-char)))
+(define gr-array-literal (peval
+                           make-array-literal
+                           (pbetween gr-dlbracket (psependby gr-relat-expr gr-comma) gr-rbracket)))
+(define gr-hash-pair (peval make-hash-pair (pseq gr-relat-expr gr-colon gr-relat-expr)))
+(define gr-hash-literal (peval
+                          make-hash-literal
+                          (pbetween gr-dlb (psependby gr-hash-pair gr-comma) gr-rb)))
 (define gr-string (peval make-string-literal (pseq gr-dq (pmtill gr-string-char gr-dq))))
 (define gr-paren-expr (pbetween gr-lp gr-relat-expr gr-rp))
 
@@ -211,6 +233,8 @@
                          gr-while-expr
                          gr-proc-literal
                          gr-char-literal
+                         gr-array-literal
+                         gr-hash-literal
                          gr-string
                          gr-ref-ident
                          gr-digit

@@ -45,12 +45,14 @@
     (add-function env "push" rhein-push)
     (add-function env "new" rhein-new)
     (add-function env "copy" rhein-copy)
+    (add-function env "literal" rhein-literal)
     ; Primary types
     (add-class env "char" 'builtin-character)
     (add-class env "int" 'builtin-integer)
     (add-class env "any" 'builtin-any)
     (add-class env "nothing" 'builtin-nothing)
-    (add-class env "generic-sequence" 'builtin-generic-sequence)))
+    (add-class env "hash" 'builtin-hash)
+    (add-class env "array" 'builtin-array)))
 
 (define-record-type rhein-function #t #t
   (name) (regc) (varc) (func) (argc) (code) (variable-bindings) (function-bindings))
@@ -180,6 +182,7 @@
           (match (fetch-instruction)
             [('move dst src) (instruction-move dst src)] 
             [('undef dst) (instruction-undef dst)]
+            [('ranew dst size) (instruction-ranew dst size)]
             [('enclose dst func) (instruction-enclose dst func)]
             [('gfref dst func) (instruction-gfref dst func)]
             [('gvref dst src) (instruction-gvref dst src)]
@@ -187,11 +190,13 @@
             [('lfref dst src-layer src-offset) (instruction-lfref dst src-layer src-offset)]
             [('iref dst seq index) (instruction-iref dst seq index)]
             [('mref dst obj mem) (instruction-mref dst obj mem)]
+            [('raref dst ary index) (instruction-raref dst ary index)]
             [('gvset dst src) (instruction-gvset dst src)]
             [('lvset dst-layer dst-offset src) (instruction-lvset dst-layer dst-offset src)]
             [('lfset dst-layer dst-offset src) (instruction-lfset dst-layer dst-offset src)]
             [('iset seq index src) (instruction-iset seq index src)]
             [('mset obj mem src) (instruction-mset obj mem src)]
+            [('raset ary index src) (instruction-raset ary index src)]
             [('jump dst) (instruction-jump dst)]
             [('if-jump con dst) (instruction-if-jump con dst)]
             [('nif-jump con dst) (instruction-nif-jump con dst)]
@@ -227,6 +232,9 @@
 (define (instruction-undef dst)
   (register-set! dst (undefined)))
 
+(define (instruction-ranew dst size)
+  (register-set! dst (make-vector (register-ref size))))
+
 (define (instruction-enclose dst func)
   (let1 base (hash-table-get (~ (*environment*) 'functions) func)
     (let1 closure (make-rhein-function (~ base 'name) (~ base 'regc) (~ base 'varc)
@@ -254,10 +262,13 @@
 (define (instruction-iref dst seq index)
   (register-set!
     dst
-    (generic-sequence-ref (register-ref seq) (register-ref index))))
+    (rhein-ref (register-ref seq) (register-ref index))))
 
 (define (instruction-mref dst obj mem)
   (register-set! dst (rhein-member-ref (register-ref obj) mem)))
+
+(define (instruction-raref dst ary index)
+  (register-set! dst (vector-ref (register-ref ary) (register-ref index))))
 
 (define (instruction-gvset dst src)
   (hash-table-put! (~ (*environment*) 'variables) dst (register-ref src)))
@@ -271,10 +282,13 @@
                (register-ref src)))
 
 (define (instruction-iset seq index src)
-  (generic-sequence-set! (register-ref seq) (register-ref index) (register-ref src)))
+  (rhein-set! (register-ref seq) (register-ref index) (register-ref src)))
 
 (define (instruction-mset obj mem src)
   (rhein-member-set! (register-ref obj) mem (register-ref src)))
+
+(define (instruction-raset ary index src)
+  (vector-set! (register-ref ary) (register-ref index) (register-ref src)))
 
 (define (instruction-jump dst)
   (set! (~ (*current-frame*) 'program-counter) dst))
@@ -336,7 +350,7 @@
   (register-set! dst value))
 
 (define (instruction-load-str dst value)
-  (register-set! dst (string->generic-sequence value)))
+  (register-set! dst (string->rhein-array value)))
 
 (define (instruction-bin-is dst src1 src2)
   (register-set! dst (eqv? (register-ref src1) (register-ref src2))))

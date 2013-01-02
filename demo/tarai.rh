@@ -1,6 +1,6 @@
 
 defun entry() {
-    print(tarai(8,4,0))
+    print(tarai(12,6,0))
 }
 
 defun tarai(x,y,z) {

@@ -129,6 +129,9 @@
 (define (list->pure-sequence lis)
   (fold (^(x s) (pure-sequence-append s x)) '() lis))
 
+(define (vector->pure-sequence lis)
+  (vector-fold (^(_ s x) (pure-sequence-append s x)) '() lis))
+
 (define (pure-sequence-print x)
   (unless (null? x)
     (pure-sequence-print (~ x 'left))
@@ -137,36 +140,39 @@
 
 ;; Wrapper with side effect for Rhein
 
-(define-record-type generic-sequence #t #t
+(define-record-type rhein-array #t #t
   (pseq) (type-restrict))
 
-(define (string->generic-sequence str)
-  (make-generic-sequence (string->pure-sequence str) 'builtin-character))
+(define (string->rhein-array str)
+  (make-rhein-array (string->pure-sequence str) 'builtin-character))
 
-(define (list->generic-sequence lis)
-  (make-generic-sequence (list->pure-sequence str) 'builtin-any))
+(define (list->rhein-array lis)
+  (make-rhein-array (list->pure-sequence str) 'builtin-any))
 
-(define (generic-sequence-ref seq index)
+(define (vector->rhein-array lis)
+  (make-rhein-array (vector->pure-sequence lis) 'builtin-any))
+
+(define (rhein-array-ref seq index)
   (pure-sequence-ref (~ seq 'pseq) index))
 
-(define (generic-sequence-set! seq index value)
+(define (rhein-array-set! seq index value)
   (unless (rhein-type-match? value (~ seq 'type-restrict))
     (error "Type restriction unmatched"))
   (set! (~ seq 'pseq) (pure-sequence-set (~ seq 'pseq) index value)))
 
-(define (generic-sequence-push! seq value)
+(define (rhein-array-push! seq value)
   (unless (rhein-type-match? value (~ seq 'type-restrict))
     (error "Type restriction unmatched"))
   (set! (~ seq 'pseq) (pure-sequence-push (~ seq 'pseq) value)))
 
-(define (generic-sequence-append! seq value)
+(define (rhein-array-append! seq value)
   (unless (rhein-type-match? value (~ seq 'type-restrict))
     (error "Type restriction unmatched"))
   (set! (~ seq 'pseq) (pure-sequence-append (~ seq 'pseq) value)))
 
-(define (generic-sequence-string? seq)
+(define (rhein-array-string? seq)
   (eq? (~ seq 'type-restrict) 'builtin-character))
 
-(define (generic-sequence-string-print seq)
+(define (rhein-array-string-print seq)
   (pure-sequence-print (~ seq 'pseq)))
 

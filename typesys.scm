@@ -31,6 +31,8 @@
   (cond
     [(char? value) (get-type-by-id (*environment*) 'char)]
     [(integer? value) (get-type-by-id (*environment*) 'int)]
+    [(rhein-array? value) (get-type-by-id (*environment*) 'array)]
+    [(rhein-hash? value) (get-type-by-id (*environment*) 'hash)]
     [(rhein-object? value) (~ value 'type)]))
 
 (define (rhein-type-match? value type)

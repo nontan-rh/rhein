@@ -170,6 +170,9 @@
     [('bin-op-s0 op lft rht) `(bin-op-s1 ,op ,(compile-code-s1 lft) ,(compile-code-s1 rht))]
     [('funcall-expr-s0 expr args)
      `(funcall-expression-s1 ,(compile-code-s1 expr) ,(map compile-code-s1 args))]
+    [('hash-literal-s0 pairs)
+     `(hash-literal-s1 ,(map (^x (cons (compile-code-s1 (car x)) (compile-code-s1 (cdr x)))) pairs))]
+    [('array-literal-s0 exprs) `(array-literal-s1 ,(map (^x (compile-code-s1 x)) exprs))]
     [('proc-literal-s0 params code) `(proc-literal-s1 ,(compile-proc-literal-s1 params code))]
     [('char-literal-s0 ch) `(char-literal-s1 ,ch)]
     [('string-literal-s0 v) `(string-literal-s1 ,v)]
@@ -275,6 +278,8 @@
     [('funcall-local-s1 offset args) (generate-code-funcall-local offset args)]
     [('funcall-expression-s1 expr args) (generate-code-funcall-expression expr args)]
     [('type-identifier-s1 name) (generate-code-load-tid name)]
+    [('array-literal-s1 exprs) (generate-code-load-array exprs)]
+    [('hash-literal-s1 pairs) (generate-code-load-hash pairs)]
     [('proc-literal-s1 func) (generate-code-load-proc func)]
     [('char-literal-s1 ch) (generate-code-load-char ch)]
     [('string-literal-s1 v) (generate-code-load-string v)]
@@ -437,6 +442,59 @@
 
 (define (generate-code-load-tid name)
   (make-lseq `(load-tid ,(*registers-top*) ,name)))
+
+(define (generate-code-load-array exprs)
+  (let ([array-len (length exprs)]
+        [array-reg (*registers-top*)]
+        [array-len-reg (*registers-top*)]
+        [tid-reg (*registers-top*)]
+        [raw-array-reg (+ (*registers-top*) 1)]
+        [count-reg (+ (*registers-top*) 2)]
+        [one-reg (+ (*registers-top*) 3)]
+        [expr-reg (+ (*registers-top*) 4)])
+    (define (load-elements expr)
+      (lappend (parameterize ([*registers-top* expr-reg])
+                 (renew-registers-max)
+                 (compile-code-s2 expr))
+               (make-lseq `(raset ,raw-array-reg ,count-reg ,expr-reg)
+                          `(bin-add ,count-reg ,count-reg ,one-reg))))
+    (lappend (make-lseq `(load-int ,array-len-reg ,array-len)
+                        `(ranew ,raw-array-reg ,array-len-reg)
+                        `(load-int ,count-reg 0)
+                        `(load-int ,one-reg 1))
+             (lconcatenate (map load-elements exprs))
+             (make-lseq `(load-tid ,tid-reg "array")
+                        `(gcall "literal" ,array-reg ,tid-reg 2)))))
+
+(define (generate-code-load-hash pairs)
+  (let ([array-len (length pairs)]
+        [array-len-reg (*registers-top*)]
+        [hash-reg (*registers-top*)]
+        [tid-reg (*registers-top*)]
+        [raw-key-array-reg (+ (*registers-top*) 1)]
+        [raw-value-array-reg (+ (*registers-top*) 2)]
+        [count-reg (+ (*registers-top*) 3)]
+        [one-reg (+ (*registers-top*) 4)]
+        [expr-reg (+ (*registers-top*) 5)])
+    (define (load-elements pair)
+      (match-let1 (key . value) pair
+        (lappend (parameterize ([*registers-top* expr-reg])
+                   (renew-registers-max)
+                   (compile-code-s2 key))
+                 (make-lseq `(raset ,raw-key-array-reg ,count-reg ,expr-reg))
+                 (parameterize ([*registers-top* expr-reg])
+                   (renew-registers-max)
+                   (compile-code-s2 value))
+                 (make-lseq `(raset ,raw-value-array-reg ,count-reg ,expr-reg)
+                            `(bin-add ,count-reg ,count-reg ,one-reg)))))
+    (lappend (make-lseq `(load-int ,array-len-reg ,array-len)
+                        `(ranew ,raw-key-array-reg ,array-len-reg)
+                        `(ranew ,raw-value-array-reg ,array-len-reg)
+                        `(load-int ,count-reg 0)
+                        `(load-int ,one-reg 1))
+             (lconcatenate (map load-elements pairs))
+             (make-lseq `(load-tid ,tid-reg "hash")
+                        `(gcall "literal" ,hash-reg ,tid-reg 3)))))
 
 (define (generate-code-load-proc func)
   (match-let1 (and definition ('defun-s1 name _ _ _ _ _)) func
