@@ -39,8 +39,7 @@
     (fold-left combine-exprs lft rhts)))
 
 (define (make-asgn-expr lis)
-  (match-let1 (lft rht) lis
-    (list 'set-s0 lft rht)))
+  (match-let1 (lft rht) lis (list 'set-s0 lft rht)))
 
 (define (make-block lis)
   (match-let1 ((vars funcs) sseq) lis
@@ -193,7 +192,7 @@
                         (pkeysym "<=")))
 (define gr-asgn-op (pkeysym "="))
 (define gr-ident
-  (pskipwl (pseqn 1 (p! gr-keyw) (psc (pseq palpha (p* palphanum))))))
+  (pskipwl (pseqn 1 (p! gr-keyw) (psc (pseq palpha (p* (p/ palphanum (pc #[_]))))))))
 (define gr-label-decl (pseqn 1 gr-at gr-ident))
 (define gr-fname-param-list (pbetween gr-lp (psependby gr-ident gr-comma) gr-rp))
 (define gr-fname-arg-list (pbetween gr-lp (psependby gr-relat-expr gr-comma) gr-rp))

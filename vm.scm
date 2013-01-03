@@ -49,8 +49,8 @@
     (add-function env "new" rhein-new)
     (add-function env "copy" rhein-copy)
     (add-function env "literal" rhein-literal)
-    (add-function env "toarray" rhein-to-array)
-    (add-function env "tostring" rhein-to-string)
+    (add-function env "to_array" rhein-to-array)
+    (add-function env "to_string" rhein-to-string)
     ; Primary types
     (add-class env "char" 'builtin-character)
     (add-class env "int" 'builtin-integer)
