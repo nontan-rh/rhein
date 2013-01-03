@@ -23,7 +23,7 @@
     (make-hash-table 'string=?)
     (make-hash-table 'eq?) 0
     (make-hash-table 'string=?)
-    (make-hash-table 'eq?) 0))
+    (make-hash-table 'string=?) 0))
 
 (define (add-function env name body)
   (let1 function-id (~ env 'function-count)
@@ -33,6 +33,9 @@
 
 (define (add-class env name body)
   (hash-table-put! (~ env 'classes) (string->symbol name) body))
+
+(define (add-variable env name)
+  (hash-table-put! (~ env 'variables) name (undefined)))
 
 (define (get-type-by-id env name)
   (hash-table-get (~ env 'classes) name))
@@ -81,11 +84,16 @@
 (define (install-rhein-object env obj)
   (case (car obj)
     [(function) (install-rhein-function env obj)]
+    [(global-variable) (install-rhein-variable env obj)]
     [(class) (install-rhein-class env obj)]))
 
 (define (install-rhein-class env klass)
   (match-let1 ('class name body) klass
     (add-class env name (make-rhein-class body))))
+
+(define (install-rhein-variable env obj)
+  (match-let1 ('global-variable name) obj
+    (add-variable env name)))
 
 (define (install-rhein-function env func)
   (match func
@@ -275,6 +283,8 @@
   (register-set! dst (vector-ref (register-ref ary) (register-ref index))))
 
 (define (instruction-gvset dst src)
+  (unless (hash-table-exists? (~ (*environment*) 'variables) dst)
+    (error "No such variable"))
   (hash-table-put! (~ (*environment*) 'variables) dst (register-ref src)))
 
 (define (instruction-lvset dst-layer dst-offset src)

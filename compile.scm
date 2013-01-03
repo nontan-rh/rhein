@@ -112,7 +112,8 @@
   (define (fn x)
     (match x
       [('defun-s0 _ _ _ _) (compile-func-s1 x)]
-      [('class-def-s0 _ _) (compile-class-s1 x)]))
+      [('class-def-s0 _ _) (compile-class-s1 x)]
+      [('global-var-def-s0 x) `(global-var-def-s1 ,x)]))
   (map fn ast))
 
 (define (compile-class-s1 ast)
@@ -187,10 +188,12 @@
 ;;
 
 (define-record-type rhein-environment #t #t
-  (functions) (classes))
+  (functions) (classes) (global-variables))
 
 (define (make-null-rhein-environment)
-  (make-rhein-environment (make-hash-table 'string=?) (make-hash-table 'string=?)))
+  (make-rhein-environment (make-hash-table 'string=?)
+                          (make-hash-table 'string=?)
+                          (make-hash-table 'string=?)))
 
 (define (rhein-install-function name code params varnum funnum regnum)
   (hash-table-put! (~ (*global-environment*) 'functions) name
@@ -200,6 +203,9 @@
   (hash-table-put! (~ (*global-environment*) 'classes) name
                    (list mem)))
 
+(define (rhein-install-global-var name)
+  (hash-table-put! (~ (*global-environment*) 'global-variables) name '()))
+
 (define (rhein-generate-output)
   (define (output-function name body)
     (match-let1 (code params varnum funnum regnum) body
@@ -207,7 +213,10 @@
   (define (output-class name body)
     (match-let1 ((mem ...)) body
       `(class ,name ,mem)))
+  (define (output-global-variable name body)
+    `(global-variable ,name))
   (append (hash-table-map (~ (*global-environment*) 'classes) output-class)
+          (hash-table-map (~ (*global-environment*) 'global-variables) output-global-variable)
           (hash-table-map (~ (*global-environment*) 'functions) output-function)))
 
 (define *registers-top* (make-parameter 0))
@@ -232,8 +241,13 @@
   (define (fn x)
     (match x
       [('defun-s1 _ _ _ _ _ _) (compile-func-s2 x)]
-      [('class-def-s1 _ _) (compile-class-s2 x)]))
+      [('class-def-s1 _ _) (compile-class-s2 x)]
+      [('global-var-def-s1 _) (compile-global-var-s2 x)]))
   (for-each fn ast))
+
+(define (compile-global-var-s2 ast)
+  (match-let1 ('global-var-def-s1 (names ...)) ast
+    (for-each rhein-install-global-var names)))
 
 (define (compile-class-s2 ast)
   (match-let1 ('class-def-s1 name mem) ast

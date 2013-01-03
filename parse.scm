@@ -137,6 +137,10 @@
   (match-let1 (pairs ...) lis
     (list 'hash-literal-s0 pairs)))
 
+(define (make-global-var-def lis)
+  (match-let1 (_ (idents ...)) lis
+    (list 'global-var-def-s0 idents)))
+
 ; Lexical
 
 ; Keywords
@@ -148,13 +152,16 @@
 (define gr-keyw-while (pkeyword "while"))
 (define gr-keyw-break (pkeyword "break"))
 (define gr-keyw-class (pkeyword "class"))
+(define gr-keyw-global (pkeyword "global"))
 (define gr-keyw (p/ gr-keyw-local
                     gr-keyw-defun
                     gr-keyw-if
                     gr-keyw-elif
                     gr-keyw-else
                     gr-keyw-while
-                    gr-keyw-break))
+                    gr-keyw-break
+                    gr-keyw-class
+                    gr-keyw-global))
 
 ; Symbols
 (define gr-lp (pskipwl (pc #[\u0028])))
@@ -292,9 +299,14 @@
 (define gr-class-block (peval make-class-block (pbetween gr-lb gr-member-decl gr-rb)))
 (define gr-class-def (peval make-class-def (pseq gr-keyw-class gr-ident gr-class-block)))
 
+; Global variable
+
+(define gr-global-var-def (peval make-global-var-def
+                                 (pseq gr-keyw-global (psependby gr-ident gr-comma))))
+
 ; Program
 
-(define gr-define (p/ gr-class-def gr-func-def))
+(define gr-define (p/ gr-class-def gr-func-def gr-global-var-def))
 (define gr-prog (pseqn 1 (p* (p/ pwhite pnew-line)) (p* (pskipwl gr-define)) peof))
 
 (define (parse str)

@@ -9,7 +9,7 @@
 (define (rhein-print . objs)
   (define (print-obj obj)
     (display obj))
-  (if (not (null? objs))
+  (when (not (null? objs))
     (print-obj (car objs))
     (for-each (^x (display " ") (print-obj x)) (cdr objs)))
   (newline))
