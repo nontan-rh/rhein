@@ -1,5 +1,5 @@
 
-defun entry() {
+def entry() {
     local x,a
     a = "Hello world!".toarray()
     a[0] = ?1

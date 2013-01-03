@@ -145,7 +145,7 @@
 
 ; Keywords
 (define gr-keyw-local (pkeyword "local"))
-(define gr-keyw-defun (pkeyword "defun"))
+(define gr-keyw-def (pkeyword "def"))
 (define gr-keyw-if (pkeyword "if"))
 (define gr-keyw-elif (pkeyword "elif"))
 (define gr-keyw-else (pkeyword "else"))
@@ -154,7 +154,7 @@
 (define gr-keyw-class (pkeyword "class"))
 (define gr-keyw-global (pkeyword "global"))
 (define gr-keyw (p/ gr-keyw-local
-                    gr-keyw-defun
+                    gr-keyw-def
                     gr-keyw-if
                     gr-keyw-elif
                     gr-keyw-else
@@ -290,7 +290,7 @@
 (define gr-decl-seq (peval make-decl-seq (psependby (p/ gr-lfdef gr-vdecl) gr-delim)))
 (define gr-block (peval make-block (pbetween gr-lb (pseq gr-decl-seq gr-stmt-seq) gr-rb)))
 (define gr-func-def (peval make-func-def
-                           (pseq gr-keyw-defun gr-ident (popt gr-label-decl)
+                           (pseq gr-keyw-def gr-ident (popt gr-label-decl)
                                  gr-fname-param-list gr-block)))
 
 ; Class

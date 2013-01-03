@@ -1,4 +1,4 @@
-defun entry() {
+def entry() {
     local a, b, c, i
     a = 1
     b = c = 0

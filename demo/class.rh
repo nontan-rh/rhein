@@ -3,7 +3,7 @@ class klass {
     a,b,c
 }
 
-defun entry () {
+def entry () {
     local k
     k = ~klass.new()
     k.a = 3

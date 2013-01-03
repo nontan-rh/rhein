@@ -1,5 +1,5 @@
 
-defun entry() {
+def entry() {
     local x
     x = 4
     x.print()

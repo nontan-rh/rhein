@@ -1,11 +1,11 @@
 
-defun extfun(k) {
+def extfun(k) {
     print(k)
 }
 
-defun entry() {
+def entry() {
     local x, varf, flit, vare
-    defun fun(k) { x = k }
+    def fun(k) { x = k }
 
     x = 0
     print(x)
