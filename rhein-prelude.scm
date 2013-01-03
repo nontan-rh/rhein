@@ -8,9 +8,7 @@
 
 (define (rhein-print . objs)
   (define (print-obj obj)
-    (if (and (rhein-array? obj) (rhein-array-string? obj))
-      (rhein-array-string-print obj)
-      (display obj)))
+    (display obj))
   (if (not (null? objs))
     (print-obj (car objs))
     (for-each (^x (display " ") (print-obj x)) (cdr objs)))
@@ -34,6 +32,7 @@
   (cond
     [(rhein-type-match? obj 'builtin-array) (rhein-array-ref obj index)]
     [(rhein-type-match? obj 'builtin-hash) (rhein-hash-ref obj index)]
+    [(rhein-type-match? obj 'builtin-string) (string-ref obj index)]
     [else (error "No reference")]))
 
 (define (rhein-set! obj index value)
@@ -41,4 +40,10 @@
     [(rhein-type-match? obj 'builtin-array) (rhein-array-set! obj index value)]
     [(rhein-type-match? obj 'builtin-hash) (rhein-hash-set! obj index value)]
     [else (error "No reference")]))
+
+(define (rhein-to-array obj)
+  (string->rhein-array obj))
+
+(define (rhein-to-string obj)
+  (rhein-array->string obj))
 

@@ -138,41 +138,42 @@
     (display (~ x 'value))
     (pure-sequence-print (~ x 'right))))
 
+(define (pure-sequence->string x p)
+  (unless (null? x)
+    (pure-sequence->string (~ x 'left) p)
+    (unless (char? (~ x 'value))
+      (error "Not a character"))
+    (display (~ x 'value) p)
+    (pure-sequence->string (~ x 'right) p)))
+
 ;; Wrapper with side effect for Rhein
 
 (define-record-type rhein-array #t #t
-  (pseq) (type-restrict))
+  (pseq))
 
 (define (string->rhein-array str)
-  (make-rhein-array (string->pure-sequence str) 'builtin-character))
+  (make-rhein-array (string->pure-sequence str)))
 
 (define (list->rhein-array lis)
-  (make-rhein-array (list->pure-sequence str) 'builtin-any))
+  (make-rhein-array (list->pure-sequence str)))
 
 (define (vector->rhein-array lis)
-  (make-rhein-array (vector->pure-sequence lis) 'builtin-any))
+  (make-rhein-array (vector->pure-sequence lis)))
 
 (define (rhein-array-ref seq index)
   (pure-sequence-ref (~ seq 'pseq) index))
 
 (define (rhein-array-set! seq index value)
-  (unless (rhein-type-match? value (~ seq 'type-restrict))
-    (error "Type restriction unmatched"))
   (set! (~ seq 'pseq) (pure-sequence-set (~ seq 'pseq) index value)))
 
 (define (rhein-array-push! seq value)
-  (unless (rhein-type-match? value (~ seq 'type-restrict))
-    (error "Type restriction unmatched"))
   (set! (~ seq 'pseq) (pure-sequence-push (~ seq 'pseq) value)))
 
 (define (rhein-array-append! seq value)
-  (unless (rhein-type-match? value (~ seq 'type-restrict))
-    (error "Type restriction unmatched"))
   (set! (~ seq 'pseq) (pure-sequence-append (~ seq 'pseq) value)))
 
-(define (rhein-array-string? seq)
-  (eq? (~ seq 'type-restrict) 'builtin-character))
-
-(define (rhein-array-string-print seq)
-  (pure-sequence-print (~ seq 'pseq)))
+(define (rhein-array->string seq)
+  (let1 p (open-output-string)
+    (pure-sequence->string (~ seq 'pseq) p)
+    (get-output-string p)))
 

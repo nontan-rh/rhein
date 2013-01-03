@@ -31,9 +31,12 @@
   (cond
     [(char? value) (get-type-by-id (*environment*) 'char)]
     [(integer? value) (get-type-by-id (*environment*) 'int)]
+    [(vector? value) (get-type-by-id (*environment*) 'raw-array)]
+    [(string? value) (get-type-by-id (*environment*) 'string)]
     [(rhein-array? value) (get-type-by-id (*environment*) 'array)]
     [(rhein-hash? value) (get-type-by-id (*environment*) 'hash)]
-    [(rhein-object? value) (~ value 'type)]))
+    [(rhein-object? value) (~ value 'type)]
+    [else (error "Unknown type")]))
 
 (define (rhein-type-match? value type)
   (case type

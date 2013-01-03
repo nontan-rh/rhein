@@ -46,10 +46,14 @@
     (add-function env "new" rhein-new)
     (add-function env "copy" rhein-copy)
     (add-function env "literal" rhein-literal)
+    (add-function env "toarray" rhein-to-array)
+    (add-function env "tostring" rhein-to-string)
     ; Primary types
     (add-class env "char" 'builtin-character)
     (add-class env "int" 'builtin-integer)
     (add-class env "any" 'builtin-any)
+    (add-class env "string" 'builtin-string)
+    (add-class env "raw-array" 'builtin-raw-array)
     (add-class env "nothing" 'builtin-nothing)
     (add-class env "hash" 'builtin-hash)
     (add-class env "array" 'builtin-array)))
@@ -350,7 +354,7 @@
   (register-set! dst value))
 
 (define (instruction-load-str dst value)
-  (register-set! dst (string->rhein-array value)))
+  (register-set! dst value))
 
 (define (instruction-bin-is dst src1 src2)
   (register-set! dst (eqv? (register-ref src1) (register-ref src2))))
