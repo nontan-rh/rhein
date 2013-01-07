@@ -3,7 +3,7 @@
 ;;
 
 (require "./parse")
-(require "./compile")
+(require "./ocompile")
 
 (define (main args)
   (if (= (length args) 1)
@@ -16,5 +16,5 @@
   (list->vector (string->list s)))
 
 (define (compile str)
-  (write (rhein-compile (parse (string->vector str)))))
+  (rhein-compile (parse (string->vector str)) (standard-output-port)))
 

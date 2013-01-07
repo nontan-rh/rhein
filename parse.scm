@@ -3,101 +3,113 @@
 ;;
 
 (require "./pcombi")
+(require "./ast")
 
 (use srfi-1)
 (use util.match)
-
-(define (chain-bin-op lft cont)
-  (match-let1 (op rht) cont
-    (list 'bin-op-s0 (obj-to-string op) lft rht)))
-
-(define (make-literal obj) (list 'int-literal-s0 obj))
-
-(define (make-funcall-name lis)
-  (list 'funcall-name-s0 lis))
-
-(define (make-funcall-expr lis)
-  (list 'funcall-expr-s0 lis))
 
 (define (make-stmt-seq lis)
   (filter (^x (not (null? x))) lis))
 
 (define (make-decl-seq lis)
-  (define (func? x)
-    (match x
-      [('defun-s0 _ _ _ _) #t]
-      [_ #f]))
-  (let ([funcs (filter func? lis)]
-        [vars  (remove func? lis)])
+  (define (function? x) (is-a? x <rh-function>))
+  (define (variable? x) (list? x)) ;;(is-a? x <rh-variable-definition>))
+  (let ([funcs (filter function? lis)]
+        [vars  (filter variable? lis)])
     (list (concatenate vars) funcs)))
 
 (define (make-binary-expr lis)
-  (define (combine-exprs lft rht)
-    (match-let1 (op rhtexpr) rht
-      (list 'bin-op-s0 op lft rhtexpr)))
+  (define (combine-exprs lft cont)
+    (match-let1 (op rht) cont
+      (make <rh-binary-expression> :operator op :left-expression lft :right-expression rht)))
   (match-let1 (lft rhts) lis
     (fold-left combine-exprs lft rhts)))
 
 (define (make-asgn-expr lis)
-  (match-let1 (lft rht) lis (list 'set-s0 lft rht)))
+  (match-let1 (lft rht) lis
+    (make <rh-assign-expression> :destinations lft :expression rht)))
 
 (define (make-block lis)
   (match-let1 ((vars funcs) sseq) lis
-    (list 'block-s0 vars funcs sseq)))
+    (make <rh-block>
+          :variable-definitions vars
+          :function-definitions funcs
+          :code sseq)))
 
-(define (make-func-def lis)
+(define (make-global-func-def lis)
   (match-let1 (_ name label params code) lis
-    (list 'defun-s0 name label params code)))
+    (make <rh-function> :name name :label label :parameters params :code code)))
+
+(define (make-closure-func-def lis)
+  (match-let1 (_ name label params code) lis
+    (make <rh-closure-function> :name name :label label :parameters params :code code)))
 
 (define (make-if-expr lis)
   (define (make-cond-clause x)
     (match-let1 (_ cnd code) x
-      (list cnd code)))
-  (match-let1 (if-clause elif-clause else-clause) lis
-    (let1 consed-else-clause (if (null? else-clause) '() (match-let1 (_ code) else-clause code))
-      (list 'cond-branch-s0 (map make-cond-clause (cons if-clause elif-clause)) consed-else-clause))))
+      (make <rh-conditional-clause> :condition-expression cnd :code code)))
+  (match-let1 (if-clause elif-clauses else-clause) lis
+    (make <rh-if-expression>
+          :conditional-clauses (map make-cond-clause if-clause elif-clauses)
+          :else-clause (match else-clause [(_ code) code] [() '()]))))
 
 (define (make-while-expr lis)
   (match-let1 (_ label cnd code) lis
-    (list 'loop-s0 label cnd code)))
+    (make <rh-while-expression>
+          :label label
+          :condition-expression cnd
+          :code code)))
+
+(define (make-funcall-name lis)
+  (match-let1 (name (args ...)) lis
+    (make <rh-identifier-call> :name name :arguments args)))
 
 (define (make-proc-literal lis)
-  (match-let1 (args code) lis
-    (list 'proc-literal-s0 (if (char? args) '() args) code)))
+  (match lis
+    [((? char? _) code) (make <rh-function-literal> :parameters '() :code code :label '() )]
+    [(params code) (make <rh-function-literal> :parameters params :code code :label '() )]))
 
 (define (make-break-stmt lis)
   (match-let1 (_ label expr) lis
-    (list 'label-break-s0 label expr)))
+    (make <rh-break-statement> :label label :expression expr)))
 
 (define (report-statement-error ph)
   (receive [lineno column] (lineno-and-column ph)
     (format #t "line:~A col:~A Syntax error, Invalid statement\n" lineno column)
     (exit 1)))
 
+(define (make-ident name) name)
+
 (define (make-ref-ident lis)
   (match-let1 (prefix ident) lis
     (case prefix
-      [(#\^) (list 'hat-ident ident)]
-      [(#\~) (list 'tilde-ident ident)]
-      ['() (list 'raw-ident ident)])))
+      [(#\^) (make <rh-identifier-reference> :prefix 'hat :name ident)]
+      [(#\~) (make <rh-identifier-reference> :prefix 'tilde :name ident)]
+      ['() (make <rh-identifier-reference> :prefix '() :name ident)])))
 
 (define (make-ref-index lis)
   (list 'index lis))
 
 (define (make-funcall-meth lis)
   (match-let1 (_ name args) lis
-    (list 'funcall-meth-s0 name args)))
+    (list 'method-call name args)))
+
+(define (make-funcall-expr lis)
+  (list 'expression-call lis))
 
 (define (make-ref-member lis)
   (match-let1 (_ ident) lis
     (list 'member ident)))
 
 (define (make-post-expr lis)
+  (define (combine-postfix c b)
+    (match c
+      [('index expr) (make <rh-index-reference> :base-expression b :index-expression expr)]
+      [('expression-call args) (make <rh-expression-call> :function b :arguments args)]
+      [('method-call name args) (make <rh-identifier-call> :name name :arguments (cons b args))]
+      [('member name) (make <rh-member-reference> :base-expression b :member-name name)]))
   (match-let1 (base (cont ...)) lis
-    (list 'post-expr-s0 base cont)))
-
-(define (make-rvalue-ref lis)
-  (list 'ref-s0 lis))
+    (fold combine-postfix base cont)))
 
 (define (last-and-other lis)
   (let1 rlis (reverse lis)
@@ -106,11 +118,11 @@
 (define (make-string-literal lis)
   (match-let1 (_ (strbody ...)) lis
     (receive [_ xs] (last-and-other strbody)
-      (list 'string-literal-s0 (list->string xs)))))
+      (make <rh-string-literal> :value (list->string xs)))))
 
 (define (make-char-literal lis)
   (match-let1 (_ ch) lis
-    (list 'char-literal-s0 ch)))
+    (make <rh-character-literal> :value ch)))
 
 (define (xdigit->char lis)
   (match-let1 (x1 x2) lis
@@ -122,23 +134,41 @@
 
 (define (make-class-def lis)
   (match-let1 (_ name mem) lis
-    (list 'class-def-s0 name mem)))
+    (make <rh-class> :name name :members mem)))
 
 (define (make-array-literal lis)
   (match-let1 (exprs ...) lis
-    (list 'array-literal-s0 exprs)))
+    (make <rh-array-literal> :contains exprs)))
 
 (define (make-hash-pair lis)
   (match-let1 (key _ value) lis
-    (cons key value)))
+    (make <rh-key-value> :key key :value value)))
 
 (define (make-hash-literal lis)
   (match-let1 (pairs ...) lis
-    (list 'hash-literal-s0 pairs)))
+    (make <rh-hash-literal> :contains pairs)))
+
+(define (make-int-literal value) (make <rh-integer-literal> :value value))
 
 (define (make-global-var-def lis)
-  (match-let1 (_ (idents ...)) lis
-    (list 'global-var-def-s0 idents)))
+  (match-let1 (_ (defs ...)) lis
+    (make <rh-global-variable> :variable-definitions defs)))
+
+(define (make-var-init lis)
+  (match-let1 (name expr) lis
+    (make <rh-variable-definition> :name name :initial-value expr)))
+
+(define (make-program lis)
+  (define (class? x) (is-a? x <rh-class>))
+  (define (function? x) (is-a? x <rh-function>))
+  (define (variable? x) (is-a? x <rh-global-variable>))
+  (let ([classes (filter class? lis)]
+        [functions (filter function? lis)]
+        [variables (filter variable? lis)])
+    (make <rh-program>
+          :function-definitions functions
+          :class-definitions classes
+          :variable-definitions variables)))
 
 ; Lexical
 
@@ -192,7 +222,8 @@
                         (pkeysym "<=")))
 (define gr-asgn-op (pkeysym "="))
 (define gr-ident
-  (pskipwl (pseqn 1 (p! gr-keyw) (psc (pseq palpha (p* (p/ palphanum (pc #[_]))))))))
+  (peval make-ident
+         (pskipwl (pseqn 1 (p! gr-keyw) (psc (pseq palpha (p* (p/ palphanum (pc #[_])))))))))
 (define gr-label-decl (pseqn 1 gr-at gr-ident))
 (define gr-fname-param-list (pbetween gr-lp (psependby gr-ident gr-comma) gr-rp))
 (define gr-fname-arg-list (pbetween gr-lp (psependby gr-relat-expr gr-comma) gr-rp))
@@ -212,7 +243,7 @@
 
 ; Literals
 (define gr-proc-literal (peval make-proc-literal (pseq (p/ gr-fexpr-param-list gr-hat) gr-block)))
-(define gr-digit (peval make-literal (pskipwl (psn (p+ pdigit)))))
+(define gr-digit (peval make-int-literal (pskipwl (psn (p+ pdigit)))))
 (define gr-string-char (p/ (peval xdigit->char (pseqn 1 (ps "\\x") (pcount 2 (pc #[[:xdigit:]]))))
                            (pseqn 1 (pc #[\\]) gr-dq)
                            pprint))
@@ -233,6 +264,9 @@
 ; Identifier
 (define gr-ref-ident (peval make-ref-ident (pseq (popt (p/ gr-hat gr-tilde)) gr-ident)))
 
+; Normal function call
+(define gr-funcall-name (peval make-funcall-name (pseq gr-ident gr-fname-arg-list)))
+
 ; Expressions
 
 (define gr-prim-expr (p/ gr-if-expr
@@ -242,18 +276,17 @@
                          gr-array-literal
                          gr-hash-literal
                          gr-string
+                         gr-funcall-name
                          gr-ref-ident
                          gr-digit
                          gr-paren-expr))
 
 ; Postfix
 (define gr-postfix-index (peval make-ref-index (pbetween gr-lbracket gr-relat-expr gr-rbracket)))
-(define gr-postfix-fname (peval make-funcall-name gr-fname-arg-list))
 (define gr-postfix-fexpr (peval make-funcall-expr gr-fexpr-arg-list))
-(define gr-postfix-fmeth (peval make-funcall-meth (pseq gr-dot gr-ref-ident gr-fname-arg-list)))
+(define gr-postfix-fmeth (peval make-funcall-meth (pseq gr-dot gr-ident gr-fname-arg-list)))
 (define gr-postfix-member (peval make-ref-member (pseq gr-dot gr-ref-ident)))
 (define gr-postfixs (p/ gr-postfix-index
-                        gr-postfix-fname
                         gr-postfix-fexpr
                         gr-postfix-fmeth
                         gr-postfix-member))
@@ -282,15 +315,16 @@
                                (p! (p/ gr-delim-symbol gr-rb)))
                     gr-delim)))
 
+(define gr-var-init
+  (peval make-var-init (pseq gr-ident (popt (pseqn 1 gr-asgn-op gr-relat-expr)))))
+
 ; Function
 
-(define gr-vdecl (p/ (pseqn 2 gr-skip-indent gr-keyw-local (psependby gr-ident gr-comma))))
-(define gr-lfdef (pseqn 1 gr-skip-indent gr-func-def))
+(define gr-vdecl (p/ (pseqn 2 gr-skip-indent gr-keyw-local (psependby gr-var-init gr-comma))))
+(define gr-lfdef (peval make-closure-func-def (pseqn 1 gr-skip-indent gr-func-def)))
 (define gr-decl-seq (peval make-decl-seq (psependby (p/ gr-lfdef gr-vdecl) gr-delim)))
 (define gr-block (peval make-block (pbetween gr-lb (pseq gr-decl-seq gr-stmt-seq) gr-rb)))
-(define gr-func-def (peval make-func-def
-                           (pseq gr-keyw-def gr-ident (popt gr-label-decl)
-                                 gr-fname-param-list gr-block)))
+(define gr-func-def (pseq gr-keyw-def gr-ident (popt gr-label-decl) gr-fname-param-list gr-block))
 
 ; Class
 
@@ -298,15 +332,16 @@
 (define gr-class-block (peval make-class-block (pbetween gr-lb gr-member-decl gr-rb)))
 (define gr-class-def (peval make-class-def (pseq gr-keyw-class gr-ident gr-class-block)))
 
-; Global variable
+; Global objects
 
 (define gr-global-var-def (peval make-global-var-def
-                                 (pseq gr-keyw-global (psependby gr-ident gr-comma))))
+                                 (pseq gr-keyw-global (psependby gr-var-init gr-comma))))
+(define gr-global-func-def (peval make-global-func-def gr-func-def))
 
 ; Program
 
-(define gr-define (p/ gr-class-def gr-func-def gr-global-var-def))
-(define gr-prog (pseqn 1 (p* (p/ pwhite pnew-line)) (p* (pskipwl gr-define)) peof))
+(define gr-define (p/ gr-class-def gr-global-func-def gr-global-var-def))
+(define gr-prog (peval make-program (pseqn 1 (p* (p/ pwhite pnew-line)) (p* (pskipwl gr-define)) peof)))
 
 (define (parse str)
   (receive [succ _ data] (gr-prog (make-parser-head str 0))

@@ -3,6 +3,7 @@ def entry() {
     local x,a
     a = "Hello world!".to_array()
     a[0] = ?1
+    print(a[0])
     x = a.to_string()
     print(x)
 }

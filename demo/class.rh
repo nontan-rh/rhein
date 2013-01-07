@@ -3,6 +3,10 @@ class klass {
     a,b,c
 }
 
+class klaas {
+    a,b,c,d
+}
+
 def entry () {
     local k
     k = ~klass.new()
