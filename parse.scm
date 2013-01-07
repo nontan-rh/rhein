@@ -285,7 +285,7 @@
 (define gr-postfix-index (peval make-ref-index (pbetween gr-lbracket gr-relat-expr gr-rbracket)))
 (define gr-postfix-fexpr (peval make-funcall-expr gr-fexpr-arg-list))
 (define gr-postfix-fmeth (peval make-funcall-meth (pseq gr-dot gr-ident gr-fname-arg-list)))
-(define gr-postfix-member (peval make-ref-member (pseq gr-dot gr-ref-ident)))
+(define gr-postfix-member (peval make-ref-member (pseq gr-dot gr-ident)))
 (define gr-postfixs (p/ gr-postfix-index
                         gr-postfix-fexpr
                         gr-postfix-fmeth

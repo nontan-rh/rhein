@@ -284,11 +284,17 @@
 (define-method allocate-tag ((bb <bytecode-builder>))
   (allocate-id! (~ bb 'tag-allocator)))
 
-(define-method allocate-register ((bb <bytecode-builder>))
+(define-method allocate-lock-register ((bb <bytecode-builder>))
   (allocate-id! (~ bb 'register-allocator)))
 
-(define-method deallocate-register ((bb <bytecode-builder>) reg)
+(define-method unlock-register ((bb <bytecode-builder>) reg)
   (deallocate-id! (~ bb 'register-allocator) reg))
+
+(define-method lock-register ((bb <bytecode-builder>) reg)
+  (let1 allocated-reg (allocate-id! (~ bb 'register-allocator))
+    (unless (= reg allocated-reg)
+      (error "Register lock failed"))
+    #t))
 
 (define-method peek-register ((bb <bytecode-builder>))
   (rlet1 reg (allocate-id! (~ bb 'register-allocator))
@@ -377,10 +383,10 @@
 
 (define-method generate-code ((clo <rh-closure-function>))
   (set! (~ clo 'name) (get-function-tempname (*global-env*)))
-  (let1 reg (allocate-register (*builder*))
+  (let1 reg (allocate-lock-register (*builder*))
     (emit (*builder*) (list 'enclose reg (~ clo 'name)))
     (emit (*builder*) (list 'lfset (~ clo 'reference 'layer) (~ clo 'reference 'offset) reg))
-    (deallocate-register (*builder*) reg))
+    (unlock-register (*builder*) reg))
   (next-method))
 
 (define-method generate-code ((blk <rh-block>))
@@ -442,10 +448,10 @@
   (let* ([base-reg (peek-register (*builder*))] ;; Peek next register will be allocated
          [dest-reg base-reg])
     (generate-code (~ in 'base-expression)) ;; Peeked register will be used
-    (allocate-register (*builder*)) ;; Reserve the register peeked
+    (lock-register (*builder*) base-reg) ;; Reserve the register peeked
     (let1 index-reg (generate-code (~ in 'index-expression))
       (emit (*builder*) (list 'iref dest-reg base-reg index-reg)))
-    (deallocate-register (*builder*) base-reg)
+    (unlock-register (*builder*) base-reg)
     dest-reg))
 
 (define-method generate-code ((in <rh-member-reference>))
@@ -467,9 +473,9 @@
 (define-method generate-code ((ae <rh-assign-expression>))
   (let1 expr-reg (peek-register (*builder*))
     (generate-code (~ ae 'expression)) ;; Peeked register will be used
-    (allocate-register (*builder*)) ;; Reserve it
+    (lock-register (*builder*) expr-reg) ;; Reserve it
     (for-each (^x (generate-set-code x expr-reg)) (~ ae 'destinations))
-    (deallocate-register (*builder*) expr-reg) ;; Free it
+    (unlock-register (*builder*) expr-reg) ;; Free it
     ))
 
 (define-method generate-set-code ((ir <rh-identifier-reference>) value-reg)
@@ -478,10 +484,10 @@
 (define-method generate-set-code ((in <rh-index-reference>) value-reg)
   (let1 base-reg (peek-register (*builder*)) ;; Peek next register will be allocated
     (generate-code (~ in 'base-expression)) ;; Peeked register will be used
-    (allocate-register (*builder*)) ;; Reserve the register peeked
+    (lock-register (*builder*) base-reg) ;; Reserve the register peeked
     (let1 index-reg (generate-code (~ in 'index-expression))
       (emit (*builder*) (list 'iset base-reg index-reg index-reg)))
-    (deallocate-register (*builder*) base-reg)))
+    (unlock-register (*builder*) base-reg)))
 
 (define-method generate-set-code ((mr <rh-member-reference>) value-reg)
   (let1 base-reg (peek-register (*builder*))
@@ -498,10 +504,10 @@
   (let* ([dest-reg (peek-register (*builder*))]
          [left-reg dest-reg])
     (generate-code (~ be 'left-expression))
-    (allocate-register (*builder*))
+    (lock-register (*builder*) left-reg)
     (let1 right-reg (generate-code (~ be 'right-expression))
       (emit (*builder*) (list (binary-op->insn (~ be 'operator)) dest-reg left-reg right-reg)))
-    (deallocate-register (*builder*) left-reg)
+    (unlock-register (*builder*) left-reg)
     dest-reg))
 
 (define (unary-op->insn op)
@@ -529,24 +535,24 @@
   (let* ([func-reg (peek-register (*builder*))]
          [dest-reg func-reg])
     (generate-code (~ ec 'function))
-    (allocate-register (*builder*))
+    (lock-register (*builder*) func-reg)
     (let1 arg-reg (peek-register (*builder*))
       (define (push-argument x)
         (generate-code x)
         (emit (*builder*) (list 'push arg-reg)))
       (for-each push-argument (~ ec 'arguments)))
     (emit (*builder*) (list 'ecall dest-reg func-reg (length (~ ec 'arguments))))
-    (deallocate-register (*builder*) func-reg)
+    (unlock-register (*builder*) func-reg)
     dest-reg))
 
 (define-method generate-code ((hl <rh-hash-literal>))
-  (let* ([key-array-reg (allocate-register (*builder*))]
+  (let* ([key-array-reg (allocate-lock-register (*builder*))]
          [value-array-reg key-array-reg]
          [tid-reg key-array-reg]
-         [counter-reg (allocate-register (*builder*))]
-         [one-reg (allocate-register (*builder*))]
+         [counter-reg (allocate-lock-register (*builder*))]
+         [one-reg (allocate-lock-register (*builder*))]
          [dest-reg key-array-reg]
-         [len-reg (allocate-register (*builder*))]
+         [len-reg (allocate-lock-register (*builder*))]
          [array-len (length (~ hl 'contains))])
     (emit (*builder*) (list 'load-tid tid-reg "hash"))
     (emit (*builder*) (list 'push tid-reg))
@@ -567,19 +573,19 @@
         (emit (*builder*) (list 'bin-add counter-reg counter-reg one-reg))))
     (emit (*builder*) (list 'push value-array-reg))
     (emit (*builder*) (list 'gcall dest-reg "literal" 3))
-    (deallocate-register (*builder*) len-reg)
-    (deallocate-register (*builder*) one-reg)
-    (deallocate-register (*builder*) counter-reg)
-    (deallocate-register (*builder*) key-array-reg)
+    (unlock-register (*builder*) len-reg)
+    (unlock-register (*builder*) one-reg)
+    (unlock-register (*builder*) counter-reg)
+    (unlock-register (*builder*) key-array-reg)
     dest-reg))
 
 (define-method generate-code ((al <rh-array-literal>))
-  (let* ([array-reg (allocate-register (*builder*))]
+  (let* ([array-reg (allocate-lock-register (*builder*))]
          [tid-reg array-reg]
-         [counter-reg (allocate-register (*builder*))]
-         [one-reg (allocate-register (*builder*))]
+         [counter-reg (allocate-lock-register (*builder*))]
+         [one-reg (allocate-lock-register (*builder*))]
          [dest-reg array-reg]
-         [len-reg (allocate-register (*builder*))]
+         [len-reg (allocate-lock-register (*builder*))]
          [array-len (length (~ al 'contains))])
     (emit (*builder*) (list 'load-tid tid-reg "array"))
     (emit (*builder*) (list 'push tid-reg))
@@ -593,10 +599,10 @@
         (emit (*builder*) (list 'bin-add counter-reg counter-reg one-reg))))
     (emit (*builder*) (list 'push array-reg))
     (emit (*builder*) (list 'gcall dest-reg "literal" 2))
-    (deallocate-register (*builder*) len-reg)
-    (deallocate-register (*builder*) one-reg)
-    (deallocate-register (*builder*) counter-reg)
-    (deallocate-register (*builder*) array-reg)
+    (unlock-register (*builder*) len-reg)
+    (unlock-register (*builder*) one-reg)
+    (unlock-register (*builder*) counter-reg)
+    (unlock-register (*builder*) array-reg)
     dest-reg))
 
 (define-method generate-code ((fl <rh-function-literal>))
@@ -623,24 +629,24 @@
   (hash-table-for-each (~ genv 'functions) (^(k v) (print-functions k v p))))
 
 (define (print-class name body p)
-  (format p "class ~a~%" name)
+  (format p "%class ~a~%" name)
   (for-each (^x (format p "~a~%" x)) (~ body 'members))
-  (format p "endclass~%~%"))
+  (format p "%endclass~%~%"))
 
 (define (print-variable name body p)
-  (format p "variable ~a~%" name)
+  (format p "%variable ~a~%" name)
   (print-bytecode (~ body 'code) p)
-  (format p "endvariable~%~%"))
+  (format p "%endvariable~%~%"))
 
 (define (print-functions name body p)
-  (format p "function ~s ~s ~s ~s ~s~%"
+  (format p "%function ~s ~s ~s ~s ~s~%"
           name
           (~ body 'argument-count)
           (~ body 'variable-count)
           (~ body 'function-count)
           (~ body 'register-count))
   (print-bytecode (~ body 'code) p)
-  (format p "endfunction~%~%"))
+  (format p "%endfunction~%~%"))
 
 (define (print-bytecode code p)
   (define (print-insn x)

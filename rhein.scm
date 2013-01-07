@@ -3,7 +3,7 @@
 ;;
 
 (require "./parse")
-(require "./ocompile")
+(require "./compile")
 
 (define (main args)
   (if (= (length args) 1)
