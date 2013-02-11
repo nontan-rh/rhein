@@ -5,6 +5,7 @@
 (use gauche.interactive)
 (use gauche.parameter)
 (use gauche.lazy)
+(use rfc.json)
 
 (require "./ast")
 
@@ -109,37 +110,37 @@
   ((kind :init-keyword :kind)
    (name :init-keyword :name)))
 
-(define-method load-reference ((lr <local-reference>) dest)
+(define-method load-reference ((lr <local-reference>))
   (case (~ lr 'kind)
-    ['variable (list 'lvref dest (~ lr 'layer) (~ lr 'offset))]
-    ['function (list 'lfref dest (~ lr 'layer) (~ lr 'offset))]
+    ['variable (list 'lvref (~ lr 'layer) (~ lr 'offset))]
+    ['function (list 'lfref (~ lr 'layer) (~ lr 'offset))]
     [else (error "Can't load local-reference" (~ lr 'kind))]))
 
-(define-method load-reference ((gr <global-reference>) dest)
+(define-method load-reference ((gr <global-reference>))
   (case (~ gr 'kind)
-    ['variable (list 'gvref dest (~ gr 'name))]
-    ['function (list 'gfref dest (~ gr 'name))]
-    ['class (list 'load-tid dest (~ gr 'name))]
+    ['variable (list 'gvref (~ gr 'name))]
+    ['function (list 'gfref (~ gr 'name))]
+    ['class (list 'pushtid (~ gr 'name))]
     [else (error "Can't load local-reference" (~ gr 'kind))]))
 
-(define-method call-reference ((lr <local-reference>) dest argc)
+(define-method call-reference ((lr <local-reference>))
   (case (~ lr 'kind)
-    ['function (list 'lcall dest (~ lr 'layer) (~ lr 'offset) argc)]
+    ['function (list 'lfref (~ lr 'layer) (~ lr 'offset))]
     [else (error "Can't call local-reference" (~ lr 'kind))]))
 
-(define-method call-reference ((gr <global-reference>) dest argc)
+(define-method call-reference ((gr <global-reference>))
   (case (~ gr 'kind)
-    ['function (list 'gcall dest (~ gr 'name) argc)]
+    ['function (list 'gfref (~ gr 'name))]
     [else (error "Can't call local-reference" (~ gr 'kind))]))
 
-(define-method set-reference ((lr <local-reference>) src)
+(define-method set-reference ((lr <local-reference>))
   (case (~ lr 'kind)
-    ['variable (list 'lvset (~ lr 'layer) (~ lr 'offset) src)]
+    ['variable (list 'lvset (~ lr 'layer) (~ lr 'offset))]
     [else (error "Can't set local-reference" (~ lr 'kind))]))
 
-(define-method set-reference ((gr <global-reference>) src)
+(define-method set-reference ((gr <global-reference>))
   (case (~ gr 'kind)
-    ['variable (list 'gvset (~ gr 'name) src)]
+    ['variable (list 'gvset (~ gr 'name))]
     [else (error "Can't set global-reference" (~ lr 'kind))]))
 
 (define *local-env* (make-parameter '() ))
@@ -163,7 +164,7 @@
     (resolve-name (~ func 'code))
     (set! (~ func 'function-count) (~ (*local-env*) 'function-allocator 'max-count))
     (set! (~ func 'variable-count) (~ (*local-env*) 'variable-allocator 'max-count))
-    (set! (~ func 'argument-count) (length (~ func 'parameters)))))
+    (set! (~ func 'argument-types) (~ func 'argument-types))))
 
 (define-method resolve-name ((clo <rh-closure-function>))
   (receive [l o] (get-function-relative-address (*local-env*) (~ clo 'name))
@@ -198,7 +199,8 @@
   (resolve-name (~ we 'code)))
 
 (define-method resolve-name ((bs <rh-break-statement>))
-  (resolve-name (~ we 'expression)))
+  (unless (null? (~ bs 'expression))
+    (resolve-name (~ bs 'expression))))
 
 (define-method resolve-name ((id <rh-identifier-reference>))
   ;; Identifier as variable
@@ -265,55 +267,44 @@
     (inc! (~ tempgen 'name-count))))
 
 (define-class <bytecode-label> ()
-  ((register :init-keyword :register)
+  ((stack-level :init-keyword :stack-level)
    (tag :init-keyword :tag)))
 
 (define-class <bytecode-builder> ()
   ((code :init-form (x->lseq '() ))
    (labels :init-form '() )
    (tag-allocator :init-form (make <id-allocator>))
-   (register-allocator :init-form (make <id-allocator>))
    (function-count :init-keyword :function-count)
    (variable-count :init-keyword :variable-count)
-   (argument-count :init-keyword :argument-count)
-   (register-count)))
+   (argument-types :init-keyword :argument-types)
+   (max-stack :init-value 1)
+   (stack-level :init-value 0)))
 
 (define-method emit ((func <bytecode-builder>) code)
   (set! (~ func 'code) (lappend (~ func 'code) (x->lseq (list code)))))
 
-(define-method allocate-tag ((bb <bytecode-builder>))
-  (allocate-id! (~ bb 'tag-allocator)))
+(define-method allocate-label ((bb <bytecode-builder>))
+  (number->string (allocate-id! (~ bb 'tag-allocator))))
 
-(define-method allocate-lock-register ((bb <bytecode-builder>))
-  (allocate-id! (~ bb 'register-allocator)))
-
-(define-method unlock-register ((bb <bytecode-builder>) reg)
-  (deallocate-id! (~ bb 'register-allocator) reg))
-
-(define-method lock-register ((bb <bytecode-builder>) reg)
-  (let1 allocated-reg (allocate-id! (~ bb 'register-allocator))
-    (unless (= reg allocated-reg)
-      (error "Register lock failed"))
-    #t))
-
-(define-method peek-register ((bb <bytecode-builder>))
-  (rlet1 reg (allocate-id! (~ bb 'register-allocator))
-    (deallocate-id! (~ bb 'register-allocator) reg)))
-
-(define-method register-label ((bb <bytecode-builder>) name tag retreg)
-  (push! (~ bb 'labels) (cons name (make <bytecode-label> :register retreg :tag tag))))
+(define-method register-label ((bb <bytecode-builder>) name label)
+  (push! (~ bb 'labels)
+    (cons name (make <bytecode-label> :stack-level (~ bb 'stack-level) :tag label))))
 
 (define-method unwind-label ((bb <bytecode-builder>))
   (pop! (~ bb 'labels)))
-
-(define-method get-top-label ((bb <bytecode-builder>))
-  (cdar (~ bb 'labels)))
 
 (define-method get-named-label ((bb <bytecode-builder>) name)
   (let1 res (assoc name (~ bb 'labels))
     (unless res
       (error "No tag" name))
     (cdr res)))
+
+(define-method sinc ((bb <bytecode-builder>) delta)
+  (set! (~ bb 'stack-level) (+ (~ bb 'stack-level) delta))
+  (set! (~ bb 'max-stack) (max (~ bb 'stack-level) (~ bb 'max-stack))))
+
+(define-method sdec ((bb <bytecode-builder>) delta)
+  (set! (~ bb 'stack-level) (- (~ bb 'stack-level) delta)))
 
 (define-class <temporary-function-builder> (<bytecode-builder>) ())
 
@@ -361,7 +352,7 @@
   (define (generate-each x)
     (parameterize ([*builder* (make <variable-builder> :name (~ x 'name))])
       (if (null? (~ x 'initial-value))
-        (emit (*builder*) (list 'undef (peek-register (*builder*)))) 
+        (emit (*builder*) (list 'pushundef (peek-register (*builder*)))) 
         (generate-code (~ x 'initial-value)))
       (emit (*builder*) (list 'ret 0))
       (install (*global-env*) (*builder*))))
@@ -372,286 +363,238 @@
                                   :name (~ func 'name)
                                   :function-count (~ func 'function-count)
                                   :variable-count (~ func 'variable-count)
-                                  :argument-count (~ func 'argument-count))])
-    (let ([return-register (peek-register (*builder*))]
-          [return-tag (allocate-tag (*builder*))])
-      (register-label (*builder*) (~ func 'label) return-tag return-register)
+                                  :argument-types (~ func 'argument-types))])
+    (let1 exit-label (allocate-label (*builder*))
+      (register-label (*builder*) (~ func 'label) exit-label)
       (generate-code (~ func 'code))
-      (emit (*builder*) (list 'ret 0)))
-    (set! (~ (*builder*) 'register-count) (~ (*builder*) 'register-allocator 'max-count))
+      (emit (*builder*) (list 'label exit-label))
+      (emit (*builder*) (list 'ret))
+      (unwind-label (*builder*)))
     (install (*global-env*) (*builder*))))
 
 (define-method generate-code ((clo <rh-closure-function>))
   (set! (~ clo 'name) (get-function-tempname (*global-env*)))
-  (let1 reg (allocate-lock-register (*builder*))
-    (emit (*builder*) (list 'enclose reg (~ clo 'name)))
-    (emit (*builder*) (list 'lfset (~ clo 'reference 'layer) (~ clo 'reference 'offset) reg))
-    (unlock-register (*builder*) reg))
+  (emit (*builder*) (list 'enclose (~ clo 'name)))
+  (emit (*builder*) (list 'lfset (~ clo 'reference 'layer) (~ clo 'reference 'offset)))
   (next-method))
 
 (define-method generate-code ((blk <rh-block>))
   (for-each generate-code (~ blk 'function-definitions))
   (for-each generate-code (~ blk 'variable-definitions))
-  (for-each generate-code (~ blk 'code)))
+  (unless (null? (~ blk 'code))
+    (let* ([revcode (reverse (~ blk 'code))]
+           [lastcode (car revcode)]
+           [othercode (reverse (cdr revcode))])
+      (define (pop-generate-code x)
+        (generate-code x)
+        (emit (*builder*) (list 'pop)))
+      (for-each pop-generate-code othercode)
+      (generate-code lastcode))))
 
 (define-method generate-code ((vd <rh-variable-definition>))
-  (if (null? (~ vd 'initial-value))
-    (begin)
-    (let1 reg (generate-code (~ vd 'initial-value))
-      (emit (*builder*) (list 'lvset (~ vd 'reference 'layer) (~ vd 'reference 'offset) reg)))))
+  (unless (null? (~ vd 'initial-value))
+    (generate-code (~ vd 'initial-value))
+    (emit (*builder*) (list 'lvset (~ vd 'reference 'layer) (~ vd 'reference 'offset)))))
 
 (define-method generate-code ((ife <rh-if-expression>))
-  (let1 exit-tag (allocate-tag (*builder*))
-    (for-each (^x (generate-code x exit-tag)) (~ ife 'conditional-clauses))
+  (let1 exit-label (allocate-label (*builder*))
+    (for-each (cut generate-code <> exit-label) (~ ife 'conditional-clauses))
     (unless (null? (~ ife 'else-clause))
       (generate-code (~ ife 'else-clause)))
-    (emit (*builder*) (list 'tag exit-tag)))
-  (peek-register (*builder*)))
+    (emit (*builder*) (list 'label exit-label))))
 
-(define-method generate-code ((cc <rh-conditional-clause>) exit-tag)
-  (let ([cond-reg (generate-code (~ cc 'condition-expression))]
-        [next-tag (allocate-tag (*builder*))])
-    (emit (*builder*) (list 'nif-jump cond-reg ntag))
+(define-method generate-code ((cc <rh-conditional-clause>) exit-label)
+  (let1 next-label (allocate-label (*builder*))
+    (generate-code (~ cc 'condition-expression))
+    (emit (*builder*) (list 'nifjump next-label))
     (generate-code (~ cc 'code))
-    (emit (*builder*) (list 'jump exit-tag))
-    (emit (*builder*) (list 'tag next-tag))))
+    (emit (*builder*) (list 'jump exit-label))
+    (emit (*builder*) (list 'label next-label))))
 
 (define-method generate-code ((we <rh-while-expression>))
-  (let ([loop-tag (allocate-tag (*builder*))]
-        [label-tag (allocate-tag (*builder*))]
-        [label-reg (peek-register (*builder*))])
-    (register-label (*builder*) (~ we 'label) label-tag label-reg)
-    (emit (*builder*) (list 'tag loop-tag))
-    (let1 cond-reg (generate-code (~ we 'condition-expression))
-      (emit (*builder*) (list 'nif-jump cond-reg label-tag)))
+  (let ([loop-label (allocate-label (*builder*))]
+        [exit-label (allocate-label (*builder*))])
+    (register-label (*builder*) (~ we 'label) exit-label)
+    (emit (*builder*) (list 'label loop-label))
+    (generate-code (~ we 'condition-expression))
+    (emit (*builder*) (list 'nifjump exit-label))
     (generate-code (~ we 'code))
-    (emit (*builder*) (list 'tag label-tag))
+    (emit (*builder*) (list 'jump loop-label))
+    (emit (*builder*) (list 'label exit-label)))
     (unwind-label (*builder*)))
-  (peek-register (*builder*)))
 
 (define-method generate-code ((br <rh-break-statement>))
   (let1 label (get-named-label (*builder*) (~ br 'label))
     (cond
       [(null? (~ br 'expression))
-        (emit (*builder*) (list 'undef (~ label 'register)))]
+        (emit (*builder*) (list 'pushundef))]
       [else
-        (let1 expr-reg (generate-code (~ br 'expression))
-          (emit (*builder*) (list 'move (~ label 'register) expr-reg)))])
+        (generate-code (~ br 'expression))])
+    (emit (*builder*) (list 'popn (- (~ (*builder*) 'stack-level) (~ label 'stack-level))))
     (emit (*builder*) (list 'jump (~ label 'tag)))))
 
 (define-method generate-code ((id <rh-identifier-reference>))
-  (let1 reg (peek-register (*builder*))
-    (emit (*builder*) (load-reference (~ id 'reference) reg))
-    reg))
+  (emit (*builder*) (load-reference (~ id 'reference))))
 
 (define-method generate-code ((in <rh-index-reference>))
-  (let* ([base-reg (peek-register (*builder*))] ;; Peek next register will be allocated
-         [dest-reg base-reg])
-    (generate-code (~ in 'base-expression)) ;; Peeked register will be used
-    (lock-register (*builder*) base-reg) ;; Reserve the register peeked
-    (let1 index-reg (generate-code (~ in 'index-expression))
-      (emit (*builder*) (list 'iref dest-reg base-reg index-reg)))
-    (unlock-register (*builder*) base-reg)
-    dest-reg))
+  (generate-code (~ in 'base-expression)) (sinc (*builder*) 1)
+  (generate-code (~ in 'index-expression))
+  (emit (*builder*) (list 'iref)) (sdec (*builder*) 1))
 
 (define-method generate-code ((in <rh-member-reference>))
-  (let* ([base-reg (peek-register (*builder*))]
-         [dest-reg base-reg])
-    (generate-code (~ in 'base-expression)) ;; Peeked register will be used
-    (emit (*builder*) (list 'mref dest-reg base-reg (~ in 'member-name)))
-    dest-reg))
+  (generate-code (~ in 'base-expression))
+  (emit (*builder*) (list 'mref (~ in 'member-name))))
 
 (define-method generate-code ((ic <rh-identifier-call>))
-  (let* ([dest-reg (peek-register (*builder*))]
-         [arg-reg dest-reg])
-    (define (push-argument x)
-      (generate-code x)
-      (emit (*builder*) (list 'push arg-reg)))
-    (for-each push-argument (~ ic 'arguments))
-    (emit (*builder*) (call-reference (~ ic 'reference) dest-reg (length (~ ic 'arguments))))))
+  (define (generate-code-inc x)
+    (generate-code x) (sinc (*builder*) 1))
+  (for-each generate-code-inc (~ ic 'arguments))
+  (emit (*builder*) (call-reference (~ ic 'reference)))
+  (emit (*builder*) (list 'call (length (~ ic 'arguments))))
+  (sdec (*builder*) (length (~ ic 'arguments))))
 
 (define-method generate-code ((ae <rh-assign-expression>))
-  (let1 expr-reg (peek-register (*builder*))
-    (generate-code (~ ae 'expression)) ;; Peeked register will be used
-    (lock-register (*builder*) expr-reg) ;; Reserve it
-    (for-each (^x (generate-set-code x expr-reg)) (~ ae 'destinations))
-    (unlock-register (*builder*) expr-reg) ;; Free it
-    ))
+  (define (f x)
+    (emit (*builder*) (list 'dup)) (sinc (*builder*) 1)
+    (generate-set-code x) (sdec (*builder*) 1))
+  (generate-code (~ ae 'expression))
+  (for-each f (~ ae 'destinations)))
 
-(define-method generate-set-code ((ir <rh-identifier-reference>) value-reg)
-  (emit (*builder*) (set-reference (~ ir 'reference) value-reg)))
+(define-method generate-set-code ((ir <rh-identifier-reference>))
+  (emit (*builder*) (set-reference (~ ir 'reference))))
 
-(define-method generate-set-code ((in <rh-index-reference>) value-reg)
-  (let1 base-reg (peek-register (*builder*)) ;; Peek next register will be allocated
-    (generate-code (~ in 'base-expression)) ;; Peeked register will be used
-    (lock-register (*builder*) base-reg) ;; Reserve the register peeked
-    (let1 index-reg (generate-code (~ in 'index-expression))
-      (emit (*builder*) (list 'iset base-reg index-reg index-reg)))
-    (unlock-register (*builder*) base-reg)))
+(define-method generate-set-code ((in <rh-index-reference>))
+  (generate-code (~ in 'base-expression)) (sinc (*builder*) 1)
+  (generate-code (~ in 'index-expression)) (sdec (*builder*) 1)
+  (emit (*builder*) (list 'iset)))
 
-(define-method generate-set-code ((mr <rh-member-reference>) value-reg)
-  (let1 base-reg (peek-register (*builder*))
-    (generate-code (~ mr 'base-expression)) ;; Peeked register will be used
-    (emit (*builder*) (list 'mset base-reg (~ mr 'member-name) value-reg))))
+(define-method generate-set-code ((mr <rh-member-reference>))
+  (generate-code (~ mr 'base-expression)) (sinc (*builder*) 1)
+  (emit (*builder*) (list 'mset (~ mr 'member-name))) (sdec (*builder*) 1))
 
 (define-method generate-code ((ue <rh-unary-expression>))
-  (let1 reg (peek-register (*builder*))
-    (generate-code (~ ue 'expression))
-    (emit (*builder*) (list (unary-op->insn (~ ue 'operator)) reg reg))
-    reg)) 
+  (generate-code (~ ue 'expression)) (sinc (*builder*) 1)
+  (emit (*builder*) (list (unary-op->insn (~ ue 'operator)))) (sdec (*builder*) 1))
 
 (define-method generate-code ((be <rh-binary-expression>))
-  (let* ([dest-reg (peek-register (*builder*))]
-         [left-reg dest-reg])
-    (generate-code (~ be 'left-expression))
-    (lock-register (*builder*) left-reg)
-    (let1 right-reg (generate-code (~ be 'right-expression))
-      (emit (*builder*) (list (binary-op->insn (~ be 'operator)) dest-reg left-reg right-reg)))
-    (unlock-register (*builder*) left-reg)
-    dest-reg))
+  (generate-code (~ be 'left-expression)) (sinc (*builder*) 1)
+  (generate-code (~ be 'right-expression)) (sinc (*builder*) 1)
+  (emit (*builder*) (list (binary-op->insn (~ be 'operator)))) (sdec (*builder*) 2))
 
 (define (unary-op->insn op)
   (case op
-   ['- 'uni-neg]
-   ['+ 'uni-plus]
-   ['not 'uni-not]
+   ['- 'neg]
+   ['+ 'plus]
+   ['not 'not]
    [else (error "Unknown operator")]))
 
 (define (binary-op->insn op)
   (case op
-    ['is 'bin-is]
-    ['isnot 'bin-isnot]
-    ['> 'bin-gt]
-    ['< 'bin-lt]
-    ['>= 'bin-ge]
-    ['<= 'bin-le]
-    ['+ 'bin-add]
-    ['- 'bin-sub]
-    ['* 'bin-mul]
-    ['/ 'bin-div]
+    ['is 'is]
+    ['isnot 'isnot]
+    ['> 'gt]
+    ['< 'lt]
+    ['>= 'ge]
+    ['<= 'le]
+    ['+ 'add]
+    ['- 'sub]
+    ['* 'mul]
+    ['/ 'div]
     [else (error "Unknown operator")]))
 
 (define-method generate-code ((ec <rh-expression-call>))
-  (let* ([func-reg (peek-register (*builder*))]
-         [dest-reg func-reg])
-    (generate-code (~ ec 'function))
-    (lock-register (*builder*) func-reg)
-    (let1 arg-reg (peek-register (*builder*))
-      (define (push-argument x)
-        (generate-code x)
-        (emit (*builder*) (list 'push arg-reg)))
-      (for-each push-argument (~ ec 'arguments)))
-    (emit (*builder*) (list 'ecall dest-reg func-reg (length (~ ec 'arguments))))
-    (unlock-register (*builder*) func-reg)
-    dest-reg))
+  (define (generate-code-inc x)
+    (generate-code x) (sinc (*builder*) 1))
+  (for-each generate-code-inc (~ ec 'arguments))
+  (generate-code (~ ec 'function)) (sinc (*builder*) 1)
+  (emit (*builder*) (list 'call (length (~ ec 'arguments))))
+  (sdec (*builder*) (+ 1 (length (~ ec 'arguments)))))
 
 (define-method generate-code ((hl <rh-hash-literal>))
-  (let* ([key-array-reg (allocate-lock-register (*builder*))]
-         [value-array-reg key-array-reg]
-         [tid-reg key-array-reg]
-         [counter-reg (allocate-lock-register (*builder*))]
-         [one-reg (allocate-lock-register (*builder*))]
-         [dest-reg key-array-reg]
-         [len-reg (allocate-lock-register (*builder*))]
-         [array-len (length (~ hl 'contains))])
-    (emit (*builder*) (list 'load-tid tid-reg "hash"))
-    (emit (*builder*) (list 'push tid-reg))
-    (emit (*builder*) (list 'load-int one-reg 1))
-    (emit (*builder*) (list 'load-int len-reg array-len))
-    (emit (*builder*) (list 'ranew key-array-reg len-reg))
-    (emit (*builder*) (list 'load-int counter-reg 0))
+  (let1 array-len (length (~ hl 'contains))
+    (emit (*builder*) (list 'pushint array-len)) (sinc (*builder*) 1)
+    (emit (*builder*) (list 'ranew))
+    (emit (*builder*) (list 'pushint 0)) (sinc (*builder*) 1)
     (do [(i 0 (+ 1 i)) (cs (~ hl 'contains) (cdr cs))] [(null? cs) '()]
-      (let1 key-reg (generate-code (~ (car cs) 'key))
-        (emit (*builder*) (list 'raset key-array-reg counter-reg key-reg))
-        (emit (*builder*) (list 'bin-add counter-reg counter-reg one-reg))))
-    (emit (*builder*) (list 'push key-array-reg))
-    (emit (*builder*) (list 'ranew value-array-reg array-len))
-    (emit (*builder*) (list 'load-int counter-reg 0))
+      (generate-code (~ (car cs) 'key)) (sinc (*builder*) 1)
+      (emit (*builder*) (list 'raset)) (sdec (*builder*) 1)
+      (emit (*builder*) (list 'inc)))
+    (emit (*builder*) (list 'pop)) (sdec (*builder*) 1)
+    (emit (*builder*) (list 'pushint array-len)) (sinc (*builder*) 1)
+    (emit (*builder*) (list 'ranew))
+    (emit (*builder*) (list 'pushint 0)) (sinc (*builder*) 1)
     (do [(i 0 (+ 1 i)) (cs (~ hl 'contains) (cdr cs))] [(null? cs) '()]
-      (let1 value-reg (generate-code (~ (car cs) 'value))
-        (emit (*builder*) (list 'raset value-array-reg counter-reg value-reg))
-        (emit (*builder*) (list 'bin-add counter-reg counter-reg one-reg))))
-    (emit (*builder*) (list 'push value-array-reg))
-    (emit (*builder*) (list 'gcall dest-reg "literal" 3))
-    (unlock-register (*builder*) len-reg)
-    (unlock-register (*builder*) one-reg)
-    (unlock-register (*builder*) counter-reg)
-    (unlock-register (*builder*) key-array-reg)
-    dest-reg))
+      (generate-code (~ (car cs) 'value)) (sinc (*builder*) 1)
+      (emit (*builder*) (list 'raset)) (sdec (*builder*) 1)
+      (emit (*builder*) (list 'inc)))
+    (emit (*builder*) (list 'pop)) (sdec (*builder*) 1)
+    (emit (*builder*) (list 'pushtid "array")) (sinc (*builder*) 1)
+    (emit (*builder*) (list 'gfref "literal")) (sinc (*builder*) 1)
+    (emit (*builder*) (list 'call 2)) (sdec (*builder*) 2)))
 
 (define-method generate-code ((al <rh-array-literal>))
-  (let* ([array-reg (allocate-lock-register (*builder*))]
-         [tid-reg array-reg]
-         [counter-reg (allocate-lock-register (*builder*))]
-         [one-reg (allocate-lock-register (*builder*))]
-         [dest-reg array-reg]
-         [len-reg (allocate-lock-register (*builder*))]
-         [array-len (length (~ al 'contains))])
-    (emit (*builder*) (list 'load-tid tid-reg "array"))
-    (emit (*builder*) (list 'push tid-reg))
-    (emit (*builder*) (list 'load-int one-reg 1))
-    (emit (*builder*) (list 'load-int len-reg array-len))
-    (emit (*builder*) (list 'ranew array-reg len-reg))
-    (emit (*builder*) (list 'load-int counter-reg 0))
+  (let1 array-len (length (~ al 'contains))
+    (emit (*builder*) (list 'pushint array-len)) (sinc (*builder*) 1)
+    (emit (*builder*) (list 'ranew))
+    (emit (*builder*) (list 'pushint 0)) (sinc (*builder*) 1)
     (do [(i 0 (+ 1 i)) (cs (~ al 'contains) (cdr cs))] [(null? cs) '()]
-      (let1 value-reg (generate-code (car cs))
-        (emit (*builder*) (list 'raset array-reg counter-reg array-reg))
-        (emit (*builder*) (list 'bin-add counter-reg counter-reg one-reg))))
-    (emit (*builder*) (list 'push array-reg))
-    (emit (*builder*) (list 'gcall dest-reg "literal" 2))
-    (unlock-register (*builder*) len-reg)
-    (unlock-register (*builder*) one-reg)
-    (unlock-register (*builder*) counter-reg)
-    (unlock-register (*builder*) array-reg)
-    dest-reg))
+      (generate-code (car cs)) (sinc (*builder*) 1)
+      (emit (*builder*) (list 'raset)) (sdec (*builder*) 1)
+      (emit (*builder*) (list 'inc)))
+    (emit (*builder*) (list 'pop)) (sdec (*builder*) 1)
+    (emit (*builder*) (list 'pushtid "array")) (sinc (*builder*) 1)
+    (emit (*builder*) (list 'gfref "literal")) (sinc (*builder*) 1)
+    (emit (*builder*) (list 'call 2)) (sdec (*builder*) 2)))
 
 (define-method generate-code ((fl <rh-function-literal>))
   (set! (~ fl 'name) (get-function-tempname (*global-env*)))
   (next-method)
-  (emit (*builder*) (list 'enclose (peek-register (*builder*)) (~ fl 'name)))
-  (peek-register (*builder*)))
+  (emit (*builder*) (list 'enclose  (~ fl 'name))))
 
 (define-method generate-code ((cl <rh-character-literal>))
-  (emit (*builder*) (list 'load-char (peek-register (*builder*)) (~ cl 'value)))
-  (peek-register (*builder*)))
+  (emit (*builder*) (list 'pushchar (~ cl 'value))))
 
 (define-method generate-code ((cl <rh-string-literal>))
-  (emit (*builder*) (list 'load-str (peek-register (*builder*)) (~ cl 'value)))
-  (peek-register (*builder*)))
+  (emit (*builder*) (list 'pushstr (~ cl 'value))))
 
 (define-method generate-code ((cl <rh-integer-literal>))
-  (emit (*builder*) (list 'load-int (peek-register (*builder*)) (~ cl 'value)))
-  (peek-register (*builder*)))
+  (emit (*builder*) (list 'pushint (~ cl 'value))))
 
 (define-method print-code ((genv <global-environment>) p)
+  (display "[\n" p)
   (hash-table-for-each (~ genv 'classes) (^(k v) (print-class k v p)))
   (hash-table-for-each (~ genv 'variables) (^(k v) (print-variable k v p)))
-  (hash-table-for-each (~ genv 'functions) (^(k v) (print-functions k v p))))
+  (hash-table-for-each (~ genv 'functions) (^(k v) (print-functions k v p)))
+  (display "]\n" p))
 
 (define (print-class name body p)
-  (format p "%class ~a~%" name)
-  (for-each (^x (format p "~a~%" x)) (~ body 'members))
-  (format p "%endclass~%~%"))
+  (format p "{~%")
+  (format p "~s:~s,~%" "name" name)
+  (format p "~s:~s,~%" "type" "class")
+  (format p "~s:~s,~%" "parent" "any")
+  (format p "~s:~a~%" "members" (construct-json-string (list->vector (~ body 'members))))
+  (format p "}~%"))
 
 (define (print-variable name body p)
-  (format p "%variable ~a~%" name)
-  (print-bytecode (~ body 'code) p)
-  (format p "%endvariable~%~%"))
+  (format p "{~%")
+  (format p "~s:~s,~%" "name" name)
+  (format p "~s:~s,~%" "type" "variable")
+  (format p "~s:[~a]~%" "code" (bytecode->json-string (~ body 'code)))
+  (format p "}~%"))
 
 (define (print-functions name body p)
-  (format p "%function ~s ~s ~s ~s ~s~%"
-          name
-          (~ body 'argument-count)
-          (~ body 'variable-count)
-          (~ body 'function-count)
-          (~ body 'register-count))
-  (print-bytecode (~ body 'code) p)
-  (format p "%endfunction~%~%"))
+  (format p "{~%")
+  (format p "~s:~s,~%" "name" name)
+  (format p "~s:~s,~%" "type" "function")
+  (format p "~s:~s,~%" "stack_size" 0)
+  (format p "~s:~s,~%" "variable_size" (~ body 'variable-count))
+  (format p "~s:~s,~%" "function_size" (~ body 'function-count))
+  (format p "~s:~a,~%" "argument_type" (construct-json-string (list->vector (~ body 'argument-types))))
+  (format p "~s:[~a]~%" "code" (bytecode->json-string (~ body 'code)))
+  (format p "}~%"))
 
-(define (print-bytecode code p)
+(define (bytecode->json-string code)
   (define (print-insn x)
-    (format p "~s" (car x))
-    (for-each (^y (format p " ~s" y)) (cdr x))
-    (format p "~%"))
-  (for-each print-insn code))
+    (string-join (cons (format #f "\"~a\"" (car x)) (map (^x (format #f "~s" x)) (cdr x))) ","))
+  (string-join (map (^x (string-append "[" (print-insn x) "]\n")) code) ","))
 

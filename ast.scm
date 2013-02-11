@@ -17,10 +17,15 @@
   ((name :init-keyword :name)
    (label :init-keyword :label)
    (parameters :init-keyword :parameters)
+   (argument-types :init-keyword :argument-types)
    (code :init-keyword :code)
    (argument-count)
    (variable-count)
    (function-count)))
+
+(define-class <rh-parameter> (<rh-ast>)
+  ((name :init-keyword :name)
+   (type :init-keyword :type)))
 
 (define-class <rh-closure-function> (<rh-function>)
   ((reference :init-value (undefined))))

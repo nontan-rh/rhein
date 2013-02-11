@@ -36,13 +36,26 @@
           :function-definitions funcs
           :code sseq)))
 
+(define (make-typed-param lis)
+  (match-let1 (varname _ vartype) lis
+    (make <rh-parameter> :name varname :type vartype)))
+
+(define (make-nontyped-param varname)
+  (make <rh-parameter> :name varname :type "any"))
+
 (define (make-global-func-def lis)
   (match-let1 (_ name label params code) lis
-    (make <rh-function> :name name :label label :parameters params :code code)))
+    (make <rh-function> :name name :label label
+                        :parameters (map (^x (~ x 'name)) params)
+                        :argument-types (map (^x (~ x 'type)) params)
+                        :code code)))
 
 (define (make-closure-func-def lis)
   (match-let1 (_ name label params code) lis
-    (make <rh-closure-function> :name name :label label :parameters params :code code)))
+    (make <rh-closure-function> :name name :label label
+                                :parameters (map (^x (~ x 'name)) params)
+                                :argument-types (map (^x (~ x 'type)) params)
+                                :code code)))
 
 (define (make-if-expr lis)
   (define (make-cond-clause x)
@@ -50,7 +63,7 @@
       (make <rh-conditional-clause> :condition-expression cnd :code code)))
   (match-let1 (if-clause elif-clauses else-clause) lis
     (make <rh-if-expression>
-          :conditional-clauses (map make-cond-clause if-clause elif-clauses)
+          :conditional-clauses (map make-cond-clause (cons if-clause elif-clauses))
           :else-clause (match else-clause [(_ code) code] [() '()]))))
 
 (define (make-while-expr lis)
@@ -225,9 +238,11 @@
   (peval make-ident
          (pskipwl (pseqn 1 (p! gr-keyw) (psc (pseq palpha (p* (p/ palphanum (pc #[_])))))))))
 (define gr-label-decl (pseqn 1 gr-at gr-ident))
-(define gr-fname-param-list (pbetween gr-lp (psependby gr-ident gr-comma) gr-rp))
+(define gr-param (p/ (peval make-typed-param (pseq gr-ident gr-colon gr-ident))
+                     (peval make-nontyped-param gr-ident)))
+(define gr-fname-param-list (pbetween gr-lp (psependby gr-param gr-comma) gr-rp))
 (define gr-fname-arg-list (pbetween gr-lp (psependby gr-relat-expr gr-comma) gr-rp))
-(define gr-fexpr-param-list (pbetween gr-hatlp (psependby gr-ident gr-comma) gr-rp))
+(define gr-fexpr-param-list (pbetween gr-hatlp (psependby gr-param gr-comma) gr-rp))
 (define gr-fexpr-arg-list (pbetween gr-hatlp (psependby gr-relat-expr gr-comma) gr-rp))
 
 ; Control structures

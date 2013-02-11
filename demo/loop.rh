@@ -1,0 +1,5 @@
+def entry(){
+    while 1 > 0 {
+        break
+    }
+}

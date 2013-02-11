@@ -1,0 +1,44 @@
+[
+  {
+    "name": "sub",
+    "type": "function",
+    "stack_size": 2,
+    "variable_size": 2,
+    "function_size": 0,
+    "argument_type": ["int", "int"],
+    "code": [
+      [ "lvref", 0, 0 ],
+      [ "lvref", 0, 1 ],
+      [ "sub" ],
+      [ "ret" ]
+    ]
+  },
+  {
+    "name": "sub",
+    "type": "function",
+    "stack_size": 2,
+    "variable_size": 2,
+    "function_size": 0,
+    "argument_type": ["string", "int"],
+    "code": [
+      [ "pushint", 1000 ],
+      [ "ret" ]
+    ]
+  },
+  {
+    "name": "entry",
+    "type": "function",
+    "stack_size": 2,
+    "variable_size": 0,
+    "function_size": 0,
+    "argument_type": [],
+    "code": [
+      [ "pushint", 1 ],
+      [ "pushstr", "2" ],
+      [ "gfref", "sub" ],
+      [ "call", 2 ],
+      [ "ret" ]
+    ]
+  }
+]
+ 
