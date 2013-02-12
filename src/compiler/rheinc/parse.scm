@@ -2,11 +2,15 @@
 ;; parse.scm - Parse Rhein program
 ;;
 
-(require "./pcombi")
-(require "./ast")
+(define-module rheinc.parse
+  (use srfi-1)
+  (use util.match)
+  (use rheinc.pcombi)
+  (use rheinc.ast)
+  (export rhein-parse)
+  )
 
-(use srfi-1)
-(use util.match)
+(select-module rheinc.parse)
 
 (define (make-stmt-seq lis)
   (filter (^x (not (null? x))) lis))
@@ -80,7 +84,10 @@
 (define (make-proc-literal lis)
   (match lis
     [((? char? _) code) (make <rh-function-literal> :parameters '() :code code :label '() )]
-    [(params code) (make <rh-function-literal> :parameters params :code code :label '() )]))
+    [(params code) (make <rh-function-literal>
+                         :parameters (map (^x (~ x 'name)) params)
+                         :argument-types (map (^x (~ x 'type)) params)
+                         :code code :label '() )]))
 
 (define (make-break-stmt lis)
   (match-let1 (_ label expr) lis
@@ -358,9 +365,11 @@
 (define gr-define (p/ gr-class-def gr-global-func-def gr-global-var-def))
 (define gr-prog (peval make-program (pseqn 1 (p* (p/ pwhite pnew-line)) (p* (pskipwl gr-define)) peof)))
 
-(define (parse str)
+(define (rhein-parse str)
   (receive [succ _ data] (gr-prog (make-parser-head str 0))
     (if succ
       data
       (error "Parse error!!"))))
+
+(provide "rheinc/parse")
 

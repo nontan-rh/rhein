@@ -2,12 +2,16 @@
 ;; Bytecode compiler
 ;;
 
-(use gauche.interactive)
-(use gauche.parameter)
-(use gauche.lazy)
-(use rfc.json)
+(define-module rheinc.compile
+  (use gauche.interactive)
+  (use gauche.parameter)
+  (use gauche.lazy)
+  (use rfc.json)
+  (use rheinc.ast)
+  (export rhein-compile)
+  )
 
-(require "./ast")
+(select-module rheinc.compile)
 
 (define (rhein-compile ast p)
   (resolve-name ast)
@@ -552,7 +556,7 @@
   (emit (*builder*) (list 'enclose  (~ fl 'name))))
 
 (define-method generate-code ((cl <rh-character-literal>))
-  (emit (*builder*) (list 'pushchar (~ cl 'value))))
+  (emit (*builder*) (list 'pushchar (string (~ cl 'value)))))
 
 (define-method generate-code ((cl <rh-string-literal>))
   (emit (*builder*) (list 'pushstr (~ cl 'value))))
@@ -561,40 +565,35 @@
   (emit (*builder*) (list 'pushint (~ cl 'value))))
 
 (define-method print-code ((genv <global-environment>) p)
-  (display "[\n" p)
-  (hash-table-for-each (~ genv 'classes) (^(k v) (print-class k v p)))
-  (hash-table-for-each (~ genv 'variables) (^(k v) (print-variable k v p)))
-  (hash-table-for-each (~ genv 'functions) (^(k v) (print-functions k v p)))
-  (display "]\n" p))
+  (let ([c (hash-table-map (~ genv 'classes) print-class)]
+        [v (hash-table-map (~ genv 'variables) print-variable)]
+        [f (hash-table-map (~ genv 'functions) print-functions)])
+    (construct-json (list->vector (append c v f)) p)))
 
-(define (print-class name body p)
-  (format p "{~%")
-  (format p "~s:~s,~%" "name" name)
-  (format p "~s:~s,~%" "type" "class")
-  (format p "~s:~s,~%" "parent" "any")
-  (format p "~s:~a~%" "members" (construct-json-string (list->vector (~ body 'members))))
-  (format p "}~%"))
+(define (print-class name body)
+  (rlet1 r '()
+    (push! r (cons "name" name))
+    (push! r (cons "type" "class"))
+    (push! r (cons "parent" "any"))
+    (push! r (cons "members" (list->vector (~ body 'members))))))
 
-(define (print-variable name body p)
-  (format p "{~%")
-  (format p "~s:~s,~%" "name" name)
-  (format p "~s:~s,~%" "type" "variable")
-  (format p "~s:[~a]~%" "code" (bytecode->json-string (~ body 'code)))
-  (format p "}~%"))
+(define (print-variable name body)
+  (rlet1 r '()
+    (push! r (cons "name" name))
+    (push! r (cons "type" "variable"))
+    (push! r (cons "code" (bytecode->json-string (~ body 'code))))))
 
-(define (print-functions name body p)
-  (format p "{~%")
-  (format p "~s:~s,~%" "name" name)
-  (format p "~s:~s,~%" "type" "function")
-  (format p "~s:~s,~%" "stack_size" 0)
-  (format p "~s:~s,~%" "variable_size" (~ body 'variable-count))
-  (format p "~s:~s,~%" "function_size" (~ body 'function-count))
-  (format p "~s:~a,~%" "argument_type" (construct-json-string (list->vector (~ body 'argument-types))))
-  (format p "~s:[~a]~%" "code" (bytecode->json-string (~ body 'code)))
-  (format p "}~%"))
+(define (print-functions name body)
+  (rlet1 r '()
+    (push! r (cons "name" name))
+    (push! r (cons "type" "function"))
+    (push! r (cons "stack_size" 0))
+    (push! r (cons "variable_size" (~ body 'variable-count)))
+    (push! r (cons "function_size" (~ body 'function-count)))
+    (push! r (cons "argument_type" (list->vector (~ body 'argument-types))))
+    (push! r (cons "varg" 'false))
+    (push! r (cons "code" (print-c (~ body 'code))))))
 
-(define (bytecode->json-string code)
-  (define (print-insn x)
-    (string-join (cons (format #f "\"~a\"" (car x)) (map (^x (format #f "~s" x)) (cdr x))) ","))
-  (string-join (map (^x (string-append "[" (print-insn x) "]\n")) code) ","))
+(define (print-c code)
+  (list->vector (map (^x (list->vector (cons (symbol->string (car x)) (cdr x)))) code)))
 

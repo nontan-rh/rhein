@@ -2,8 +2,8 @@
 ;; rhein.scm - Programming language Rhein
 ;;
 
-(require "./parse")
-(require "./compile")
+(use rheinc.parse)
+(use rheinc.compile)
 
 (define (main args)
   (if (= (length args) 1)
@@ -16,5 +16,5 @@
   (list->vector (string->list s)))
 
 (define (compile str)
-  (rhein-compile (parse (string->vector str)) (standard-output-port)))
+  (rhein-compile (rhein-parse (string->vector str)) (standard-output-port)))
 

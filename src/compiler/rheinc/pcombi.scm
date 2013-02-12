@@ -2,8 +2,13 @@
 ;; pcombi.scm - Parser combinator
 ;;
 
-(use srfi-1)
-(use gauche.record)
+(define-module rheinc.pcombi
+  (use srfi-1)
+  (use gauche.record)
+  (export-all)
+  )
+
+(select-module rheinc.pcombi)
 
 (define-record-type parser-head #t #t
   (text) (position))

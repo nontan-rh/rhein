@@ -2,6 +2,12 @@
 ;; AST classes
 ;;
 
+(define-module rheinc.ast
+  (export-all)
+  )
+
+(select-module rheinc.ast)
+
 (define-class <rh-ast> () ())
 
 (define-class <rh-program> (<rh-ast>)

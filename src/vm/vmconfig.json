@@ -35,10 +35,22 @@
     "pushstr" : "str",
     "pushint" : "int",
     "pushchar" : "str",
+    "enclose" : "str",
     "dup" : "noarg",
     "pop" : "noarg",
     "popn" : "int",
     "label" : "str"
+  },
+  "std_library" : {
+    "print" : [
+      { "name" : "rhlib_print", "argtype" : [], "varg" : true }
+    ],
+    "to_array" : [
+      { "name" : "rhlib_to_array", "argtype" : ["any"], "varg" : false }
+    ],
+    "to_string" : [
+      { "name" : "rhlib_to_string", "argtype" : ["any"], "varg" : false }
+    ]
   }
 }
 

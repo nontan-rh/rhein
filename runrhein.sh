@@ -1,4 +1,4 @@
 #!/usr/bin/env sh
 
-gosh rhein.scm $1 | gosh vm.scm
+PYTHONPATH="$PYTHONPATH:." gosh -I src/compiler rheinc $1 | python2 src/vm/vm.py
 
