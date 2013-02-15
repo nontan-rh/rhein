@@ -3,8 +3,10 @@
 #
 
 import sys
+import copy
 import json
-import rhlib
+from rhobject import *
+import rhlibrary
 
 # Configure file
 vmconfig_file = 'src/vm/vmconfig.json'
@@ -12,222 +14,6 @@ vmconfig_file = 'src/vm/vmconfig.json'
 vmconfig = json.load(open(vmconfig_file))
 insn_format = vmconfig['insn_format']
 std_library = vmconfig['std_library']
-
-class VMKlass():
-    def __init__(self, parent):
-        self.parent = parent
-
-class VMObject(object):
-    def __init__(self, klass):
-        self.klass = klass
-
-# Embedded classes
-any_klass = VMKlass(None)
-int_klass = VMKlass(any_klass)
-string_klass = VMKlass(any_klass)
-func_klass = VMKlass(any_klass)
-
-class VMRecordKlass(VMKlass):
-    def __init__(self, parent_name, member):
-        super(VMRecordKlass, self).__init__(None)
-        self.parent_name = parent_name
-        self.member = {}
-        self.member_num = len(member)
-        self.resolved = False
-        for i in xrange(self.member_num):
-            self.member[member[i]] = i
-
-    def resolve(self, env, reached):
-        if self.resolved:
-            return
-        if self in reached:
-            raise Exception()
-        self.parent = env.get_klass_obj(self.parent_name)
-        if not isinstance(self.parent, VMRecordKlass):
-            return
-        # Mark reached
-        reached[self] = True
-        self.parent.resolve(env, reached)
-        del reached[self]
-
-    def get_slot_index(self, name):
-        if not name in self.member:
-            raise Exception()
-        return self.member[name]
-
-# Function and Method
-
-class VMFunc(VMObject):
-    def __init__(self, name, args, varg):
-        super(VMFunc, self).__init__(func_klass)
-        self.name = name
-        self.args = args
-        self.varg = varg
-
-class VMNativeFunc(VMFunc):
-    def __init__(self, name, args, varg, fn):
-        super(VMNativeFunc, self).__init__(name, args, varg)
-        self.fn = fn
-
-class VMUserFunc(VMFunc):
-    def __init__(self, name, stack_size, var_size,
-        func_size, args, varg, code):
-        super(VMUserFunc, self).__init__(name, args, varg)
-        self.stack_size = stack_size
-        self.var_size = var_size
-        self.func_size = func_size
-        self.closed = None
-        self.code = code
-
-    def enclose(self, frame):
-        closure = self.copy()
-        closure.closed = frame
-        return closure
-
-class VMMethod(VMFunc):
-    def __init__(self):
-        self.dispatcher = VMMethodDispatcher(None, None)
-
-    def add_function(self, func):
-        self.dispatcher.add_function(func, 0)
-
-    def dispatch(self, args):
-        return self.dispatcher.dispatch(args, 0)
-
-class VMMethodDispatcher():
-    def __init__(self, entry, varg_entry):
-        self.childs = {}
-        self.entry = entry
-        self.varg_entry = varg_entry
-    
-    def add_function(self, func, index):
-        if len(func.args) == index:
-            if func.varg:
-                if self.varg_entry != None: raise Exception()
-                self.varg_entry = func
-            else:
-                if self.entry != None: raise Exception()
-                self.entry = func
-            return
-        klass = func.args[index]
-        if not klass in self.childs:
-            self.childs[klass] = VMMethodDispatcher(None, None)
-        self.childs[klass].add_function(func, index + 1)
-
-    def dispatch(self, args, index):
-        if len(args) == index:
-            if self.entry == None:
-                return self.varg_entry
-            return self.entry
-        klass = get_klass(args[index])
-        while True:
-            if klass in self.childs:
-                res = self.childs[klass].dispatch(args, index + 1)
-                if res != None:
-                    return res
-            klass = klass.parent
-            if klass == None:
-                break
-        return self.varg_entry
-
-# Code manipulation
-
-def code_preprocess(code):
-    if not isinstance(code, list):
-        raise Exception()
-    (stripped_code, label_list) = code_collect_labels(code)
-    for i in stripped_code:
-        insn_format_check(i)
-        if i[0] == 'jump' or i[0] == 'ifjump' or i[0] == 'nifjump':
-            if len(i) != 2:
-                raise Exception()
-            if not i[1] in label_list:
-                raise Exception()
-            dest = label_list[i[1]]
-            i[1] = dest
-    return stripped_code
-
-def code_collect_labels(code):
-    stripped = []
-    labels = {}
-    count = 0
-    for i in code:
-        insn_format_check(i)
-        if i[0] == 'label':
-            if i[1] in labels:
-                raise Exception()
-            labels[i[1]] = count
-        else:
-            stripped.append(i)
-            count = count + 1
-    return (stripped, labels)
-
-def insn_format_check(insn):
-    if not (isinstance(insn, list)
-        and len(insn) >= 1
-        and insn[0] in insn_format):
-        raise Exception()
-    i = insn_format[insn[0]]
-    if i == 'noarg':
-        if len(insn) != 1:
-            raise Exception()
-    elif i == 'str':
-        if not (len(insn) == 2 and (isinstance(insn[1], str)
-                                 or isinstance(insn[1], unicode))):
-            raise Exception()
-    elif i == 'int':
-        if not (len(insn) == 2 and isinstance(insn[1], int)):
-            raise Exception()
-    elif i == 'lref':
-        if not (len(insn) == 3
-            and isinstance(insn[1], int)
-            and isinstance(insn[2], int)):
-            raise Exception()
-
-# first-class object
-
-class VMRecord(VMObject):
-    def __init__(self, klass):
-        super(VMRecord, self).__init__(klass)
-        self.slots = [None] * klass.member_num
-
-    def mref(self, name):
-        index = self.klass.get_slot_index(name)
-        if index == None: raise Exception()
-        return self.slots[index]
-
-    def mset(self, name, value):
-        index = self.klass.get_slot_index(name)
-        if index == None: raise Exception()
-        self.slots[index] = value
-
-class VMArray(VMObject):
-    def __init__(self, size):
-        self.body = [None] * size
-
-    def raref(self, index):
-        return self.body[index]
-
-    def raset(self, index, value):
-        self.body[index] = value
-
-    def iref(self, index):
-        return self.body[index]
-
-    def iset(self, index, value):
-        self.body[index] = value
-
-def get_klass(obj):
-    if isinstance(obj, VMKlass):
-        return obj
-    if isinstance(obj, int) or isinstance(obj, long):
-        return int_klass
-    elif isinstance(obj, str) or isinstance(obj, unicode):
-        return string_klass
-    elif isinstance(obj, VMObject):
-        return obj.klass
-    else:
-        raise Exception()
 
 # VM Global Environment
 class VMEnv():
@@ -238,6 +24,7 @@ class VMEnv():
         self.klass_slots['any'] = any_klass
         self.klass_slots['int'] = int_klass
         self.klass_slots['string'] = string_klass
+        self.klass_slots['array'] = array_klass
         self.load_standard_library()
 
     def load_standard_library(self):
@@ -246,7 +33,7 @@ class VMEnv():
         for name, defs in std_library.items():
             m = VMMethod()
             for d in defs:
-                fn = rhlib.__dict__[d['name']]
+                fn = rhlibrary.__dict__[d['name']]
                 argtype = map((lambda x: self.get_klass_obj(x)), d['argtype'])
                 varg = d['varg']
                 m.add_function(VMNativeFunc(name, argtype, varg, fn))
@@ -260,7 +47,7 @@ class VMEnv():
             self.load_obj(j)
         for k,v in self.klass_slots.items():
             if isinstance(v, VMRecordKlass):
-                k.resolve(self, {})
+                v.resolve(self, {})
 
     def load_obj(self, jobj):
         if not 'type' in jobj:
@@ -318,6 +105,61 @@ class VMEnv():
     def get_klass_obj(self, name):
         return self.klass_slots[name]
 
+# Code manipulation
+
+def code_preprocess(code):
+    if not isinstance(code, list):
+        raise Exception()
+    (stripped_code, label_list) = code_collect_labels(code)
+    for i in stripped_code:
+        insn_format_check(i)
+        i[0] = intern(str(i[0]))
+        if i[0] == 'jump' or i[0] == 'ifjump' or i[0] == 'nifjump':
+            if len(i) != 2:
+                raise Exception()
+            if not i[1] in label_list:
+                raise Exception()
+            dest = label_list[i[1]]
+            i[1] = dest
+    return stripped_code
+
+def code_collect_labels(code):
+    stripped = []
+    labels = {}
+    count = 0
+    for i in code:
+        insn_format_check(i)
+        if i[0] == 'label':
+            if i[1] in labels:
+                raise Exception()
+            labels[i[1]] = count
+        else:
+            stripped.append(i)
+            count = count + 1
+    return (stripped, labels)
+
+def insn_format_check(insn):
+    if not (isinstance(insn, list)
+        and len(insn) >= 1
+        and insn[0] in insn_format):
+        raise Exception()
+    i = insn_format[insn[0]]
+    if i == 'noarg':
+        if len(insn) != 1:
+            raise Exception()
+    elif i == 'str':
+        if not (len(insn) == 2 and (isinstance(insn[1], str)
+                                 or isinstance(insn[1], unicode))):
+            raise Exception()
+    elif i == 'int':
+        if not (len(insn) == 2 and isinstance(insn[1], int)):
+            raise Exception()
+    elif i == 'lref':
+        if not (len(insn) == 3
+            and isinstance(insn[1], int)
+            and isinstance(insn[2], int)):
+            raise Exception()
+
 class VMFrame():
     def __init__(self, closed, parent, func):
         self.stack = []
@@ -336,6 +178,9 @@ class VMFrame():
 
     def pop(self):
         return self.stack.pop()
+
+    def top(self):
+        return self.stack[-1]
 
     def dup(self):
         value = self.stack[-1]
@@ -386,45 +231,46 @@ def execute(env, entry):
         try:
             i = frame.fetch_insn()
             #print i
-            if i[0] == 'add': execute_add(env, i, frame)
-            elif i[0] == 'sub': execute_sub(env, i, frame)
-            elif i[0] == 'mul': execute_mul(env, i, frame)
-            elif i[0] == 'div': execute_div(env, i, frame)
-            elif i[0] == 'mod': execute_mod(env, i, frame)
-            elif i[0] == 'eq': execute_eq(env, i, frame)
-            elif i[0] == 'ne': execute_ne(env, i, frame)
-            elif i[0] == 'gt': execute_gt(env, i, frame)
-            elif i[0] == 'lt': execute_lt(env, i, frame)
-            elif i[0] == 'ge': execute_ge(env, i, frame)
-            elif i[0] == 'le': execute_le(env, i, frame)
-            elif i[0] == 'jump': execute_jump(env, i, frame)
-            elif i[0] == 'ifjump': execute_ifjump(env, i, frame)
-            elif i[0] == 'nifjump': execute_nifjump(env, i, frame)
-            elif i[0] == 'call': frame = execute_call(env, i, frame)
-            elif i[0] == 'ret': frame = execute_ret(env, i, frame)
-            elif i[0] == 'ranew': execute_ranew(env, i, frame)
-            elif i[0] == 'raref': execute_raref(env, i, frame)
-            elif i[0] == 'raset': execute_raset(env, i, frame)
-            elif i[0] == 'iref': execute_iref(env, i, frame)
-            elif i[0] == 'iset': execute_iset(env, i, frame)
-            elif i[0] == 'mref': execute_mref(env, i, frame)
-            elif i[0] == 'mset': execute_mset(env, i, frame)
-            elif i[0] == 'lfref': execute_lfref(env, i, frame)
-            elif i[0] == 'lfset': execute_lfset(env, i, frame)
-            elif i[0] == 'lvref': execute_lvref(env, i, frame)
-            elif i[0] == 'lvset': execute_lvset(env, i, frame)
-            elif i[0] == 'gfref': execute_gfref(env, i, frame)
-            elif i[0] == 'gvref': execute_gvref(env, i, frame)
-            elif i[0] == 'gvset': execute_gvset(env, i, frame)
-            elif i[0] == 'pushundef': execute_pushundef(env, i, frame)
-            elif i[0] == 'pushtid': execute_pushtid(env, i, frame)
-            elif i[0] == 'pushstr': execute_pushstr(env, i, frame)
-            elif i[0] == 'pushint': execute_pushint(env, i, frame)
-            elif i[0] == 'pushchar': execute_pushchar(env, i, frame)
-            elif i[0] == 'enclose': execute_enclose(env, i, frame)
-            elif i[0] == 'dup': execute_dup(env, i, frame)
-            elif i[0] == 'pop': execute_pop(env, i, frame)
-            elif i[0] == 'popn': execute_popn(env, i, frame)
+            if   i[0] is 'add': execute_add(env, i, frame)
+            elif i[0] is 'sub': execute_sub(env, i, frame)
+            elif i[0] is 'mul': execute_mul(env, i, frame)
+            elif i[0] is 'div': execute_div(env, i, frame)
+            elif i[0] is 'mod': execute_mod(env, i, frame)
+            elif i[0] is 'inc': execute_inc(env, i, frame)
+            elif i[0] is 'eq': execute_eq(env, i, frame)
+            elif i[0] is 'ne': execute_ne(env, i, frame)
+            elif i[0] is 'gt': execute_gt(env, i, frame)
+            elif i[0] is 'lt': execute_lt(env, i, frame)
+            elif i[0] is 'ge': execute_ge(env, i, frame)
+            elif i[0] is 'le': execute_le(env, i, frame)
+            elif i[0] is 'jump': execute_jump(env, i, frame)
+            elif i[0] is 'ifjump': execute_ifjump(env, i, frame)
+            elif i[0] is 'nifjump': execute_nifjump(env, i, frame)
+            elif i[0] is 'call': frame = execute_call(env, i, frame)
+            elif i[0] is 'ret': frame = execute_ret(env, i, frame)
+            elif i[0] is 'ranew': execute_ranew(env, i, frame)
+            elif i[0] is 'raref': execute_raref(env, i, frame)
+            elif i[0] is 'raset': execute_raset(env, i, frame)
+            elif i[0] is 'iref': execute_iref(env, i, frame)
+            elif i[0] is 'iset': execute_iset(env, i, frame)
+            elif i[0] is 'mref': execute_mref(env, i, frame)
+            elif i[0] is 'mset': execute_mset(env, i, frame)
+            elif i[0] is 'lfref': execute_lfref(env, i, frame)
+            elif i[0] is 'lfset': execute_lfset(env, i, frame)
+            elif i[0] is 'lvref': execute_lvref(env, i, frame)
+            elif i[0] is 'lvset': execute_lvset(env, i, frame)
+            elif i[0] is 'gfref': execute_gfref(env, i, frame)
+            elif i[0] is 'gvref': execute_gvref(env, i, frame)
+            elif i[0] is 'gvset': execute_gvset(env, i, frame)
+            elif i[0] is 'pushundef': execute_pushundef(env, i, frame)
+            elif i[0] is 'pushtid': execute_pushtid(env, i, frame)
+            elif i[0] is 'pushstr': execute_pushstr(env, i, frame)
+            elif i[0] is 'pushint': execute_pushint(env, i, frame)
+            elif i[0] is 'pushchar': execute_pushchar(env, i, frame)
+            elif i[0] is 'enclose': execute_enclose(env, i, frame)
+            elif i[0] is 'dup': execute_dup(env, i, frame)
+            elif i[0] is 'pop': execute_pop(env, i, frame)
+            elif i[0] is 'popn': execute_popn(env, i, frame)
             else: raise Exception()
         except VMExit, e:
             return e.value
@@ -457,6 +303,11 @@ def execute_mod(env, i, frame):
     vr = frame.pop()
     vl = frame.pop()
     frame.push(vl % vr)
+    frame.incr_count()
+
+def execute_inc(env, i, frame):
+    v = frame.pop()
+    frame.push(v + 1)
     frame.incr_count()
 
 def execute_eq(env, i, frame):
@@ -531,7 +382,7 @@ def execute_call(env, i, frame):
     elif isinstance(func, VMMethod):
         dfunc = func.dispatch(args)
         if isinstance(dfunc, VMUserFunc):
-            new_frame = VMFrame(dfunc.closed, frame, dfunc)
+            new_frame = VMFrame(func.closed, frame, dfunc)
             for j in xrange(i[1]):
                 new_frame.variable_slots[j] = args[j]
             return new_frame
@@ -551,7 +402,7 @@ def execute_ret(env, i, frame):
 
 def execute_ranew(env, i, frame):
     size = frame.pop()
-    frame.push(VMArray(size))
+    frame.push(VMArray.make(size))
     frame.incr_count()
 
 def execute_raref(env, i, frame):
@@ -569,6 +420,8 @@ def execute_raset(env, i, frame):
     if not isinstance(array, VMArray):
         raise Exception()
     array.raset(index,value)
+    frame.push(array)
+    frame.push(index)
     frame.incr_count()
 
 def execute_iref(env, i, frame):
@@ -582,7 +435,7 @@ def execute_iref(env, i, frame):
 def execute_iset(env, i, frame):
     index = frame.pop()
     obj = frame.pop()
-    value = frame.pop()
+    value = frame.top()
     if not isinstance(obj, VMObject):
         raise Exception()
     obj.iset(index,value)
@@ -597,7 +450,7 @@ def execute_mref(env, i, frame):
 
 def execute_mset(env, i, frame):
     obj = frame.pop()
-    value = frame.pop()
+    value = frame.top()
     if not isinstance(obj, VMRecord):
         raise Exception()
     obj.mset(i[1], value)
@@ -608,7 +461,7 @@ def execute_lfref(env, i, frame):
     frame.incr_count()
 
 def execute_lfset(env, i, frame):
-    value = frame.pop()
+    value = frame.top()
     frame.lfset(i[1],i[2],value)
     frame.incr_count()
 
@@ -617,7 +470,7 @@ def execute_lvref(env, i, frame):
     frame.incr_count()
 
 def execute_lvset(env, i, frame):
-    value = frame.pop()
+    value = frame.top()
     frame.lvset(i[1],i[2],value)
     frame.incr_count()
 
@@ -632,7 +485,7 @@ def execute_gvref(env, i, frame):
     frame.incr_count()
 
 def execute_gvset(env, i, frame):
-    value = frame.pop()
+    value = frame.top()
     env.set_variable(i[1], value)
     frame.incr_count()
 

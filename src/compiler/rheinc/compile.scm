@@ -380,12 +380,14 @@
   (set! (~ clo 'name) (get-function-tempname (*global-env*)))
   (emit (*builder*) (list 'enclose (~ clo 'name)))
   (emit (*builder*) (list 'lfset (~ clo 'reference 'layer) (~ clo 'reference 'offset)))
+  (emit (*builder*) (list 'pop))
   (next-method))
 
 (define-method generate-code ((blk <rh-block>))
   (for-each generate-code (~ blk 'function-definitions))
   (for-each generate-code (~ blk 'variable-definitions))
-  (unless (null? (~ blk 'code))
+  (if (null? (~ blk 'code))
+    (emit (*builder*) (list 'pushundef))
     (let* ([revcode (reverse (~ blk 'code))]
            [lastcode (car revcode)]
            [othercode (reverse (cdr revcode))])
@@ -398,7 +400,8 @@
 (define-method generate-code ((vd <rh-variable-definition>))
   (unless (null? (~ vd 'initial-value))
     (generate-code (~ vd 'initial-value))
-    (emit (*builder*) (list 'lvset (~ vd 'reference 'layer) (~ vd 'reference 'offset)))))
+    (emit (*builder*) (list 'lvset (~ vd 'reference 'layer) (~ vd 'reference 'offset)))
+    (emit (*builder*) (list 'pop))))
 
 (define-method generate-code ((ife <rh-if-expression>))
   (let1 exit-label (allocate-label (*builder*))
@@ -459,7 +462,6 @@
 
 (define-method generate-code ((ae <rh-assign-expression>))
   (define (f x)
-    (emit (*builder*) (list 'dup)) (sinc (*builder*) 1)
     (generate-set-code x) (sdec (*builder*) 1))
   (generate-code (~ ae 'expression))
   (for-each f (~ ae 'destinations)))
@@ -494,8 +496,8 @@
 
 (define (binary-op->insn op)
   (case op
-    ['is 'is]
-    ['isnot 'isnot]
+    ['is 'eq]
+    ['isnot 'ne]
     ['> 'gt]
     ['< 'lt]
     ['>= 'ge]

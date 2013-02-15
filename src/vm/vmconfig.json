@@ -11,6 +11,7 @@
     "lt" : "noarg",
     "ge" : "noarg",
     "le" : "noarg",
+    "inc" : "noarg",
     "jump" : "str",
     "ifjump" : "str",
     "nifjump" : "str",
@@ -43,13 +44,13 @@
   },
   "std_library" : {
     "print" : [
-      { "name" : "rhlib_print", "argtype" : [], "varg" : true }
+      { "name" : "print_", "argtype" : [], "varg" : true }
     ],
     "to_array" : [
-      { "name" : "rhlib_to_array", "argtype" : ["any"], "varg" : false }
+      { "name" : "string_to_array", "argtype" : ["string"], "varg" : false }
     ],
     "to_string" : [
-      { "name" : "rhlib_to_string", "argtype" : ["any"], "varg" : false }
+      { "name" : "array_to_string", "argtype" : ["array"], "varg" : false }
     ]
   }
 }
