@@ -378,6 +378,15 @@
 (define-method get-function-tempname ((genv <global-environment>))
   (get-tempname (~ genv 'function-tempgen)))
 
+(define (load-int val)
+  (list 'load (list (cons "type" "int") (cons "value" val))))
+
+(define (load-char val)
+  (list 'load (list (cons "type" "char") (cons "value" val))))
+
+(define (load-string val)
+  (list 'load (list (cons "type" "string") (cons "value" val))))
+
 (define *global-env* (make-parameter '() ))
 
 (define-method generate-code ((prog <rh-program>))
@@ -594,18 +603,18 @@
 
 (define-method generate-code ((hl <rh-hash-literal>))
   (let1 array-len (length (~ hl 'contains))
-    (emit (*builder*) (list 'load array-len)) (sinc (*builder*) 1)
+    (emit (*builder*) (load-int array-len)) (sinc (*builder*) 1)
     (emit (*builder*) (list 'ranew))
-    (emit (*builder*) (list 'load 0)) (sinc (*builder*) 1)
+    (emit (*builder*) (load-int 0)) (sinc (*builder*) 1)
     (do [(i 0 (+ 1 i)) (cs (~ hl 'contains) (cdr cs))] [(null? cs) '()]
       (generate-code (~ (car cs) 'value))
       (emit (*builder*) (list 'raset)) (sdec (*builder*) 1)
       (emit (*builder*) (list 'inc)))
     (emit (*builder*) (list 'pop)) (sdec (*builder*) 1)
 
-    (emit (*builder*) (list 'load array-len)) (sinc (*builder*) 1)
+    (emit (*builder*) (load-int array-len)) (sinc (*builder*) 1)
     (emit (*builder*) (list 'ranew))
-    (emit (*builder*) (list 'load 0)) (sinc (*builder*) 1)
+    (emit (*builder*) (load-int 0)) (sinc (*builder*) 1)
     (do [(i 0 (+ 1 i)) (cs (~ hl 'contains) (cdr cs))] [(null? cs) '()]
       (generate-code (~ (car cs) 'key))
       (emit (*builder*) (list 'raset)) (sdec (*builder*) 1)
@@ -618,9 +627,9 @@
 
 (define-method generate-code ((al <rh-array-literal>))
   (let1 array-len (length (~ al 'contains))
-    (emit (*builder*) (list 'load array-len)) (sinc (*builder*) 1)
+    (emit (*builder*) (load-int array-len)) (sinc (*builder*) 1)
     (emit (*builder*) (list 'ranew))
-    (emit (*builder*) (list 'load 0)) (sinc (*builder*) 1)
+    (emit (*builder*) (load-int 0)) (sinc (*builder*) 1)
     (do [(i 0 (+ 1 i)) (cs (~ al 'contains) (cdr cs))] [(null? cs) '()]
       (generate-code (car cs))
       (emit (*builder*) (list 'raset)) (sdec (*builder*) 1)
@@ -636,13 +645,13 @@
   (emit (*builder*) (list 'enclose  (~ fl 'name))) (sinc (*builder*) 1))
 
 (define-method generate-code ((cl <rh-character-literal>))
-  (emit (*builder*) (list 'pushchar (string (~ cl 'value)))) (sinc (*builder*) 1))
+  (emit (*builder*) (load-char (string (~ cl 'value)))) (sinc (*builder*) 1))
 
 (define-method generate-code ((cl <rh-string-literal>))
-  (emit (*builder*) (list 'load (~ cl 'value))) (sinc (*builder*) 1))
+  (emit (*builder*) (load-string (~ cl 'value))) (sinc (*builder*) 1))
 
 (define-method generate-code ((cl <rh-integer-literal>))
-  (emit (*builder*) (list 'load (~ cl 'value))) (sinc (*builder*) 1))
+  (emit (*builder*) (load-int (~ cl 'value))) (sinc (*builder*) 1))
 
 (define-method generate-code ((tl <rh-true-literal>))
   (emit (*builder*) (list 'loadtrue)) (sinc (*builder*) 1))

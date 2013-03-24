@@ -9,15 +9,6 @@
 
 namespace rhein {
 
-class ObjectSign {
-public:
-    enum ObjectSign_ {
-        Class,
-        Function,
-        Variable,
-    };
-};
-
 bool
 BinaryReader::readByte(FILE* fp, unsigned char& byte) {
     if (feof(fp)) {
@@ -153,14 +144,21 @@ State::readFunction(FILE* fp) {
         unsigned char type;
         BinaryReader::readByte(fp, type);
         switch (type) {
-            case 0:
+            case LiteralSigniture::Int:
                 {
                     long int_value;
                     BinaryReader::readInt(fp, int_value);
                     constant_table[i] = make_value(int_value);
                 }
                 break;
-            case 1:
+            case LiteralSigniture::Char:
+                {
+                    uint32_t int_value;
+                    BinaryReader::read32Bit(fp, int_value);
+                    constant_table[i] = make_value((Int)int_value);
+                }
+                break;
+            case LiteralSigniture::String:
                 {
                     String* string_value;
                     BinaryReader::readString(fp, this, string_value);
@@ -207,13 +205,13 @@ State::readObject(FILE* fp) {
     unsigned char byte;
     BinaryReader::readByte(fp, byte);
     switch (byte) {
-        case ObjectSign::Class:
+        case ObjectSigniture::Class:
             readKlass(fp);
             break;
-        case ObjectSign::Function:
+        case ObjectSigniture::Function:
             readFunction(fp);
             break;
-        case ObjectSign::Variable:
+        case ObjectSigniture::Variable:
             readVariable(fp);
             break;
         default:

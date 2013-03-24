@@ -1,0 +1,4 @@
+def entry() {
+    print(?a)
+}
+

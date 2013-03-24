@@ -16,10 +16,20 @@
 namespace rhein {
 
 class ObjectSigniture {
+public:
     enum {
-        Klass,
+        Class,
         Function,
         Variable,
+    };
+};
+
+class LiteralSigniture {
+public:
+    enum {
+        Int,
+        Char,
+        String,
     };
 };
 

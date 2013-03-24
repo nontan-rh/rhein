@@ -11,7 +11,8 @@
 (define *var-sign* 2)
 
 (define *int-sign* 0)
-(define *string-sign* 1)
+(define *char-sign* 1)
+(define *string-sign* 2)
 
 (define *insn-list*
   '(add sub mul div mod inc dec eq ne gt lt ge le jump ifjump unlessjump call ret ranew raref 
@@ -27,6 +28,7 @@
 ;; write-string val
 ;; write-ber val
 ;; write-int val
+;; write-ch val
 
 ; (define (write-byte val) ...)
 
@@ -42,6 +44,11 @@
 
 (define (write-int val)
   (write-ber (if (negative? val) (- (ash (- val) 1) 1) (ash val 1))))
+
+(define (write-ch val)
+  (unless (= 1 (string-length val))
+    (error "Not a character"))
+  (write-4byte (char->integer (string-ref val 0))))
 
 (define (assemble jasm)
   (unless (vector? jasm)
@@ -102,15 +109,22 @@
           [cindex 0])
       (dolist [i stripped]
         (case (string->symbol (vector-ref i 0))
-          [(mref mset gfref gvref gvset enclose load loadklass)
+          [(mref mset gfref gvref gvset enclose loadklass)
+           (let1 literal-obj (list (cons "type" "string") (cons "value" (vector-ref i 1)))
+             (vector-set! i 1 literal-obj)
+             (unless (hash-table-exists? ctable literal-obj)
+               (hash-table-put! ctable literal-obj cindex)
+               (inc! cindex)))]
+          [(load)
            (unless (hash-table-exists? ctable (vector-ref i 1))
              (hash-table-put! ctable (vector-ref i 1) cindex)
              (inc! cindex))]))
       (write-ber (hash-table-num-entries ctable))
       (dolist [c (map car (sort (hash-table->alist ctable) (^(l r) (< (cdr l) (cdr r)))))]
-        (cond
-          [(string? c) (write-byte *string-sign*) (write-string c)]
-          [(integer? c) (write-byte *int-sign*) (write-int c)]
+        (case (string->symbol (cdr (assoc "type" c)))
+          ['int (write-byte *int-sign*) (write-int (cdr (assoc "value" c)))]
+          ['char (write-byte *char-sign*) (write-ch (cdr (assoc "value" c)))]
+          ['string (write-byte *string-sign*) (write-string (cdr (assoc "value" c)))]
           [else (error "Not constant")]))
       (write-ber (length stripped))
       (dolist [i stripped]
