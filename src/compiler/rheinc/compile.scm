@@ -440,6 +440,46 @@
     (emit (*builder*) (list 'lvset (~ vd 'reference 'layer) (~ vd 'reference 'offset)))
     (emit (*builder*) (list 'pop)) (sdec (*builder*) 1)))
 
+(define-method generate-code ((andex <rh-and-expression>))
+  (for-each generate-code (~ andex 'function-definitions))
+  (for-each generate-code (~ andex 'variable-definitions))
+  (let1 exit-label (allocate-label (*builder*))
+    (cond
+      [(null? (~ andex 'code))
+       (emit (*builder*) (list 'loadtrue) (sinc (*builder*) 1))]
+      [else
+       (let* ([revcode (reverse (~ andex 'code))]
+              [lastcode (car revcode)]
+              [othercode (reverse (cdr revcode))])
+         (define (jump-generate-code x)
+           (generate-code x)
+           (emit (*builder*) (list 'dup)) (sinc (*builder*) 1)
+           (emit (*builder*) (list 'unlessjump exit-label)) (sdec (*builder*) 1)
+           (emit (*builder*) (list 'pop)) (sdec (*builder*) 1))
+         (for-each jump-generate-code othercode)
+         (generate-code lastcode)
+         (emit (*builder*) (list 'label exit-label)))])))
+
+(define-method generate-code ((orex <rh-or-expression>))
+  (for-each generate-code (~ orex 'function-definitions))
+  (for-each generate-code (~ orex 'variable-definitions))
+  (let1 exit-label (allocate-label (*builder*))
+    (cond
+      [(null? (~ orex 'code))
+       (emit (*builder*) (list 'loadfalse) (sinc (*builder*) 1))]
+      [else
+       (let* ([revcode (reverse (~ orex 'code))]
+              [lastcode (car revcode)]
+              [othercode (reverse (cdr revcode))])
+         (define (jump-generate-code x)
+           (generate-code x)
+           (emit (*builder*) (list 'dup)) (sinc (*builder*) 1)
+           (emit (*builder*) (list 'ifjump exit-label)) (sdec (*builder*) 1)
+           (emit (*builder*) (list 'pop)) (sdec (*builder*) 1))
+         (for-each jump-generate-code othercode)
+         (generate-code lastcode)
+         (emit (*builder*) (list 'label exit-label)))])))
+
 (define-method generate-code ((ife <rh-if-expression>))
   (let1 exit-label (allocate-label (*builder*))
     (for-each (cut generate-code <> exit-label) (~ ife 'conditional-clauses))

@@ -7,6 +7,7 @@
   (use util.match)
   (use rheinc.pcombi)
   (use rheinc.ast)
+  (use parser.peg)
   (export rhein-parse)
   )
 
@@ -76,6 +77,20 @@
           :label label
           :condition-expression cnd
           :code code)))
+
+(define (make-and-expr lis)
+  (match-let1 (_ block) lis
+    (make <rh-and-expression>
+          :variable-definitions (~ block 'variable-definitions)
+          :function-definitions (~ block 'function-definitions)
+          :code (~ block 'code))))
+
+(define (make-or-expr lis)
+  (match-let1 (_ block) lis
+    (make <rh-or-expression>
+          :variable-definitions (~ block 'variable-definitions)
+          :function-definitions (~ block 'function-definitions)
+          :code (~ block 'code))))
 
 (define (make-funcall-name lis)
   (match-let1 (name (args ...)) lis
@@ -202,6 +217,8 @@
 (define gr-keyw-break (pkeyword "break"))
 (define gr-keyw-class (pkeyword "class"))
 (define gr-keyw-global (pkeyword "global"))
+(define gr-keyw-and (pkeyword "and"))
+(define gr-keyw-or (pkeyword "or"))
 (define gr-keyw (p/ gr-keyw-local
                     gr-keyw-def
                     gr-keyw-if
@@ -210,7 +227,9 @@
                     gr-keyw-while
                     gr-keyw-break
                     gr-keyw-class
-                    gr-keyw-global))
+                    gr-keyw-global
+                    gr-keyw-and
+                    gr-keyw-or))
 
 ; Symbols
 (define gr-lp (pskipwl (pc #[\u0028])))
@@ -263,6 +282,9 @@
   (peval make-while-expr
          (pseq gr-keyw-while (popt gr-label-decl) gr-relat-expr gr-block)))
 
+(define gr-and-expr (peval make-and-expr (pseq gr-keyw-and gr-block)))
+(define gr-or-expr  (peval make-or-expr  (pseq gr-keyw-or  gr-block)))
+
 ; Literals
 (define gr-proc-literal (peval make-proc-literal (pseq (p/ gr-fexpr-param-list gr-hat) gr-block)))
 (define gr-digit (peval make-int-literal (pskipwl (psn (p+ pdigit)))))
@@ -293,6 +315,8 @@
 
 (define gr-prim-expr (p/ gr-if-expr
                          gr-while-expr
+                         gr-and-expr
+                         gr-or-expr
                          gr-proc-literal
                          gr-char-literal
                          gr-array-literal

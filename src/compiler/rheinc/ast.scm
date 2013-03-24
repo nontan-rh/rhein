@@ -66,6 +66,12 @@
   ((label :init-keyword :label)
    (expression :init-keyword :expression)))
 
+(define-class <rh-and-expression> (<rh-block>)
+  ())
+
+(define-class <rh-or-expression> (<rh-block>)
+  ())
+
 (define-class <rh-identifier-reference> (<rh-ast>)
   ((prefix :init-keyword :prefix)
    (name :init-keyword :name)
