@@ -13,6 +13,8 @@ namespace rhein {
 
 class State;
 
+class Array;
+
 class String : public Object {
     friend class StringProvider;
     friend class StringHashTable;
@@ -41,6 +43,8 @@ public:
     String* head(State* state, size_t end);
     String* tail(State* state, size_t begin);
     String* substring(State* state, size_t begin, size_t end);
+
+    bool toArray(State* state, Array*& array);
 
     // For debugging
     void dump();

@@ -92,6 +92,34 @@ fn_literal(State* state, unsigned argc, Value* args) {
     }
 }
 
+Value
+fn_to_array(State* state, unsigned argc, Value* args) {
+    if (!(argc == 1 && get_klass(state, args[0]) == state->string_klass)) {
+        fatal("Invalid arguments");
+    }
+
+    Array* array;
+    if (!static_cast<String*>(get_obj(args[0]))->toArray(state, array)) {
+        fatal("Error occured");
+    }
+
+    return make_value(array);
+}
+
+Value
+fn_to_string(State* state, unsigned argc, Value* args) {
+    if (!(argc == 1 && get_klass(state, args[0]) == state->array_klass)) {
+        fatal("Invalid arguments");
+    }
+
+    String* string;
+    if (!static_cast<Array*>(get_obj(args[0]))->toString(state, string)) {
+        fatal("Error occured");
+    }
+
+    return make_value(string);
+}
+
 BasicModule*
 BasicModule::create(State* state) {
     void* p = state->ator->allocateStruct<BasicModule>();
@@ -106,6 +134,8 @@ BasicModule::initialize(State* state) {
     ADD_FUNC(print);
     ADD_FUNC(new);
     ADD_FUNC(literal);
+    ADD_FUNC(to_array);
+    ADD_FUNC(to_string);
 #undef ADD_FUNC
     return false;
 }

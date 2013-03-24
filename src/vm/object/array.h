@@ -15,6 +15,8 @@ namespace rhein {
 
 class State;
 
+class String;
+
 class Array : public Object {
     Array() = delete;
     Array(const Array& /* rht */) = delete;
@@ -65,6 +67,8 @@ public:
         }
         return eltSet(get_int(index), value);
     }
+
+    bool toString(State* state, String*& dest);
 };
 
 };

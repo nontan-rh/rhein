@@ -8,6 +8,7 @@
 
 #include "object/object.h"
 #include "object/imstring.h"
+#include "object/array.h"
 #include "allocator.h"
 #include "vm.h"
 
@@ -249,6 +250,16 @@ String::substring(State* state, size_t begin, size_t end) {
         throw;
     }
     return state->string_provider->getString(body + begin, end - begin);
+}
+
+bool
+String::toArray(State* state, Array*& array) {
+    array = Array::create(state, length);
+
+    for (unsigned i = 0; i < length; i++) {
+        array->eltSet(i, make_value((Int)body[i]));
+    }
+    return true;
 }
 
 void
