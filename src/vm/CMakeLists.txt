@@ -18,3 +18,5 @@ target_link_libraries(
     rheinvm
     gc)
 
+install(TARGETS rheinvm RUNTIME DESTINATION bin)
+
