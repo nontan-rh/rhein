@@ -1,7 +1,7 @@
 
 def entry()
 {
-    print(tak(12,6,0))
+    print(tak(18,9,0))
 }
 
 def tak(x:int,y:int,z:int) 

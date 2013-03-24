@@ -37,7 +37,9 @@
    (functions :init-form (make-hash-table 'string=?))
    (function-allocator :init-form (make <id-allocator>))
    (variables :init-form (make-hash-table 'string=?))
-   (variable-allocator :init-form (make <id-allocator>))))
+   (variable-allocator :init-form (make <id-allocator>))
+   (arguments :init-form (make-hash-table 'string=?))
+   (argument-allocator :init-form (make <id-allocator>))))
 
 (define-method function-exists? ((env <local-environment>) name)
   (or (hash-table-exists? (~ env 'functions) name)
@@ -46,10 +48,18 @@
       (function-exists? (~ env 'parent-environment) name))))
 
 (define-method variable-exists? ((env <local-environment>) name)
-  (or (hash-table-exists? (~ env 'variables) name)
+  (or
+    (hash-table-exists? (~ env 'variables) name)
     (if (null? (~ env 'parent-environment))
       #f
       (variable-exists? (~ env 'parent-environment) name))))
+
+(define-method argument-exists? ((env <local-environment>) name)
+  (or
+    (hash-table-exists? (~ env 'arguments) name)
+    (if (null? (~ env 'parent-environment))
+      #f
+      (argument-exists? (~ env 'parent-environment) name))))
 
 (define-method get-function-relative-address ((env <local-environment>) name)
   (define (help e cnt)
@@ -69,6 +79,15 @@
       [else (help (~ e 'parent-environment) (+ cnt 1))]))
   (help env 0))
 
+(define-method get-argument-relative-address ((env <local-environment>) name)
+  (define (help e cnt)
+    (cond
+      [(hash-table-exists? (~ e 'arguments) name)
+       (values cnt (hash-table-get (~ e 'arguments) name))]
+      [(null? (~ e 'parent-environment)) (error "Variable does not exist")]
+      [else (help (~ e 'parent-environment) (+ cnt 1))]))
+  (help env 0))
+
 (define-method register-function! ((env <local-environment>) name)
   (when (hash-table-exists? (~ env 'functions) name)
     (error "Function name collision" name))
@@ -78,6 +97,11 @@
   (when (hash-table-exists? (~ env 'variables) name)
     (error "Variable name collision" name))
   (hash-table-put! (~ env 'variables) name (allocate-id! (~ env 'variable-allocator))))
+
+(define-method register-argument! ((env <local-environment>) name)
+  (when (hash-table-exists? (~ env 'arguments) name)
+    (error "Argument name collision" name))
+  (hash-table-put! (~ env 'arguments) name (allocate-id! (~ env 'argument-allocator))))
 
 (define-method unwind-function! ((env <local-environment>) name)
   (unless (hash-table-exists? (~ env 'functions) name)
@@ -90,6 +114,12 @@
     (error "No variable" name))
   (deallocate-id! (~ env 'variable-allocator) (hash-table-get (~ env 'variables) name))
   (hash-table-delete! (~ env 'variables) name))
+
+(define-method unwind-argument! ((env <local-environment>) name)
+  (unless (hash-table-exists? (~ env 'arguments) name)
+    (error "No argument" name))
+  (deallocate-id! (~ env 'argument-allocator) (hash-table-get (~ env 'arguments) name))
+  (hash-table-delete! (~ env 'arguments) name))
 
 ;; For debug
 
@@ -118,13 +148,14 @@
   (case (~ lr 'kind)
     ['variable (list 'lvref (~ lr 'layer) (~ lr 'offset))]
     ['function (list 'lfref (~ lr 'layer) (~ lr 'offset))]
+    ['argument (list 'laref (~ lr 'layer) (~ lr 'offset))]
     [else (error "Can't load local-reference" (~ lr 'kind))]))
 
 (define-method load-reference ((gr <global-reference>))
   (case (~ gr 'kind)
     ['variable (list 'gvref (~ gr 'name))]
     ['function (list 'gfref (~ gr 'name))]
-    ['class (list 'pushtid (~ gr 'name))]
+    ['class (list 'loadklass (~ gr 'name))]
     [else (error "Can't load local-reference" (~ gr 'kind))]))
 
 (define-method call-reference ((lr <local-reference>))
@@ -140,6 +171,7 @@
 (define-method set-reference ((lr <local-reference>))
   (case (~ lr 'kind)
     ['variable (list 'lvset (~ lr 'layer) (~ lr 'offset))]
+    ['argument (list 'laset (~ lr 'layer) (~ lr 'offset))]
     [else (error "Can't set local-reference" (~ lr 'kind))]))
 
 (define-method set-reference ((gr <global-reference>))
@@ -164,8 +196,9 @@
 
 (define-method resolve-name ((func <rh-function>))
   (parameterize ([*local-env* (make <local-environment> :parent-environment (*local-env*))])
-    (for-each (^x (register-variable! (*local-env*) x)) (~ func 'parameters))
+    (for-each (^x (register-argument! (*local-env*) x)) (~ func 'parameters))
     (resolve-name (~ func 'code))
+    (for-each (^x (unwind-argument! (*local-env*) x)) (~ func 'parameters))
     (set! (~ func 'function-count) (~ (*local-env*) 'function-allocator 'max-count))
     (set! (~ func 'variable-count) (~ (*local-env*) 'variable-allocator 'max-count))
     (set! (~ func 'argument-types) (~ func 'argument-types))))
@@ -186,7 +219,7 @@
 
 (define-method resolve-name ((vd <rh-variable-definition>))
   (receive [l o] (get-variable-relative-address (*local-env*) (~ vd 'name))
-    (set! (~ vd 'reference) (make <local-reference> :layer l :offset o)))
+    (set! (~ vd 'reference) (make <local-reference> :kind 'variable :layer l :offset o)))
   (unless (null? (~ vd 'initial-value))
     (resolve-name (~ vd 'initial-value))))
 
@@ -217,10 +250,15 @@
     ['tilde
      (set! (~ id 'reference) (make <global-reference> :kind 'class :name (~ id 'name)))]
     ['()
-     (if (variable-exists? (*local-env*) (~ id 'name))
-       (receive [l o] (get-variable-relative-address (*local-env*) (~ id 'name))
-         (set! (~ id 'reference) (make <local-reference> :kind 'variable :layer l :offset o)))
-       (set! (~ id 'reference) (make <global-reference> :kind 'variable :name (~ id 'name))))]))
+     (cond
+       [(variable-exists? (*local-env*) (~ id 'name))
+        (receive [l o] (get-variable-relative-address (*local-env*) (~ id 'name))
+          (set! (~ id 'reference) (make <local-reference> :kind 'variable :layer l :offset o)))]
+       [(argument-exists? (*local-env*) (~ id 'name))
+        (receive [l o] (get-argument-relative-address (*local-env*) (~ id 'name))
+          (set! (~ id 'reference) (make <local-reference> :kind 'argument :layer l :offset o)))]
+       [else
+        (set! (~ id 'reference) (make <global-reference> :kind 'variable :name (~ id 'name)))])]))
 
 (define-method resolve-name ((in <rh-index-reference>))
   (resolve-name (~ in 'base-expression))
@@ -356,7 +394,7 @@
   (define (generate-each x)
     (parameterize ([*builder* (make <variable-builder> :name (~ x 'name))])
       (if (null? (~ x 'initial-value))
-        (emit (*builder*) (list 'pushundef (peek-register (*builder*)))) 
+        (begin (emit (*builder*) (list 'loadundef (peek-register (*builder*)))) (sinc (*builder*) 1))
         (generate-code (~ x 'initial-value)))
       (emit (*builder*) (list 'ret 0))
       (install (*global-env*) (*builder*))))
@@ -378,22 +416,21 @@
 
 (define-method generate-code ((clo <rh-closure-function>))
   (set! (~ clo 'name) (get-function-tempname (*global-env*)))
-  (emit (*builder*) (list 'enclose (~ clo 'name)))
+  (emit (*builder*) (list 'enclose (~ clo 'name))) (sinc (*builder*) 1)
   (emit (*builder*) (list 'lfset (~ clo 'reference 'layer) (~ clo 'reference 'offset)))
-  (emit (*builder*) (list 'pop))
+  (emit (*builder*) (list 'pop)) (sdec (*builder*) 1)
   (next-method))
 
 (define-method generate-code ((blk <rh-block>))
   (for-each generate-code (~ blk 'function-definitions))
   (for-each generate-code (~ blk 'variable-definitions))
   (if (null? (~ blk 'code))
-    (emit (*builder*) (list 'pushundef))
-    (let* ([revcode (reverse (~ blk 'code))]
-           [lastcode (car revcode)]
+    (begin (emit (*builder*) (list 'loadundef)) (sinc (*builder*) 1))
+    (let* ([revcode (reverse (~ blk 'code))] [lastcode (car revcode)]
            [othercode (reverse (cdr revcode))])
       (define (pop-generate-code x)
         (generate-code x)
-        (emit (*builder*) (list 'pop)))
+        (emit (*builder*) (list 'pop)) (sdec (*builder*) 1))
       (for-each pop-generate-code othercode)
       (generate-code lastcode))))
 
@@ -401,7 +438,7 @@
   (unless (null? (~ vd 'initial-value))
     (generate-code (~ vd 'initial-value))
     (emit (*builder*) (list 'lvset (~ vd 'reference 'layer) (~ vd 'reference 'offset)))
-    (emit (*builder*) (list 'pop))))
+    (emit (*builder*) (list 'pop)) (sdec (*builder*) 1)))
 
 (define-method generate-code ((ife <rh-if-expression>))
   (let1 exit-label (allocate-label (*builder*))
@@ -413,7 +450,7 @@
 (define-method generate-code ((cc <rh-conditional-clause>) exit-label)
   (let1 next-label (allocate-label (*builder*))
     (generate-code (~ cc 'condition-expression))
-    (emit (*builder*) (list 'nifjump next-label))
+    (emit (*builder*) (list 'unlessjump next-label)) (sdec (*builder*) 1)
     (generate-code (~ cc 'code))
     (emit (*builder*) (list 'jump exit-label))
     (emit (*builder*) (list 'label next-label))))
@@ -424,7 +461,7 @@
     (register-label (*builder*) (~ we 'label) exit-label)
     (emit (*builder*) (list 'label loop-label))
     (generate-code (~ we 'condition-expression))
-    (emit (*builder*) (list 'nifjump exit-label))
+    (emit (*builder*) (list 'unlessjump exit-label)) (sdec (*builder*) 1)
     (generate-code (~ we 'code))
     (emit (*builder*) (list 'jump loop-label))
     (emit (*builder*) (list 'label exit-label)))
@@ -434,17 +471,18 @@
   (let1 label (get-named-label (*builder*) (~ br 'label))
     (cond
       [(null? (~ br 'expression))
-        (emit (*builder*) (list 'pushundef))]
+        (emit (*builder*) (list 'loadundef)) (sinc (*builder*) 1)]
       [else
         (generate-code (~ br 'expression))])
-    (emit (*builder*) (list 'popn (- (~ (*builder*) 'stack-level) (~ label 'stack-level))))
-    (emit (*builder*) (list 'jump (~ label 'tag)))))
+    (emit (*builder*) (list 'escape (- (~ (*builder*) 'stack-level) (~ label 'stack-level))))
+    (emit (*builder*) (list 'jump (~ label 'tag)))
+    (sdec (*builder*) 1))) ;; Justify stack depth
 
 (define-method generate-code ((id <rh-identifier-reference>))
-  (emit (*builder*) (load-reference (~ id 'reference))))
+  (emit (*builder*) (load-reference (~ id 'reference))) (sinc (*builder*) 1))
 
 (define-method generate-code ((in <rh-index-reference>))
-  (generate-code (~ in 'base-expression)) (sinc (*builder*) 1)
+  (generate-code (~ in 'base-expression))
   (generate-code (~ in 'index-expression))
   (emit (*builder*) (list 'iref)) (sdec (*builder*) 1))
 
@@ -454,9 +492,9 @@
 
 (define-method generate-code ((ic <rh-identifier-call>))
   (define (generate-code-inc x)
-    (generate-code x) (sinc (*builder*) 1))
-  (for-each generate-code-inc (~ ic 'arguments))
-  (emit (*builder*) (call-reference (~ ic 'reference)))
+    (generate-code x))
+  (for-each generate-code-inc (reverse (~ ic 'arguments)))
+  (emit (*builder*) (call-reference (~ ic 'reference))) (sinc (*builder*) 1)
   (emit (*builder*) (list 'call (length (~ ic 'arguments))))
   (sdec (*builder*) (length (~ ic 'arguments))))
 
@@ -470,22 +508,22 @@
   (emit (*builder*) (set-reference (~ ir 'reference))))
 
 (define-method generate-set-code ((in <rh-index-reference>))
-  (generate-code (~ in 'base-expression)) (sinc (*builder*) 1)
-  (generate-code (~ in 'index-expression)) (sdec (*builder*) 1)
-  (emit (*builder*) (list 'iset)))
+  (generate-code (~ in 'base-expression))
+  (generate-code (~ in 'index-expression))
+  (emit (*builder*) (list 'iset)) (sdec (*builder*) 2))
 
 (define-method generate-set-code ((mr <rh-member-reference>))
-  (generate-code (~ mr 'base-expression)) (sinc (*builder*) 1)
-  (emit (*builder*) (list 'mset (~ mr 'member-name))) (sdec (*builder*) 1))
+  (generate-code (~ mr 'base-expression))
+  (emit (*builder*) (list 'mset (~ mr 'member-name))))
 
 (define-method generate-code ((ue <rh-unary-expression>))
-  (generate-code (~ ue 'expression)) (sinc (*builder*) 1)
-  (emit (*builder*) (list (unary-op->insn (~ ue 'operator)))) (sdec (*builder*) 1))
+  (generate-code (~ ue 'expression))
+  (emit (*builder*) (list (unary-op->insn (~ ue 'operator)))))
 
 (define-method generate-code ((be <rh-binary-expression>))
-  (generate-code (~ be 'left-expression)) (sinc (*builder*) 1)
-  (generate-code (~ be 'right-expression)) (sinc (*builder*) 1)
-  (emit (*builder*) (list (binary-op->insn (~ be 'operator)))) (sdec (*builder*) 2))
+  (generate-code (~ be 'left-expression))
+  (generate-code (~ be 'right-expression))
+  (emit (*builder*) (list (binary-op->insn (~ be 'operator)))) (sdec (*builder*) 1))
 
 (define (unary-op->insn op)
   (case op
@@ -509,62 +547,62 @@
     [else (error "Unknown operator")]))
 
 (define-method generate-code ((ec <rh-expression-call>))
-  (define (generate-code-inc x)
-    (generate-code x) (sinc (*builder*) 1))
-  (for-each generate-code-inc (~ ec 'arguments))
-  (generate-code (~ ec 'function)) (sinc (*builder*) 1)
+  (for-each generate-code (reverse (~ ec 'arguments)))
+  (generate-code (~ ec 'function))
   (emit (*builder*) (list 'call (length (~ ec 'arguments))))
-  (sdec (*builder*) (+ 1 (length (~ ec 'arguments)))))
+  (sdec (*builder*) (length (~ ec 'arguments))))
 
 (define-method generate-code ((hl <rh-hash-literal>))
   (let1 array-len (length (~ hl 'contains))
-    (emit (*builder*) (list 'pushint array-len)) (sinc (*builder*) 1)
+    (emit (*builder*) (list 'load array-len)) (sinc (*builder*) 1)
     (emit (*builder*) (list 'ranew))
-    (emit (*builder*) (list 'pushint 0)) (sinc (*builder*) 1)
+    (emit (*builder*) (list 'load 0)) (sinc (*builder*) 1)
     (do [(i 0 (+ 1 i)) (cs (~ hl 'contains) (cdr cs))] [(null? cs) '()]
-      (generate-code (~ (car cs) 'key)) (sinc (*builder*) 1)
+      (generate-code (~ (car cs) 'value))
       (emit (*builder*) (list 'raset)) (sdec (*builder*) 1)
       (emit (*builder*) (list 'inc)))
     (emit (*builder*) (list 'pop)) (sdec (*builder*) 1)
-    (emit (*builder*) (list 'pushint array-len)) (sinc (*builder*) 1)
+
+    (emit (*builder*) (list 'load array-len)) (sinc (*builder*) 1)
     (emit (*builder*) (list 'ranew))
-    (emit (*builder*) (list 'pushint 0)) (sinc (*builder*) 1)
+    (emit (*builder*) (list 'load 0)) (sinc (*builder*) 1)
     (do [(i 0 (+ 1 i)) (cs (~ hl 'contains) (cdr cs))] [(null? cs) '()]
-      (generate-code (~ (car cs) 'value)) (sinc (*builder*) 1)
+      (generate-code (~ (car cs) 'key))
       (emit (*builder*) (list 'raset)) (sdec (*builder*) 1)
       (emit (*builder*) (list 'inc)))
     (emit (*builder*) (list 'pop)) (sdec (*builder*) 1)
-    (emit (*builder*) (list 'pushtid "array")) (sinc (*builder*) 1)
+
+    (emit (*builder*) (list 'loadklass "hashtable")) (sinc (*builder*) 1)
     (emit (*builder*) (list 'gfref "literal")) (sinc (*builder*) 1)
-    (emit (*builder*) (list 'call 2)) (sdec (*builder*) 2)))
+    (emit (*builder*) (list 'call 3)) (sdec (*builder*) 2)))
 
 (define-method generate-code ((al <rh-array-literal>))
   (let1 array-len (length (~ al 'contains))
-    (emit (*builder*) (list 'pushint array-len)) (sinc (*builder*) 1)
+    (emit (*builder*) (list 'load array-len)) (sinc (*builder*) 1)
     (emit (*builder*) (list 'ranew))
-    (emit (*builder*) (list 'pushint 0)) (sinc (*builder*) 1)
+    (emit (*builder*) (list 'load 0)) (sinc (*builder*) 1)
     (do [(i 0 (+ 1 i)) (cs (~ al 'contains) (cdr cs))] [(null? cs) '()]
-      (generate-code (car cs)) (sinc (*builder*) 1)
+      (generate-code (car cs))
       (emit (*builder*) (list 'raset)) (sdec (*builder*) 1)
       (emit (*builder*) (list 'inc)))
     (emit (*builder*) (list 'pop)) (sdec (*builder*) 1)
-    (emit (*builder*) (list 'pushtid "array")) (sinc (*builder*) 1)
+    (emit (*builder*) (list 'loadklass "array")) (sinc (*builder*) 1)
     (emit (*builder*) (list 'gfref "literal")) (sinc (*builder*) 1)
     (emit (*builder*) (list 'call 2)) (sdec (*builder*) 2)))
 
 (define-method generate-code ((fl <rh-function-literal>))
   (set! (~ fl 'name) (get-function-tempname (*global-env*)))
   (next-method)
-  (emit (*builder*) (list 'enclose  (~ fl 'name))))
+  (emit (*builder*) (list 'enclose  (~ fl 'name))) (sinc (*builder*) 1))
 
 (define-method generate-code ((cl <rh-character-literal>))
-  (emit (*builder*) (list 'pushchar (string (~ cl 'value)))))
+  (emit (*builder*) (list 'pushchar (string (~ cl 'value)))) (sinc (*builder*) 1))
 
 (define-method generate-code ((cl <rh-string-literal>))
-  (emit (*builder*) (list 'pushstr (~ cl 'value))))
+  (emit (*builder*) (list 'load (~ cl 'value))) (sinc (*builder*) 1))
 
 (define-method generate-code ((cl <rh-integer-literal>))
-  (emit (*builder*) (list 'pushint (~ cl 'value))))
+  (emit (*builder*) (list 'load (~ cl 'value))) (sinc (*builder*) 1))
 
 (define-method print-code ((genv <global-environment>) p)
   (let ([c (hash-table-map (~ genv 'classes) print-class)]
@@ -589,7 +627,7 @@
   (rlet1 r '()
     (push! r (cons "name" name))
     (push! r (cons "type" "function"))
-    (push! r (cons "stack_size" 0))
+    (push! r (cons "stack_size" (~ body 'max-stack)))
     (push! r (cons "variable_size" (~ body 'variable-count)))
     (push! r (cons "function_size" (~ body 'function-count)))
     (push! r (cons "argument_type" (list->vector (~ body 'argument-types))))

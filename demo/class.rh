@@ -14,5 +14,14 @@ def entry () {
     print(k.a)
     k.a = 4
     print(k.a)
+    k = ~klaas.new()
+    k.a = 1
+    k.b = 2
+    k.c = 3
+    k.d = 4
+    print(k.a)
+    print(k.b)
+    print(k.c)
+    print(k.d)
 }
 

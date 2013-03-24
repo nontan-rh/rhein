@@ -3,7 +3,7 @@ def entry() {
     a = 1
     b = c = 0
     i = 0
-    while i < 20 {
+    while i < 40 {
         c = a + b
         a = b
         b = c 
