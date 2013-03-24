@@ -21,6 +21,8 @@ void
 print_value(State* state, Value v) {
     if (is_int(v)) {
         printf("%ld", get_int(v));
+    } else if (is_char(v)) {
+        printf("?%c", get_char(v));
     } else if (v == Ctrue) {
         printf("true");
     } else if (v == Cfalse) {

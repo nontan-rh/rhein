@@ -201,6 +201,7 @@ State::initializeKlass1() {
     SET_KLASS(null, any);
     SET_KLASS(bool, any);
     SET_KLASS(int, any);
+    SET_KLASS(char, any);
     SET_KLASS(string, any);
     SET_KLASS(array, any);
     SET_KLASS(hashtable, any);
@@ -217,6 +218,7 @@ State::initializeKlass2() {
     SET_NAME(null);
     SET_NAME(bool);
     SET_NAME(int);
+    SET_NAME(char);
     SET_NAME(string);
     SET_NAME(array);
     SET_NAME(hashtable);
@@ -234,6 +236,7 @@ State::initializeKlass3() {
     HASH_SET(null);
     HASH_SET(bool);
     HASH_SET(int);
+    HASH_SET(char);
     HASH_SET(string);
     HASH_SET(array);
     HASH_SET(hashtable);

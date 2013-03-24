@@ -96,24 +96,36 @@ typedef intptr_t Int;
 
 // Value tag structure
 //
+// Special constant prefix
+// -------- 11111110 : 8bit and more are reserved
+//
 // ---> LSB
-// -------1 : Integer
-// ------00 : Object
-// 00000010 : False
-// 00000110 : True
-// 00001010 : Null
-// 00001110 : Undef
+// -------- -------1 : Integer
+// -------- ------00 : Object
+// -------- 00000010 : Character
+// 00000000 11111110 : False
+// 00000001 11111110 : True
+// 00000010 11111110 : Null
+// 00000011 11111110 : Undef
 
-const uintptr_t Cfalse      = 0x00000002;
-const uintptr_t Ctrue       = 0x00000006;
-const uintptr_t Cnull       = 0x0000000a;
-const uintptr_t Cundef      = 0x0000000e;
+#define CONST_ID(x) (((x) << 8) | ConstSign)
+
+const uintptr_t ConstSign   = 0x000000fe;
+const uintptr_t Cfalse      = CONST_ID(0);
+const uintptr_t Ctrue       = CONST_ID(1);
+const uintptr_t Cnull       = CONST_ID(2);
+const uintptr_t Cundef      = CONST_ID(3);
 
 const uintptr_t int_mask    = 0x00000001;
+const uintptr_t int_masked  = 0x00000001;
 const uintptr_t obj_mask    = 0x00000003;
+const uintptr_t obj_masked  = 0x00000000;
+const uintptr_t char_mask   = 0x000000ff;
+const uintptr_t char_masked = 0x00000002;
 
-static inline bool is_int(Value v)      { return ((v & int_mask) == 1); }
-static inline bool is_obj(Value v)      { return ((v & obj_mask) == 0); }
+static inline bool is_int(Value v)      { return ((v & int_mask) == int_masked); }
+static inline bool is_obj(Value v)      { return ((v & obj_mask) == obj_masked); }
+static inline bool is_char(Value v)     { return ((v & char_mask) == char_masked); }
 static inline bool is_bool(Value v)     { return (v == Ctrue || v == Cfalse); }
 static inline bool is_true(Value v)     { return (v == Ctrue); }
 static inline bool is_false(Value v)    { return (v == Cfalse); }
@@ -128,6 +140,11 @@ const uintptr_t msb_mask    = (uintptr_t)1 << ((sizeof(intptr_t) * CHAR_BIT) - 1
 static inline Int get_int(Value v) {
     assert(is_int(v));
     return static_cast<intptr_t>((v & msb_mask) | (v >> 1));
+}
+
+static inline char get_char(Value v) {
+    assert(is_char(v));
+    return static_cast<char>(v >> 8);
 }
 
 static inline Object* get_obj(Value v) {
@@ -149,6 +166,7 @@ static inline Value make_value(const Object* v) { return reinterpret_cast<Value>
 static inline Value make_value(Object* v)   { return reinterpret_cast<Value>(v); }
 static inline Value make_value(Int v)       { return static_cast<Value>(((v << 1) | 1)); }
 static inline Value make_value(unsigned v)  { return static_cast<Value>(((v << 1) | 1)); }
+static inline Value make_value(char v)      { return static_cast<Value>(((v << 8) | 2)); }
 
 static inline bool equal(Value lft, Value rht) { return (lft == rht); }
 

@@ -36,6 +36,8 @@ rhein::get_klass(State* state, Value v) {
         return state->bool_klass;
     } else if (is_int(v)) {
         return state->int_klass;
+    } else if (is_char(v)) {
+        return state->char_klass;
     } else if (is_null(v)) {
         return state->null_klass;
     }

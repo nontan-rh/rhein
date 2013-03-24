@@ -32,12 +32,12 @@ Array::toString(State* state, String*& dest) {
     char* buf = state->ator->allocateBlock<char>(size);
     
     for (Int i = 0; i < size; i++) {
-        if (!(is_int(body[i]) && -128 <= get_int(body[i]) && get_int(body[i]) < 128)) {
+        if (!is_char(body[i])) {
             state->ator->releaseBlock(buf);
             return false;
         }
 
-        buf[i] = (char)get_int(body[i]);
+        buf[i] = get_char(body[i]);
     }
 
     dest = state->string_provider->getString(buf, size);

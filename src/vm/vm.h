@@ -56,6 +56,7 @@ public:
 
     Klass* any_klass;
     Klass* int_klass;
+    Klass* char_klass;
     Klass* null_klass;
     Klass* bool_klass;
     Klass* array_klass;

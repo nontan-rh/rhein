@@ -153,9 +153,9 @@ State::readFunction(FILE* fp) {
                 break;
             case LiteralSigniture::Char:
                 {
-                    uint32_t int_value;
-                    BinaryReader::read32Bit(fp, int_value);
-                    constant_table[i] = make_value((Int)int_value);
+                    uint32_t char_value;
+                    BinaryReader::read32Bit(fp, char_value);
+                    constant_table[i] = make_value((char)char_value);
                 }
                 break;
             case LiteralSigniture::String:

@@ -208,7 +208,7 @@ String::indexRef(State* /* state */, Value vindex, Value& dest) const {
         return false;
     }
 
-    dest = make_value((Int)body[index]);
+    dest = make_value(body[index]);
     return true;
 }
 
@@ -257,7 +257,7 @@ String::toArray(State* state, Array*& array) {
     array = Array::create(state, length);
 
     for (unsigned i = 0; i < length; i++) {
-        array->eltSet(i, make_value((Int)body[i]));
+        array->eltSet(i, make_value(body[i]));
     }
     return true;
 }
