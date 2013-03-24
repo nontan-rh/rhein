@@ -163,6 +163,15 @@
   (match-let1 (x1 x2) lis
     (integer->char (+ (* 16 (digit->integer x1)) (digit->integer x2)))))
 
+(define (make-true-literal _)
+  (make <rh-true-literal>))
+
+(define (make-false-literal _)
+  (make <rh-false-literal>))
+
+(define (make-null-literal _)
+  (make <rh-null-literal>))
+
 (define (make-member-decl lis) lis)
 
 (define (make-class-block lis) lis)
@@ -219,6 +228,9 @@
 (define gr-keyw-global (pkeyword "global"))
 (define gr-keyw-and (pkeyword "and"))
 (define gr-keyw-or (pkeyword "or"))
+(define gr-keyw-true (pkeyword "true"))
+(define gr-keyw-false (pkeyword "false"))
+(define gr-keyw-null (pkeyword "null"))
 (define gr-keyw (p/ gr-keyw-local
                     gr-keyw-def
                     gr-keyw-if
@@ -229,7 +241,10 @@
                     gr-keyw-class
                     gr-keyw-global
                     gr-keyw-and
-                    gr-keyw-or))
+                    gr-keyw-or
+                    gr-keyw-true
+                    gr-keyw-false
+                    gr-keyw-null))
 
 ; Symbols
 (define gr-lp (pskipwl (pc #[\u0028])))
@@ -304,6 +319,9 @@
                           (pbetween gr-dlb (psependby gr-hash-pair gr-comma) gr-rb)))
 (define gr-string (peval make-string-literal (pseq gr-dq (pmtill gr-string-char gr-dq))))
 (define gr-paren-expr (pbetween gr-lp gr-relat-expr gr-rp))
+(define gr-true (peval make-true-literal gr-keyw-true))
+(define gr-false (peval make-false-literal gr-keyw-false))
+(define gr-null (peval make-null-literal gr-keyw-null))
 
 ; Identifier
 (define gr-ref-ident (peval make-ref-ident (pseq (popt (p/ gr-hat gr-tilde)) gr-ident)))
@@ -325,6 +343,9 @@
                          gr-funcall-name
                          gr-ref-ident
                          gr-digit
+                         gr-true
+                         gr-false
+                         gr-null
                          gr-paren-expr))
 
 ; Postfix

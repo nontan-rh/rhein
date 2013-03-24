@@ -130,3 +130,15 @@
 (define-class <rh-integer-literal> (<rh-ast>)
   ((value :init-keyword :value)))
 
+(define-class <rh-special-literal> (<rh-ast>)
+  ())
+
+(define-class <rh-true-literal> (<rh-special-literal>)
+  ())
+
+(define-class <rh-false-literal> (<rh-special-literal>)
+  ())
+
+(define-class <rh-null-literal> (<rh-special-literal>)
+  ())
+

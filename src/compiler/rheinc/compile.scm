@@ -644,6 +644,15 @@
 (define-method generate-code ((cl <rh-integer-literal>))
   (emit (*builder*) (list 'load (~ cl 'value))) (sinc (*builder*) 1))
 
+(define-method generate-code ((tl <rh-true-literal>))
+  (emit (*builder*) (list 'loadtrue)) (sinc (*builder*) 1))
+
+(define-method generate-code ((tl <rh-false-literal>))
+  (emit (*builder*) (list 'loadfalse)) (sinc (*builder*) 1))
+
+(define-method generate-code ((tl <rh-null-literal>))
+  (emit (*builder*) (list 'loadnull)) (sinc (*builder*) 1))
+
 (define-method print-code ((genv <global-environment>) p)
   (let ([c (hash-table-map (~ genv 'classes) print-class)]
         [v (hash-table-map (~ genv 'variables) print-variable)]
