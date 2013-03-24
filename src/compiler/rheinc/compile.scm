@@ -574,8 +574,8 @@
 
 (define (binary-op->insn op)
   (case op
-    ['is 'eq]
-    ['isnot 'ne]
+    ['eq 'eq]
+    ['ne 'ne]
     ['> 'gt]
     ['< 'lt]
     ['>= 'ge]

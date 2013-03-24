@@ -2,12 +2,12 @@
 def entry() {
     and {
         print("hello")
-        1 is 0
+        1 eq 0
         print("this should not shown")
     }
 
     or {
-        1 + 1 is 3
+        1 + 1 eq 3
         print("world")
         print("this should not shown")
     }

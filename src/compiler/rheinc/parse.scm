@@ -58,13 +58,7 @@
 (define (make-closure-func-def lis)
   (match-let1 (_ name label params code) lis
     (make <rh-closure-function> :name name :label label
-                                :parameters (map (^x (~ x 'name)) params)
-                                :argument-types (map (^x (~ x 'type)) params)
-                                :code code)))
-
-(define (make-if-expr lis)
-  (define (make-cond-clause x)
-    (match-let1 (_ cnd code) x
+                                :parameters (map (^x (~ x 'name)) params) :argument-types (map (^x (~ x 'type)) params) :code code))) (define (make-if-expr lis) (define (make-cond-clause x) (match-let1 (_ cnd code) x
       (make <rh-conditional-clause> :condition-expression cnd :code code)))
   (match-let1 (if-clause elif-clauses else-clause) lis
     (make <rh-if-expression>
@@ -268,8 +262,8 @@
 (define gr-comma (pskipwl (pc #[,])))
 (define gr-mul-op (p/ (pkeysym "*") (pkeysym "/")))
 (define gr-add-op (p/ (pkeysym "+") (pkeysym "-")))
-(define gr-relat-op (p/ (pkeyword "is")
-                        (pkeyword "isnot")
+(define gr-relat-op (p/ (pkeyword "eq")
+                        (pkeyword "ne")
                         (pkeysym ">")
                         (pkeysym "<")
                         (pkeysym ">=")
