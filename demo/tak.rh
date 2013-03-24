@@ -1,5 +1,5 @@
 
-def entry()
+def main()
 {
     print(tak(18,9,0))
 }

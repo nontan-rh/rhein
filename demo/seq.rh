@@ -1,5 +1,5 @@
 
-def entry() {
+def main() {
     local x,a
     a = "Hello world!".to_array()
     a[0] = ?1

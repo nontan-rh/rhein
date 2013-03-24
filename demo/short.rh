@@ -1,5 +1,5 @@
 
-def entry() {
+def main() {
     and {
         print("hello")
         1 eq 0

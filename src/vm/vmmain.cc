@@ -16,7 +16,7 @@ int main() {
     State *state = new (GC_malloc(sizeof(State))) State();
     state->loadFile(stdin);
     state->loadModule(BasicModule::create(state));
-    execute(state, state->string_provider->getString("entry"), 0, nullptr);
+    execute(state, state->string_provider->getString("main"), 0, nullptr);
     return 0;
 }
 

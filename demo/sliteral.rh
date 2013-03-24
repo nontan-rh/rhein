@@ -1,5 +1,5 @@
 
-def entry() {
+def main() {
     local x = true, y = false, z = null
     print(x)
     print(y)

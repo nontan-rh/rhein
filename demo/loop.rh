@@ -1,4 +1,4 @@
-def entry(){
+def main(){
     while 1 > 0 {
         break
     }

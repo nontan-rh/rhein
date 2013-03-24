@@ -3,7 +3,7 @@ def extfun(a) {
     print(a)
 }
 
-def entry() {
+def main() {
     local x, varf, flit, vare
     def fun(b) { x = b }
 

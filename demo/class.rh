@@ -7,7 +7,7 @@ class klaas {
     a,b,c,d
 }
 
-def entry () {
+def main () {
     local k
     k = ~klass.new()
     k.a = 3

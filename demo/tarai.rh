@@ -1,5 +1,5 @@
 
-def entry() {
+def main() {
     print(tarai(12,6,0))
 }
 
