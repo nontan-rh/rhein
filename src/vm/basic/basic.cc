@@ -56,6 +56,22 @@ fn_print(State* state, unsigned argc, Value* args) {
 }
 
 Value
+fn_input(State* state, unsigned argc, Value* args) {
+    if (argc >= 2) {
+        fatal("Invalid arguments");
+    }
+
+    if (argc == 1) {
+        print_value(state, args[0]);
+    }
+
+    char buf[256];
+    scanf("%256s", buf);
+
+    return make_value(state->string_provider->getString(buf));
+}
+
+Value
 fn_new(State* state, unsigned argc, Value* args) {
     if (argc != 1) {
         fatal("Too many arguments for new");
@@ -134,6 +150,7 @@ BasicModule::initialize(State* state) {
 #define ADD_FUNC(x) state->addFunction(NativeFunction::create(state, \
     state->string_provider->getString(#x), fn_ ## x));
     ADD_FUNC(print);
+    ADD_FUNC(input);
     ADD_FUNC(new);
     ADD_FUNC(literal);
     ADD_FUNC(to_array);
