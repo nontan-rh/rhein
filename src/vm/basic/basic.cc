@@ -138,6 +138,65 @@ fn_to_string(State* state, unsigned argc, Value* args) {
     return make_value(string);
 }
 
+Value
+fn_append(State* state, unsigned argc, Value* args) {
+    if (argc == 0) {
+        return make_value(state->string_provider->getString(""));
+    }
+
+    if (get_klass(state, args[0]) != state->string_klass) {
+        fatal("Cannot append");
+    }
+
+    String* result = (String*)get_obj(args[0]);
+    for (unsigned i = 1; i < argc; i++) {
+        if (get_klass(state, args[i]) != state->string_klass) {
+            fatal("Cannot append");
+        }
+
+        result = result->append(state, (String*)get_obj(args[i]));
+    }
+    return make_value(result);
+}
+
+Value
+fn_head(State* state, unsigned argc, Value* args) {
+    if (!(argc == 2
+        && get_klass(state, args[0]) == state->string_klass
+        && get_klass(state, args[1]) == state->int_klass)) {
+
+        fatal("Invalid arguments");
+    }
+
+    return make_value(static_cast<String*>(get_obj(args[0]))->head(state, get_int(args[1])));
+}
+
+Value
+fn_tail(State* state, unsigned argc, Value* args) {
+    if (!(argc == 2
+        && get_klass(state, args[0]) == state->string_klass
+        && get_klass(state, args[1]) == state->int_klass)) {
+
+        fatal("Invalid arguments");
+    }
+
+    return make_value(static_cast<String*>(get_obj(args[0]))->tail(state, get_int(args[1])));
+}
+
+Value
+fn_sub(State* state, unsigned argc, Value* args) {
+    if (!(argc == 3
+        && get_klass(state, args[0]) == state->string_klass
+        && get_klass(state, args[1]) == state->int_klass
+        && get_klass(state, args[2]) == state->int_klass)) {
+
+        fatal("Invalid arguments");
+    }
+
+    return make_value(
+        static_cast<String*>(get_obj(args[0]))->sub(state, get_int(args[1]), get_int(args[2])));
+}
+
 BasicModule*
 BasicModule::create(State* state) {
     void* p = state->ator->allocateStruct<BasicModule>();
@@ -155,6 +214,10 @@ BasicModule::initialize(State* state) {
     ADD_FUNC(literal);
     ADD_FUNC(to_array);
     ADD_FUNC(to_string);
+    ADD_FUNC(append);
+    ADD_FUNC(head);
+    ADD_FUNC(tail);
+    ADD_FUNC(sub);
 #undef ADD_FUNC
     return false;
 }

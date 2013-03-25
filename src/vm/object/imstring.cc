@@ -245,7 +245,7 @@ String::tail(State* state, size_t begin) {
 }
 
 String*
-String::substring(State* state, size_t begin, size_t end) {
+String::sub(State* state, size_t begin, size_t end) {
     if (end > length || begin >= length || end < begin) {
         throw;
     }

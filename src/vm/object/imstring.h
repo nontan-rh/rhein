@@ -42,7 +42,7 @@ public:
     String* append(State* state, String* rht);
     String* head(State* state, size_t end);
     String* tail(State* state, size_t begin);
-    String* substring(State* state, size_t begin, size_t end);
+    String* sub(State* state, size_t begin, size_t end);
 
     bool toArray(State* state, Array*& array);
 
