@@ -77,6 +77,9 @@ bool rhein::op_gt(Value lft, Value rht, Value& dest) {
     if (is_int(lft) && is_int(rht)) {
         dest = make_value(get_int(lft) > get_int(rht));
         return true;
+    } else if (is_char(lft) && is_char(rht)) {
+        dest = make_value(get_char(lft) > get_char(rht));
+        return true;
     }
     return false;
 }
@@ -84,6 +87,9 @@ bool rhein::op_gt(Value lft, Value rht, Value& dest) {
 bool rhein::op_lt(Value lft, Value rht, Value& dest) {
     if (is_int(lft) && is_int(rht)) {
         dest = make_value(get_int(lft) < get_int(rht));
+        return true;
+    } else if (is_char(lft) && is_char(rht)) {
+        dest = make_value(get_char(lft) < get_char(rht));
         return true;
     }
     return false;
@@ -93,6 +99,9 @@ bool rhein::op_ge(Value lft, Value rht, Value& dest) {
     if (is_int(lft) && is_int(rht)) {
         dest = make_value(get_int(lft) >= get_int(rht));
         return true;
+    } else if (is_char(lft) && is_char(rht)) {
+        dest = make_value(get_char(lft) >= get_char(rht));
+        return true;
     }
     return false;
 }
@@ -100,6 +109,9 @@ bool rhein::op_ge(Value lft, Value rht, Value& dest) {
 bool rhein::op_le(Value lft, Value rht, Value& dest) {
     if (is_int(lft) && is_int(rht)) {
         dest = make_value(get_int(lft) <= get_int(rht));
+        return true;
+    } else if (is_char(lft) && is_char(rht)) {
+        dest = make_value(get_char(lft) <= get_char(rht));
         return true;
     }
     return false;

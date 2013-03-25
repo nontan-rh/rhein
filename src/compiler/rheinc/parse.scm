@@ -303,7 +303,7 @@
 (define gr-char (p/ (peval xdigit->char (pseqn 1 (ps "\\x") (pcount 2 (pc #[[:xdigit:]]))))
                     (pseqn 1 (pc #[\\]) gr-dq)
                     pgraph))
-(define gr-char-literal (peval make-char-literal (pseq gr-question gr-char)))
+(define gr-char-literal (peval make-char-literal (pseq gr-question (pskipwl gr-char))))
 (define gr-array-literal (peval
                            make-array-literal
                            (pbetween gr-dlbracket (psependby gr-relat-expr gr-comma) gr-rbracket)))

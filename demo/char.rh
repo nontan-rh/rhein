@@ -1,4 +1,6 @@
 def main() {
     print(?a)
+    print("?a > ?b:", ?a > ?b)
+    print("?a > ?A:", ?a > ?A)
 }
 
