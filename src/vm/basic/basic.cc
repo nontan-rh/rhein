@@ -68,7 +68,7 @@ fn_input(State* state, unsigned argc, Value* args) {
     char buf[256];
     scanf("%256s", buf);
 
-    return make_value(state->string_provider->getString(buf));
+    return make_value(state->s_prv->getString(buf));
 }
 
 Value
@@ -141,7 +141,7 @@ fn_to_string(State* state, unsigned argc, Value* args) {
 Value
 fn_append(State* state, unsigned argc, Value* args) {
     if (argc == 0) {
-        return make_value(state->string_provider->getString(""));
+        return make_value(state->s_prv->getString(""));
     }
 
     if (get_klass(state, args[0]) != state->string_klass) {
@@ -197,6 +197,22 @@ fn_sub(State* state, unsigned argc, Value* args) {
         static_cast<String*>(get_obj(args[0]))->sub(state, get_int(args[1]), get_int(args[2])));
 }
 
+Value
+fn_length(State* state, unsigned argc, Value* args) {
+    if (argc != 1) {
+        fatal("Invalid arguments");
+    }
+
+    if (get_klass(state, args[0]) == state->string_klass) {
+        return make_value(static_cast<String*>(get_obj(args[0]))->getLength());
+    } else if (get_klass(state, args[0]) == state->array_klass) {
+        return make_value(static_cast<Array*>(get_obj(args[0]))->getLength());
+    } else {
+        fatal("Cannot get length");
+    }
+    return Cnull;
+}
+
 BasicModule*
 BasicModule::create(State* state) {
     void* p = state->ator->allocateStruct<BasicModule>();
@@ -207,7 +223,7 @@ BasicModule::create(State* state) {
 bool
 BasicModule::initialize(State* state) {
 #define ADD_FUNC(x) state->addFunction(NativeFunction::create(state, \
-    state->string_provider->getString(#x), fn_ ## x));
+    state->s_prv->getString(#x), fn_ ## x));
     ADD_FUNC(print);
     ADD_FUNC(input);
     ADD_FUNC(new);
@@ -218,6 +234,7 @@ BasicModule::initialize(State* state) {
     ADD_FUNC(head);
     ADD_FUNC(tail);
     ADD_FUNC(sub);
+    ADD_FUNC(length);
 #undef ADD_FUNC
     return false;
 }

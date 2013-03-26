@@ -47,7 +47,7 @@ BinaryReader::readString(FILE* fp, State* state, String*& result) {
         }
         buffer[i] = (char)fgetc(fp);
     }
-    result = state->string_provider->getString(buffer, length);
+    result = state->s_prv->getString(buffer, length);
     delete[] buffer;
     return true;
 }

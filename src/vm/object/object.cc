@@ -11,7 +11,7 @@ using namespace rhein;
 
 String*
 Object::stringRepr(State* state) {
-    return state->string_provider->getString("#<obj>");
+    return state->s_prv->getString("#<obj>");
 }
 
 Klass*

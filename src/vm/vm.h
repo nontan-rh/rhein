@@ -52,7 +52,7 @@ public:
     static void* operator new(size_t /* size */, void* p) { return p; }
 
     Allocator* ator;
-    StringProvider* string_provider;
+    StringProvider* s_prv;
 
     Klass* any_klass;
     Klass* int_klass;
@@ -79,8 +79,8 @@ public:
     bool addVariable(String* id);
     bool addKlass(Klass* klass);
 
-    void setStringProvider(StringProvider* s) { string_provider = s; } 
-    bool hasStringProvider() const { return (string_provider != nullptr); }
+    void setStringProvider(StringProvider* s) { s_prv = s; } 
+    bool hasStringProvider() const { return (s_prv != nullptr); }
 
     bool getKlass(String* id, Value& klass) { return klass_slots->find(make_value(id), klass); }
 

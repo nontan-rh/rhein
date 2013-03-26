@@ -39,6 +39,8 @@ public:
     // Override
     bool indexRef(State* state, Value index, Value& value) const;
 
+    Int getLength() const { return length; }
+
     String* append(State* state, String* rht);
     String* head(State* state, size_t end);
     String* tail(State* state, size_t begin);

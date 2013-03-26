@@ -172,7 +172,7 @@ Frame::laset(unsigned depth, unsigned offset, Value value) {
     return true;
 }
 
-State::State() : string_provider(nullptr) {
+State::State() : s_prv(nullptr) {
     // Bootstrap type system
     ator = new (GC_malloc(sizeof(Allocator))) Allocator();
 
@@ -213,7 +213,7 @@ State::initializeKlass1() {
 
 void
 State::initializeKlass2() {
-#define SET_NAME(name) name ## _klass->setName(string_provider->getString(#name))
+#define SET_NAME(name) name ## _klass->setName(s_prv->getString(#name))
     SET_NAME(any);
     SET_NAME(null);
     SET_NAME(bool);
@@ -231,7 +231,7 @@ State::initializeKlass2() {
 void
 State::initializeKlass3() {
 #define HASH_SET(name) klass_slots->insert(this, \
-    make_value(string_provider->getString(#name)), make_value(name ## _klass))
+    make_value(s_prv->getString(#name)), make_value(name ## _klass))
     HASH_SET(any);
     HASH_SET(null);
     HASH_SET(bool);
@@ -248,7 +248,7 @@ State::initializeKlass3() {
 
 void
 State::initializeString() {
-    string_provider = StringProvider::create(this);
+    s_prv = StringProvider::create(this);
 }
 
 bool

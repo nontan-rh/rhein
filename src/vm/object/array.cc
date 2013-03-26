@@ -40,7 +40,7 @@ Array::toString(State* state, String*& dest) {
         buf[i] = get_char(body[i]);
     }
 
-    dest = state->string_provider->getString(buf, size);
+    dest = state->s_prv->getString(buf, size);
     state->ator->releaseBlock(buf);
     return true;
 }

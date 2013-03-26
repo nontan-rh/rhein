@@ -223,7 +223,7 @@ String::append(State* state, String* rht) {
     char* buffer = state->ator->allocateBlock<char>(newlength);
     memcpy(buffer, this->body, this->length);
     memcpy(buffer + this->length, rht->body, rht->length);
-    String* ret = state->string_provider->getString(buffer, newlength);
+    String* ret = state->s_prv->getString(buffer, newlength);
     state->ator->releaseBlock(buffer);
     return ret;
 }
@@ -233,7 +233,7 @@ String::head(State* state, size_t end) {
     if (end > length) {
         throw;
     }
-    return state->string_provider->getString(body, end);
+    return state->s_prv->getString(body, end);
 }
 
 String*
@@ -241,7 +241,7 @@ String::tail(State* state, size_t begin) {
     if (begin >= length) {
         throw;
     }
-    return state->string_provider->getString(body + begin, length - begin);
+    return state->s_prv->getString(body + begin, length - begin);
 }
 
 String*
@@ -249,7 +249,7 @@ String::sub(State* state, size_t begin, size_t end) {
     if (end > length || begin >= length || end < begin) {
         throw;
     }
-    return state->string_provider->getString(body + begin, end - begin);
+    return state->s_prv->getString(body + begin, end - begin);
 }
 
 bool
