@@ -30,7 +30,7 @@ print_value(State* state, Value v) {
     } else if (v == Cnull) {
         printf("null");
     } else if (is_obj(v)) {
-        String* str = get_obj(v)->stringRepr(state);
+        String* str = get_obj<Object>(v)->stringRepr(state);
         const char* cstr;
         size_t len;
         str->getCStr(cstr, len);
@@ -68,7 +68,7 @@ fn_input(State* state, unsigned argc, Value* args) {
     char buf[256];
     scanf("%256s", buf);
 
-    return make_value(state->s_prv->getString(buf));
+    return obj2value(state->s_prv->getString(buf));
 }
 
 Value
@@ -78,7 +78,7 @@ fn_new(State* state, unsigned argc, Value* args) {
     }
 
     Klass* k = get_klass(state, args[0]);
-    return make_value(Record::create(state, k));
+    return obj2value(Record::create(state, k));
 }
 
 Value
@@ -93,7 +93,7 @@ fn_literal(State* state, unsigned argc, Value* args) {
             fatal("Lack of argument");
         }
 
-        return make_value(Array::literal(state, (Array*)get_obj(args[1])));
+        return obj2value(Array::literal(state, get_obj<Array>(args[1])));
     } else if (k == state->hashtable_klass) {
         if (!(argc == 3
             && get_klass(state, args[1]) == state->array_klass
@@ -102,9 +102,9 @@ fn_literal(State* state, unsigned argc, Value* args) {
             fatal("Lack of argument");
         }
 
-        return make_value(HashTable::literal(state,
-            (Array*)get_obj(args[1]),
-            (Array*)get_obj(args[2])));
+        return obj2value(HashTable::literal(state,
+            get_obj<Array>(args[1]),
+            get_obj<Array>(args[2])));
     } else {
         fatal("Not supported class");
     }
@@ -117,11 +117,11 @@ fn_to_array(State* state, unsigned argc, Value* args) {
     }
 
     Array* array;
-    if (!static_cast<String*>(get_obj(args[0]))->toArray(state, array)) {
+    if (!get_obj<String>(args[0])->toArray(state, array)) {
         fatal("Error occured");
     }
 
-    return make_value(array);
+    return obj2value(array);
 }
 
 Value
@@ -131,32 +131,32 @@ fn_to_string(State* state, unsigned argc, Value* args) {
     }
 
     String* string;
-    if (!static_cast<Array*>(get_obj(args[0]))->toString(state, string)) {
+    if (!get_obj<Array>(args[0])->toString(state, string)) {
         fatal("Error occured");
     }
 
-    return make_value(string);
+    return obj2value(string);
 }
 
 Value
 fn_append(State* state, unsigned argc, Value* args) {
     if (argc == 0) {
-        return make_value(state->s_prv->getString(""));
+        return obj2value(state->s_prv->getString(""));
     }
 
     if (get_klass(state, args[0]) != state->string_klass) {
         fatal("Cannot append");
     }
 
-    String* result = (String*)get_obj(args[0]);
+    String* result = get_obj<String>(args[0]);
     for (unsigned i = 1; i < argc; i++) {
         if (get_klass(state, args[i]) != state->string_klass) {
             fatal("Cannot append");
         }
 
-        result = result->append(state, (String*)get_obj(args[i]));
+        result = result->append(state, get_obj<String>(args[i]));
     }
-    return make_value(result);
+    return obj2value(result);
 }
 
 Value
@@ -168,7 +168,7 @@ fn_head(State* state, unsigned argc, Value* args) {
         fatal("Invalid arguments");
     }
 
-    return make_value(static_cast<String*>(get_obj(args[0]))->head(state, get_int(args[1])));
+    return obj2value(get_obj<String>(args[0])->head(state, get_int(args[1])));
 }
 
 Value
@@ -180,7 +180,7 @@ fn_tail(State* state, unsigned argc, Value* args) {
         fatal("Invalid arguments");
     }
 
-    return make_value(static_cast<String*>(get_obj(args[0]))->tail(state, get_int(args[1])));
+    return obj2value(get_obj<String>(args[0])->tail(state, get_int(args[1])));
 }
 
 Value
@@ -193,8 +193,7 @@ fn_sub(State* state, unsigned argc, Value* args) {
         fatal("Invalid arguments");
     }
 
-    return make_value(
-        static_cast<String*>(get_obj(args[0]))->sub(state, get_int(args[1]), get_int(args[2])));
+    return obj2value(get_obj<String>(args[0])->sub(state, get_int(args[1]), get_int(args[2])));
 }
 
 Value
@@ -204,9 +203,9 @@ fn_length(State* state, unsigned argc, Value* args) {
     }
 
     if (get_klass(state, args[0]) == state->string_klass) {
-        return make_value(static_cast<String*>(get_obj(args[0]))->getLength());
+        return int2value(get_obj<String>(args[0])->getLength());
     } else if (get_klass(state, args[0]) == state->array_klass) {
-        return make_value(static_cast<Array*>(get_obj(args[0]))->getLength());
+        return int2value(get_obj<Array>(args[0])->getLength());
     } else {
         fatal("Cannot get length");
     }

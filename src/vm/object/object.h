@@ -139,34 +139,34 @@ const uintptr_t msb_mask    = (uintptr_t)1 << ((sizeof(intptr_t) * CHAR_BIT) - 1
 
 static inline Int get_int(Value v) {
     assert(is_int(v));
-    return static_cast<intptr_t>((v & msb_mask) | (v >> 1));
+    return (Int)((v & msb_mask) | (v >> 1));
 }
 
 static inline char get_char(Value v) {
     assert(is_char(v));
-    return static_cast<char>(v >> 8);
+    return (char)(v >> 8);
 }
 
-static inline Object* get_obj(Value v) {
+template <class T>
+static inline T* get_obj(Value v) {
     assert(is_obj(v));
-    return reinterpret_cast<Object*>(v);
+    return (T*)v;
 }
 
 Klass* get_klass(State* state, Value v);
 
 static inline unsigned long get_hash(Value v) {
     if (is_obj(v)) {
-        return get_obj(v)->hash();
+        return get_obj<Object>(v)->hash();
     }
-    return static_cast<unsigned long>(v);
+    return (unsigned long)v;
 }
 
-static inline Value make_value(bool v)      { return (v ? Ctrue : Cfalse); }
-static inline Value make_value(const Object* v) { return reinterpret_cast<Value>(v); }
-static inline Value make_value(Object* v)   { return reinterpret_cast<Value>(v); }
-static inline Value make_value(Int v)       { return static_cast<Value>(((v << 1) | 1)); }
-static inline Value make_value(unsigned v)  { return static_cast<Value>(((v << 1) | 1)); }
-static inline Value make_value(char v)      { return static_cast<Value>(((v << 8) | 2)); }
+static inline Value bool2value(bool v)      { return (v ? Ctrue : Cfalse); }
+static inline Value obj2value(const Object* v)  { return (Value)v; }
+static inline Value int2value(Int v)        { return (Value)((v << 1) | 1); }
+static inline Value uint2value(Int v)       { return (Value)((v << 1) | 1); }
+static inline Value char2value(char v)      { return (Value)(((uintptr_t)v << 8) | 2); }
 
 static inline bool equal(Value lft, Value rht) { return (lft == rht); }
 

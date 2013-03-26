@@ -30,7 +30,7 @@ RecordInfo::RecordInfo(State* state, RecordInfo* parent, unsigned slot_num_,
 
     unsigned base = id_index_table->getItemNumber();
     for (unsigned i = 0; i < slot_num; i++) {
-        id_index_table->insert(state, make_value(slot_ids[i]), make_value(base + i));
+        id_index_table->insert(state, obj2value(slot_ids[i]), int2value(base + i));
     }
 }
 
@@ -45,7 +45,7 @@ RecordInfo::create(State* state, RecordInfo* parent, unsigned slot_num,
 bool
 RecordInfo::getSlotIndex(const String* slot_id, unsigned& index) const {
     Value vindex;
-    if (!id_index_table->find(make_value(slot_id), vindex)) {
+    if (!id_index_table->find(obj2value(slot_id), vindex)) {
         return false;
     }
 

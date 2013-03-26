@@ -111,9 +111,9 @@ public:
         Klass* klass = get_klass(state, args[index]);
         while (true) {
             Value child;
-            if (child_table->find(make_value(klass), child)) {
+            if (child_table->find(obj2value(klass), child)) {
                 // Unsafe cast!
-                if (!((DispatcherNode*)get_obj(child))->dispatch(state, argc, args, index + 1, func)) {
+                if (!get_obj<DispatcherNode>(child)->dispatch(state, argc, args, index + 1, func)) {
                     if (!is_null(variable_entry)) {
                         func = variable_entry;
                         return true;
@@ -146,13 +146,13 @@ public:
         }
         Klass* klass = func_body->getArgumentKlass()[index];
         Value child;
-        if (!child_table->find(make_value(klass), child)) {
+        if (!child_table->find(obj2value(klass), child)) {
             // Unsafe cast
-            child = make_value((Object*)create(state));
-            child_table->insert(state, make_value(klass), child);
+            child = obj2value((Object*)create(state));
+            child_table->insert(state, obj2value(klass), child);
         }
         // Unsafe cast
-        return ((DispatcherNode*)get_obj(child))->addFunction(state, func, func_body, index + 1);
+        return get_obj<DispatcherNode>(child)->addFunction(state, func, func_body, index + 1);
     }
 };
 
@@ -176,7 +176,7 @@ Method::dispatch(State* state, unsigned argc, Value* args, Value& result) {
 
 bool
 Method::addFunction(State* state, Function* func) {
-    return node->addFunction(state, make_value(func), func, 0);
+    return node->addFunction(state, obj2value(func), func, 0);
 }
 
 Method*

@@ -31,7 +31,7 @@ Klass::create(State* state, String* name, Klass* parent, unsigned slot_num, Stri
 Klass*
 rhein::get_klass(State* state, Value v) {
     if (is_obj(v)) {
-        return get_obj(v)->getKlass();
+        return get_obj<Object>(v)->getKlass();
     } else if (is_bool(v)) {
         return state->bool_klass;
     } else if (is_int(v)) {

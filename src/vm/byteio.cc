@@ -107,7 +107,7 @@ State::readKlass(FILE* fp) {
         return false;
     }
 
-    addKlass(Klass::create(this, klass_name, (Klass*)get_obj(parent), slot_num, slots));
+    addKlass(Klass::create(this, klass_name, get_obj<Klass>(parent), slot_num, slots));
     return true;
 }
 
@@ -131,7 +131,7 @@ State::readFunction(FILE* fp) {
         BinaryReader::readString(fp, this, type_name);
         //type_name->dump();
         getKlass(type_name, klass);
-        argument_types[i] = (Klass*)get_obj(klass);
+        argument_types[i] = get_obj<Klass>(klass);
     }
     BinaryReader::readBER(fp, function_slot_num);
     BinaryReader::readBER(fp, variable_slot_num);
@@ -148,21 +148,21 @@ State::readFunction(FILE* fp) {
                 {
                     long int_value;
                     BinaryReader::readInt(fp, int_value);
-                    constant_table[i] = make_value(int_value);
+                    constant_table[i] = int2value(int_value);
                 }
                 break;
             case LiteralSigniture::Char:
                 {
                     uint32_t char_value;
                     BinaryReader::read32Bit(fp, char_value);
-                    constant_table[i] = make_value((char)char_value);
+                    constant_table[i] = char2value((char)char_value);
                 }
                 break;
             case LiteralSigniture::String:
                 {
                     String* string_value;
                     BinaryReader::readString(fp, this, string_value);
-                    constant_table[i] = make_value(string_value);
+                    constant_table[i] = obj2value(string_value);
                 }
                 break;
             default:

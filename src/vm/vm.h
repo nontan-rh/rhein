@@ -82,19 +82,19 @@ public:
     void setStringProvider(StringProvider* s) { s_prv = s; } 
     bool hasStringProvider() const { return (s_prv != nullptr); }
 
-    bool getKlass(String* id, Value& klass) { return klass_slots->find(make_value(id), klass); }
+    bool getKlass(String* id, Value& klass) { return klass_slots->find(obj2value(id), klass); }
 
     // Bytecode level interface
     bool gfref(String* id, Value& func) {
-        if (!func_slots->find(make_value(id), func)) {
+        if (!func_slots->find(obj2value(id), func)) {
             id->dump();
             return false;
         }
         return true;
     }
 
-    bool gvref(String* id, Value& value) { return var_slots->find(make_value(id), value); }
-    bool gvset(String* id, Value value) { return var_slots->assign(make_value(id), value); }
+    bool gvref(String* id, Value& value) { return var_slots->find(obj2value(id), value); }
+    bool gvset(String* id, Value value) { return var_slots->assign(obj2value(id), value); }
 
     // File loading interface
     bool loadFile(FILE* fp);
