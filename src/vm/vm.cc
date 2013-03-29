@@ -263,9 +263,10 @@ State::addFunction(Function* func) {
             || fold->getKlass() == bytecode_function_klass) {
 
             Method* method = Method::create(this);
-            return (method->addFunction(this, (Function*)fold)
-                    && method->addFunction(this, func)
-                    && func_slots->assign(name, obj2value(method)));
+            method->addFunction(this, (Function*)fold);
+            method->addFunction(this, func);
+
+            return func_slots->assign(name, obj2value(method));
         } else if (fold->getKlass() == method_klass) {
             return static_cast<Method*>(fold)->addFunction(this, func);
         } else {

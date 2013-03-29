@@ -214,6 +214,16 @@ fn_length(State* state, unsigned argc, Value* args) {
     return Cnull;
 }
 
+Value
+fn_die(State* state, unsigned argc, Value* args) {
+    if (argc >= 1) {
+        fn_print(state, argc, args);
+        fflush(stdout);
+    }
+    exit(1);
+    // NOTREACHED
+}
+
 BasicModule*
 BasicModule::create(State* state) {
     void* p = state->ator->allocateStruct<BasicModule>();
@@ -236,6 +246,7 @@ BasicModule::initialize(State* state) {
     ADD_FUNC(tail);
     ADD_FUNC(sub);
     ADD_FUNC(length);
+    ADD_FUNC(die);
 #undef ADD_FUNC
     return false;
 }

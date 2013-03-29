@@ -115,17 +115,18 @@ public:
             Value child;
             if (child_table->find(obj2value(klass), child)) {
                 // Unsafe cast!
-                if (!get_obj<DispatcherNode>(child)->dispatch(state, argc, args, index + 1, func)) {
-                    if (!is_null(variable_entry)) {
-                        func = variable_entry;
-                        return true;
-                    }
+                if (get_obj<DispatcherNode>(child)->dispatch(state, argc, args, index + 1, func)) {
+                    return true;
                 }
             }
             klass = klass->getParent();
             if (klass == nullptr) {
                 break;
             }
+        }
+        if (!is_null(variable_entry)) {
+            func = variable_entry;
+            return true;
         }
         return false;
     }
