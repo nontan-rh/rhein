@@ -2,6 +2,8 @@
 // byteio.cc
 //
 
+#include "common.h"
+
 #include "object/object.h"
 #include "object/imstring.h"
 #include "object/function.h"

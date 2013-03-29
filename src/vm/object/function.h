@@ -5,6 +5,8 @@
 #ifndef FUNCTION_H
 #define FUNCTION_H
 
+#include "common.h"
+
 #include <cstdint>
 
 #include "object/object.h"
@@ -18,11 +20,11 @@ struct Frame;
 typedef Value (*NativeFunctionBody)(State*, unsigned, Value*);
 
 class Function : public Object {
-    Function() = delete;
-    Function& operator=(const Function& /* rht */) = delete;
+    //Function() = delete;
+    //Function& operator=(const Function& /* rht */) = delete;
 
 protected:
-    Function(const Function& /* rht */) = default;
+    //Function(const Function& /* rht */) = default;
 
     String* name;
     bool variable_arg;
@@ -44,10 +46,10 @@ public:
 };
 
 class NativeFunction : public Function {
-    NativeFunction() = delete;
-    NativeFunction& operator=(const NativeFunction& /* rht */) = delete;
+    //NativeFunction() = delete;
+    //NativeFunction& operator=(const NativeFunction& /* rht */) = delete;
 
-    NativeFunction(const NativeFunction& /* rht */) = default;
+    //NativeFunction(const NativeFunction& /* rht */) = default;
 
     NativeFunctionBody body;
     bool copied;
@@ -72,10 +74,10 @@ public:
 };
 
 class BytecodeFunction : public Function {
-    BytecodeFunction() = delete;
-    BytecodeFunction& operator=(const BytecodeFunction& /* rht */) = delete;
+    //BytecodeFunction() = delete;
+    //BytecodeFunction& operator=(const BytecodeFunction& /* rht */) = delete;
 
-    BytecodeFunction(const BytecodeFunction& /* rht */) = default;
+    //BytecodeFunction(const BytecodeFunction& /* rht */) = default;
 
     bool copied;
     unsigned stack_size;
@@ -113,10 +115,10 @@ public:
 class DispatcherNode;
 
 class Method : public Object {
-    Method() = delete;
-    Method& operator=(const Method& /* rht */) = delete;
+    //Method() = delete;
+    //Method& operator=(const Method& /* rht */) = delete;
 
-    Method(const Method& /* rht */) = default;
+    //Method(const Method& /* rht */) = default;
 
     bool copied;
     DispatcherNode* node;

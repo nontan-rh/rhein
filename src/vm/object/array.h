@@ -5,6 +5,8 @@
 #ifndef ARRAY_H
 #define ARRAY_H
 
+#include "common.h"
+
 #include <cstdint>
 
 #include "object/object.h"
@@ -18,9 +20,9 @@ class State;
 class String;
 
 class Array : public Object {
-    Array() = delete;
-    Array(const Array& /* rht */) = delete;
-    Array& operator=(const Array& /* rht */) = delete;
+    //Array() = delete;
+    //Array(const Array& /* rht */) = delete;
+    //Array& operator=(const Array& /* rht */) = delete;
 
     Value* body;
     Int size;

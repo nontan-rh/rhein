@@ -5,6 +5,8 @@
 #ifndef VM_H
 #define VM_H
 
+#include "common.h"
+
 #include <cstdio>
 
 #include "allocator.h"
@@ -40,8 +42,8 @@ class State {
     HashTable* var_slots;
     HashTable* klass_slots;
 
-    State(const State& /* rht */) = delete;
-    State& operator=(const State& /* rht */) = delete;
+    //State(const State& /* rht */) = delete;
+    //State& operator=(const State& /* rht */) = delete;
 
     bool readObject(FILE* fp);
     bool readVariable(FILE* fp);
@@ -105,16 +107,16 @@ public:
 
 class Module {
 protected:
-    Module() = default;
+    //Module() = default;
 public:
     virtual bool initialize(State* state) = 0;
 };
 
 struct Frame {
 private:
-    Frame() = delete;
-    Frame(const Frame& /* rht */) = delete;
-    Frame& operator=(const Frame& /* rht */) = delete;
+    //Frame() = delete;
+    //Frame(const Frame& /* rht */) = delete;
+    //Frame& operator=(const Frame& /* rht */) = delete;
 
     Frame(State* state, BytecodeFunction* fn_, Frame* parent_, Frame* closure_,
         unsigned argc_, Value* args_);

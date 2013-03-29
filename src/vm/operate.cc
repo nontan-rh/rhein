@@ -2,6 +2,8 @@
 // operate.cc
 //
 
+#include "common.h"
+
 #include "object/object.h"
 #include "operate.h"
 

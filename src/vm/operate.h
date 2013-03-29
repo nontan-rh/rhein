@@ -5,6 +5,8 @@
 #ifndef ARITHMETIC_H
 #define ARITHMETIC_H
 
+#include "common.h"
+
 #include "object/object.h"
 
 namespace rhein {

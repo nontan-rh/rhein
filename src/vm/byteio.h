@@ -5,6 +5,8 @@
 #ifndef BCDECODE_H
 #define BCDECODE_H
 
+#include "common.h"
+
 #include <cstdio>
 #include <cstdint>
 

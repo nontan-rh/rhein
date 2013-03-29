@@ -5,6 +5,8 @@
 #ifndef IMSTRING_H
 #define IMSTRING_H
 
+#include "common.h"
+
 #include <cstddef>
 
 #include "object/object.h"
@@ -19,9 +21,9 @@ class String : public Object {
     friend class StringProvider;
     friend class StringHashTable;
 
-    String() = delete;
-    String(const String& /* rht */) = delete;
-    String& operator=(const String& /* rht */) = delete;
+    //String() = delete;
+    //String(const String& /* rht */) = delete;
+    //String& operator=(const String& /* rht */) = delete;
 
     String(State* state, const char* body_, size_t length_);
     
@@ -55,9 +57,9 @@ public:
 class StringHashTable;
 
 class StringProvider {
-    StringProvider() = delete;
-    StringProvider(const StringProvider& /* rht */) = delete;
-    StringProvider& operator=(const StringProvider& /* rht */) = delete;
+    //StringProvider() = delete;
+    //StringProvider(const StringProvider& /* rht */) = delete;
+    //StringProvider& operator=(const StringProvider& /* rht */) = delete;
 
     static void* operator new (size_t /* size */, void* p) { return p; }
 

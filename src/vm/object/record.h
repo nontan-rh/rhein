@@ -5,6 +5,8 @@
 #ifndef RECORD_H
 #define RECORD_H
 
+#include "common.h"
+
 #include "object/object.h"
 #include "object/hashtable.h"
 
@@ -13,9 +15,9 @@ namespace rhein {
 class State;
 
 class RecordInfo {
-    RecordInfo() = delete;
-    RecordInfo(const RecordInfo& /* rht */) = delete;
-    RecordInfo& operator=(const RecordInfo& /* rht */) = delete;
+    //RecordInfo() = delete;
+    //RecordInfo(const RecordInfo& /* rht */) = delete;
+    //RecordInfo& operator=(const RecordInfo& /* rht */) = delete;
 
     unsigned slot_num;
     HashTable* id_index_table;
@@ -34,9 +36,9 @@ public:
 };
 
 class Record : public Object {
-    Record() = delete;
-    Record(const Record& /* rht */) = delete;
-    Record& operator=(const Record& /* rht */) = delete;
+    //Record() = delete;
+    //Record(const Record& /* rht */) = delete;
+    //Record& operator=(const Record& /* rht */) = delete;
 
     Value* member_slots;
 

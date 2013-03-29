@@ -2,6 +2,8 @@
 // record.cc
 //
 
+#include "common.h"
+
 #include <cstring>
 #include <cassert>
 

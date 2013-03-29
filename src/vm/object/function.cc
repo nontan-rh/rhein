@@ -2,6 +2,8 @@
 // function.cc
 //
 
+#include "common.h"
+
 #include "object/object.h"
 #include "object/hashtable.h"
 #include "object/function.h"

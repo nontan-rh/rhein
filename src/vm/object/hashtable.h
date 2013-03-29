@@ -5,6 +5,8 @@
 #ifndef HASHTABLE_H
 #define HASHTABLE_H
 
+#include "common.h"
+
 #include "object/object.h"
 
 namespace rhein {
@@ -15,12 +17,12 @@ class Array;
 struct HashTableNode;
 
 class HashTable : public Object {
-    HashTable() = delete;
-    HashTable(const HashTable& /* rht */) = delete;
-    HashTable& operator=(const HashTable& /* rht */) = delete;
+    //HashTable() = delete;
+    //HashTable(const HashTable& /* rht */) = delete;
+    //HashTable& operator=(const HashTable& /* rht */) = delete;
     
-    const unsigned default_table_size = 16;
-    const double rehash_ratio = 0.75;
+    static const unsigned default_table_size = 16;
+    static const double rehash_ratio = 0.75;
     
     HashTableNode* table;
     unsigned table_size;

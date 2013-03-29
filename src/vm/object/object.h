@@ -5,6 +5,8 @@
 #ifndef OBJECT_H
 #define OBJECT_H
 
+#include "common.h"
+
 #include <climits>
 #include <cstdint>
 #include <cassert>
@@ -19,12 +21,12 @@ class State;
 typedef uintptr_t Value;
 
 class Object {
-    Object() = delete;
-    Object& operator=(const Object& /* rht */) = delete;
+    //Object() = delete;
+    //Object& operator=(const Object& /* rht */) = delete;
 
 protected:
-    Object(const Object& /* rht */) = default;
-    ~Object() = default;
+    //Object(const Object& /* rht */) = default;
+    //~Object() = default;
 
     Klass* klass;
 
