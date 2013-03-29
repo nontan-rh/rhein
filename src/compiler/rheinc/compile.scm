@@ -225,7 +225,8 @@
 
 (define-method resolve-name ((ife <rh-if-expression>))
   (for-each resolve-name (~ ife 'conditional-clauses))
-  (resolve-name (~ ife 'else-clause)))
+  (unless (null? (~ ife 'else-clause))
+    (resolve-name (~ ife 'else-clause))))
 
 (define-method resolve-name ((cc <rh-conditional-clause>))
   (resolve-name (~ cc 'condition-expression))
