@@ -255,9 +255,6 @@ State::initializeString() {
 bool
 State::addFunction(Function* func) {
     Value name = obj2value(func->getName());
-    fprintf(stderr, "State name: ");
-    func->getName()->dump();
-    fprintf(stderr, " argc:%u\n", func->getArgumentCount());
     Value old;
     if (func_slots->find(name, old)) {
         Object* fold = get_obj<Object>(old);
@@ -410,6 +407,7 @@ rhein::execute(State* state, BytecodeFunction* bfn, unsigned argc_, Value* args_
 
     for(; ; ){
         uint32_t insn = *pc;
+#if 0
         cerr << "stack: ";
         for (int i = 0; i < fn->getStackSize() - 1; i++) {
             cerr << fr->stack[i] << ":";
@@ -419,6 +417,7 @@ rhein::execute(State* state, BytecodeFunction* bfn, unsigned argc_, Value* args_
         cerr << "sp: " << fn->getStackSize() - (sp - fr->stack) << endl;
         cerr << "code: " << (insn & 0xff) << endl;
         cerr.flush();
+#endif
         switch(insn & 0xff) {
             case Insn::Add: BINARY_OP(op_add)
             case Insn::Sub: BINARY_OP(op_sub)

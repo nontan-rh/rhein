@@ -177,9 +177,6 @@ Method::dispatch(State* state, unsigned argc, Value* args, Value& result) {
 
 bool
 Method::addFunction(State* state, Function* func) {
-    fprintf(stderr, "Method name: ");
-    func->getName()->dump();
-    fprintf(stderr, " argc:%u\n", func->getArgumentCount());
     return node->addFunction(state, obj2value(func), func, 0);
 }
 

@@ -513,9 +513,11 @@
   (let ([loop-label (allocate-label (*builder*))]
         [exit-label (allocate-label (*builder*))])
     (register-label (*builder*) (~ we 'label) exit-label)
+    (emit (*builder*) (list 'loadundef)) (sinc (*builder*) 1)
     (emit (*builder*) (list 'label loop-label))
     (generate-code (~ we 'condition-expression))
     (emit (*builder*) (list 'unlessjump exit-label)) (sdec (*builder*) 1)
+    (emit (*builder*) (list 'pop)) (sdec (*builder*) 1)
     (generate-code (~ we 'code))
     (emit (*builder*) (list 'jump loop-label))
     (emit (*builder*) (list 'label exit-label)))
