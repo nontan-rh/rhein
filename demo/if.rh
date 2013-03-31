@@ -1,0 +1,28 @@
+
+def main() {
+    print(fn(?I))
+}
+
+def fn(t) {
+    if or { t eq ?I; t eq ?K; t eq ?S } {
+        t
+    } else {
+        local et = t
+
+        if or { et eq ?I; et eq ?K; et eq ?S } {
+            et
+        } elif and { et.car eq ?I; et.length() eq 2 } {
+            et.cdr.car
+        } elif and { et.car eq ?K; et.length() eq 3 } {
+            et.cdr.car
+        } elif and { et.car eq ?S; et.length() eq 4 } {
+            local x = et.cdr.car
+            local y = et.cdr.cdr.car
+            local z = et.cdr.cdr.cdr.car
+            eval_tree(list(eval_tree(list(x, z)), eval_tree(list(y, z))))
+        } else {
+            et
+        }
+    }
+}
+

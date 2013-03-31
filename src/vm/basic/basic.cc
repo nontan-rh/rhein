@@ -56,6 +56,37 @@ fn_print(State* state, unsigned argc, Value* args) {
 }
 
 Value
+fn_write(State* state, unsigned argc, Value* args) {
+    if (argc != 1) {
+        fatal("Invalid arguments");
+    }
+
+    Value v = args[0];
+    if (is_int(v)) {
+        printf("%ld", get_int(v));
+    } else if (is_char(v)) {
+        printf("%c", get_char(v));
+    } else if (v == Ctrue) {
+        printf("true");
+    } else if (v == Cfalse) {
+        printf("false");
+    } else if (v == Cnull) {
+        printf("null");
+    } else if (is_obj(v)) {
+        String* str = get_obj<Object>(v)->stringRepr(state);
+        const char* cstr;
+        size_t len;
+        str->getCStr(cstr, len);
+        for (unsigned i = 0; i < len; i++) {
+            printf("%c", cstr[i]);
+        }
+    } else {
+        fatal("Cannot print");
+    }
+    return Cnull;
+}
+
+Value
 fn_input(State* state, unsigned argc, Value* args) {
     if (argc >= 2) {
         fatal("Invalid arguments");
@@ -222,6 +253,22 @@ fn_die(State* state, unsigned argc, Value* args) {
     // NOTREACHED
 }
 
+Value
+fn_is_a(State* state, unsigned argc, Value* args) {
+    if (!(argc == 2)) {
+        fatal("Invalid arguments");
+    }
+
+    Klass* objklass = get_klass(state, args[0]);
+    Klass* cmpklass = get_klass(state, args[1]);
+    for (; objklass != nullptr; objklass = objklass->getParent()) {
+        if (objklass == cmpklass) {
+            return Ctrue;
+        }
+    }
+    return Cfalse;
+}
+
 BasicModule*
 BasicModule::create(State* state) {
     void* p = state->ator->allocateStruct<BasicModule>();
@@ -234,6 +281,7 @@ BasicModule::initialize(State* state) {
 #define ADD_FUNC(x) state->addFunction(NativeFunction::create(state, \
     state->s_prv->getString(#x), fn_ ## x));
     ADD_FUNC(print);
+    ADD_FUNC(write);
     ADD_FUNC(input);
     ADD_FUNC(new);
     ADD_FUNC(literal);
@@ -245,6 +293,7 @@ BasicModule::initialize(State* state) {
     ADD_FUNC(sub);
     ADD_FUNC(length);
     ADD_FUNC(die);
+    ADD_FUNC(is_a);
 #undef ADD_FUNC
     return false;
 }

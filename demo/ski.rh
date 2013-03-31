@@ -1,0 +1,156 @@
+
+class list {
+	car, cdr
+}
+
+def cons(x, y) {
+	local list = ~list.new()
+	list.car = x
+	list.cdr = y
+	list
+}
+
+def list_length(x) {
+    local count = 0
+    while x ne null {
+        count = count + 1
+        x = x.cdr
+    }
+    count
+}
+
+def list(x) {
+    cons(x, null)
+}
+
+def list(x, y) {
+    cons(x, cons(y, null))
+}
+
+def concateate(x, y) {
+    if x eq null {
+        y
+    } else {
+        cons(x.car, concateate(x.cdr, y))
+    }
+}
+
+def map(fn, list) {
+    if list eq null {
+        null
+    } else {
+        cons(fn^(list.car), map(fn, list.cdr))
+    }
+}
+
+def write(l : list) {
+    write("(")
+    while l ne null {
+        write(l.car)
+        l = l.cdr
+    }
+    write(")")
+}
+
+def print(l : list) {
+    write("(")
+    while l ne null {
+        write(l.car)
+        l = l.cdr
+    }
+    write(")")
+    print("")
+}
+
+def main() {
+    while true {
+        local code = input(">")
+        parse_ccexpr(code , 0).v.eval_all().eval_force().print()
+    }
+}
+
+class parse_result {
+    v, p
+}
+
+def new(obj : parse_result, v, p) {
+	obj = ~parse_result.new()
+	obj.v = v
+	obj.p = p
+	obj
+}
+
+def parse_ccexpr(s, p) {
+	local e_res, cep_res
+	e_res = parse_expr(s, p)
+	cep_res = parse_ccexpr_prime(s, e_res.p)
+
+	~parse_result.new(cons(e_res.v, cep_res.v), cep_res.p)
+}
+
+def parse_ccexpr_prime(s, p) {
+	local e_res, cep_res
+	if or { p >= s.length(); s[p] eq ?) } { ~parse_result.new(null, p) }
+	else {
+		e_res = parse_expr(s, p)
+		cep_res = parse_ccexpr_prime(s, e_res.p)
+		
+		~parse_result.new(cons(e_res.v, cep_res.v), cep_res.p)
+	}
+}
+
+def parse_expr(s, p) {
+	local ch = s[p], res
+	
+	if or { ch eq ?S; ch eq ?K; ch eq ?I } {
+		~parse_result.new(ch, p + 1)
+	} elif ch eq ?( {
+		res = parse_ccexpr(s, p + 1)
+		res.p = res.p + 1
+		res
+	} else {
+		die("Invalid character")
+	}
+}
+
+def eval_force(t) {
+    def force_each (x) {
+        if x.is_a(~list) {
+            x = eval_all(eval_force(x))
+            if x.cdr eq null { x.car }
+            else { x }
+        }
+        else { x }
+    }
+
+    map(^force_each, t)
+}
+
+def eval_all(t) {
+    local prev = null, curr = t
+
+    while (prev ne curr) {
+        prev = curr
+        curr = eval_1step(curr)
+    }
+    curr
+}
+
+def eval_1step(t) {
+    local ln = t.list_length(), fn = t.car
+    local td = t.cdr
+    
+    if   and { fn eq ?I; ln > 1 } { td }
+    elif and { fn eq ?K; ln > 2 } { cons(td.car, td.cdr.cdr) }
+    elif and { fn eq ?S; ln > 3 } {
+        local x = td.car
+        local y = td.cdr.car
+        local z = td.cdr.cdr.car
+        local c = td.cdr.cdr.cdr
+
+        cons(list(x, z), cons(list(y, z), c))
+    } elif fn.is_a(~list) {
+        fn.concateate(td)
+    } else { t }
+}
+

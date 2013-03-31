@@ -1,0 +1,63 @@
+
+class list {
+	car, cdr
+}
+
+def cons(x, y) {
+	local list = ~list.new()
+	list.car = x
+	list.cdr = y
+	list
+}
+
+def length(x : list) {
+    local count = 0
+    while x ne null {
+        count = count + 1
+        x = x.cdr
+    }
+    count
+}
+
+def list(x) {
+    cons(x, null)
+}
+
+def list(x, y) {
+    cons(x, cons(y, null))
+}
+
+def list(x, y, z) {
+    cons(x, cons(y, cons(z, null)))
+}
+
+def map(fn, list) {
+    if list eq null {
+        null
+    } else {
+        cons(fn^(list.car), map(fn, list.cdr))
+    }
+}
+
+def print(l : list) {
+    print("(")
+    while l ne null {
+        print(l.car)
+        l = l.cdr
+    }
+    print(")")
+}
+
+def concateate(x, y) {
+    if x eq null {
+        y
+    } else {
+        cons(x.car, concateate(x.cdr, y))
+    }
+}
+
+def main() {
+    print(map(^(x){ 2 * x }, list(1, 2, 3)))
+    print(list(1,2,3).concateate(list(?a,?b,?c)))
+}
+

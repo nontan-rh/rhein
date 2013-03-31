@@ -3,5 +3,8 @@ def main() {
     local x
     x = 4
     x.print()
+    x.is_a(~int).print()
+    x.is_a(~string).print()
+    x.is_a(~any).print()
 }
 
