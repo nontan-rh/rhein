@@ -369,7 +369,7 @@ getInsnArgUU2(uint32_t insn) {
 #define LOCAL_SET_OP(op) { \
     uint32_t depth = getInsnArgUU1(insn); \
     uint32_t offset = getInsnArgUU2(insn); \
-    if (!fr->op(depth, offset, *(sp++))) { \
+    if (!fr->op(depth, offset, *(sp))) { \
         fprintf(stderr, #op ":%u:%u\n", depth, offset); \
         fatal("Error on local set"); \
     } \
@@ -394,7 +394,7 @@ getInsnArgUU2(uint32_t insn) {
     if (!is_obj(id) || get_obj<Object>(id)->getKlass() != state->string_klass) { \
         fatal("Error on global set"); \
     } \
-    if (!state->op(get_obj<String>(id), *(sp++))) { \
+    if (!state->op(get_obj<String>(id), *(sp))) { \
         fatal("Error on global set"); \
     } \
     pc++; \
