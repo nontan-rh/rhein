@@ -5,8 +5,6 @@
 #ifndef ALLOCATOR_H
 #define ALLOCATOR_H
 
-#include "common.h"
-
 #include <gc.h>
 
 #include "object/object.h"

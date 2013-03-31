@@ -2,8 +2,6 @@
 // basic.cc
 //
 
-#include "common.h"
-
 #include <cstdio>
 
 #include "object/object.h"

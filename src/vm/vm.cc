@@ -2,8 +2,6 @@
 // vm.cc
 //
 
-#include "common.h"
-
 #include <iostream>
 using namespace std;
 
@@ -66,6 +64,7 @@ struct Insn {
         Dup,
         Pop,
         Escape,
+        Break,
     };
 };
 
@@ -256,6 +255,9 @@ State::initializeString() {
 bool
 State::addFunction(Function* func) {
     Value name = obj2value(func->getName());
+    fprintf(stderr, "State name: ");
+    func->getName()->dump();
+    fprintf(stderr, " argc:%u\n", func->getArgumentCount());
     Value old;
     if (func_slots->find(name, old)) {
         Object* fold = get_obj<Object>(old);
@@ -357,6 +359,7 @@ getInsnArgUU2(uint32_t insn) {
     uint32_t depth = getInsnArgUU1(insn); \
     uint32_t offset = getInsnArgUU2(insn); \
     if (!fr->op(depth, offset, *(--sp))) { \
+        fprintf(stderr, #op ":%u:%u\n", depth, offset); \
         fatal("Error on local refer"); \
     } \
     pc++; \
@@ -367,6 +370,7 @@ getInsnArgUU2(uint32_t insn) {
     uint32_t depth = getInsnArgUU1(insn); \
     uint32_t offset = getInsnArgUU2(insn); \
     if (!fr->op(depth, offset, *(sp++))) { \
+        fprintf(stderr, #op ":%u:%u\n", depth, offset); \
         fatal("Error on local set"); \
     } \
     pc++; \
@@ -406,15 +410,15 @@ rhein::execute(State* state, BytecodeFunction* bfn, unsigned argc_, Value* args_
 
     for(; ; ){
         uint32_t insn = *pc;
-        /* cerr << "stack: ";
+        cerr << "stack: ";
         for (int i = 0; i < fn->getStackSize() - 1; i++) {
             cerr << fr->stack[i] << ":";
         }
         cerr << fr->stack[fn->getStackSize() - 1] << endl;
         cerr << "pc: " << pc - fn->getBytecode() << endl;
+        cerr << "sp: " << fn->getStackSize() - (sp - fr->stack) << endl;
         cerr << "code: " << (insn & 0xff) << endl;
         cerr.flush();
-        */
         switch(insn & 0xff) {
             case Insn::Add: BINARY_OP(op_add)
             case Insn::Sub: BINARY_OP(op_sub)
@@ -512,7 +516,7 @@ rhein::execute(State* state, BytecodeFunction* bfn, unsigned argc_, Value* args_
             }
                 break;
             case Insn::Raref: {
-                Value index = *sp++;
+           Value index = *sp++;
                 Value array = *sp;
 
                 if (!is_obj(array) || get_obj<Object>(array)->getKlass() != state->array_klass) {
@@ -574,10 +578,12 @@ rhein::execute(State* state, BytecodeFunction* bfn, unsigned argc_, Value* args_
                 if (!is_obj(obj) || !is_obj(id)
                     || get_obj<Object>(id)->getKlass() != state->string_klass) {
 
+                    get_klass(state, obj)->getName()->dump();
                     fatal("Cannot refer");
                 }
 
                 if (!get_obj<Object>(obj)->slotRef(state, get_obj<String>(id), sp[0])) {
+                    get_obj<String>(id)->dump();
                     fatal("Cannot refer");
                 }
                 pc++;
@@ -685,7 +691,12 @@ rhein::execute(State* state, BytecodeFunction* bfn, unsigned argc_, Value* args_
                 pc++;
             }
                 break;
+            case Insn::Break:
+                getchar();
+                pc++;
+                break;
             default:
+                fprintf(stderr, "%u\n", insn);
                 fatal("Invalid insn");
         }
     }

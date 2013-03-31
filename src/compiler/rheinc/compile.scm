@@ -8,6 +8,7 @@
   (use gauche.lazy)
   (use rfc.json)
   (use rheinc.ast)
+  (use srfi-1)
   (export rhein-compile)
   )
 
@@ -368,7 +369,7 @@
    (classes :init-form (make-hash-table 'string=?))))
 
 (define-method install ((genv <global-environment>) (func <named-function-builder>))
-  (hash-table-put! (~ genv 'functions) (~ func 'name) func))
+  (hash-table-push! (~ genv 'functions) (~ func 'name) func))
 
 (define-method install ((genv <global-environment>) (klass <compiled-class>))
   (hash-table-put! (~ genv 'classes) (~ klass 'name) klass))
@@ -493,8 +494,11 @@
 (define-method generate-code ((ife <rh-if-expression>))
   (let1 exit-label (allocate-label (*builder*))
     (for-each (cut generate-code <> exit-label) (~ ife 'conditional-clauses))
-    (unless (null? (~ ife 'else-clause))
-      (generate-code (~ ife 'else-clause)))
+    (cond
+      [(null? (~ ife 'else-clause))
+       (emit (*builder*) (list 'loadundef)) (sinc (*builder*) 1)]
+      [else
+       (generate-code (~ ife 'else-clause))])
     (emit (*builder*) (list 'label exit-label))))
 
 (define-method generate-code ((cc <rh-conditional-clause>) exit-label)
@@ -666,7 +670,7 @@
 (define-method print-code ((genv <global-environment>) p)
   (let ([c (hash-table-map (~ genv 'classes) print-class)]
         [v (hash-table-map (~ genv 'variables) print-variable)]
-        [f (hash-table-map (~ genv 'functions) print-functions)])
+        [f (concatenate (hash-table-map (~ genv 'functions) print-functions))])
     (construct-json (list->vector (append c v f)) p)))
 
 (define (print-class name body)
@@ -683,15 +687,18 @@
     (push! r (cons "code" (bytecode->json-string (~ body 'code))))))
 
 (define (print-functions name body)
-  (rlet1 r '()
-    (push! r (cons "name" name))
-    (push! r (cons "type" "function"))
-    (push! r (cons "stack_size" (~ body 'max-stack)))
-    (push! r (cons "variable_size" (~ body 'variable-count)))
-    (push! r (cons "function_size" (~ body 'function-count)))
-    (push! r (cons "argument_type" (list->vector (~ body 'argument-types))))
-    (push! r (cons "varg" 'false))
-    (push! r (cons "code" (print-c (~ body 'code))))))
+  (rlet1 gr '()
+    (dolist [b body]
+      (let1 r '()
+        (push! r (cons "name" name))
+        (push! r (cons "type" "function"))
+        (push! r (cons "stack_size" (~ b 'max-stack)))
+        (push! r (cons "variable_size" (~ b 'variable-count)))
+        (push! r (cons "function_size" (~ b 'function-count)))
+        (push! r (cons "argument_type" (list->vector (~ b 'argument-types))))
+        (push! r (cons "varg" 'false))
+        (push! r (cons "code" (print-c (~ b 'code))))
+        (push! gr r)))))
 
 (define (print-c code)
   (list->vector (map (^x (list->vector (cons (symbol->string (car x)) (cdr x)))) code)))

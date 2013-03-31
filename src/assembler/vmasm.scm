@@ -17,7 +17,7 @@
 (define *insn-list*
   '(add sub mul div mod inc dec eq ne gt lt ge le jump ifjump unlessjump call ret ranew raref 
     raset iref iset mref mset lfref lfset lvref lvset laref laset gfref gvref gvset load loadklass
-    loadundef loadnull loadtrue loadfalse enclose dup pop escape))
+    loadundef loadnull loadtrue loadfalse enclose dup pop escape break))
 (define *insn-table* (alist->hash-table (map cons *insn-list* (iota (length *insn-list*))) 'eq?))
 
 (define (main args)
@@ -132,7 +132,7 @@
                [code (hash-table-get *insn-table* op)])
           (case op
             [(add sub mul div mod inc dec eq ne gt lt ge le ret ranew raref raset iref iset
-              dup pop loadundef loadnull loadtrue loadfalse)
+              dup pop loadundef loadnull loadtrue loadfalse break)
              (write-4byte code)]
             [(call escape)
              (write-4byte (logior code (ash (vector-ref i 1) 8)))]

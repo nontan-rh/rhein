@@ -5,8 +5,6 @@
 #ifndef OBJECT_H
 #define OBJECT_H
 
-#include "common.h"
-
 #include <climits>
 #include <cstdint>
 #include <cassert>

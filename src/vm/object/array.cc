@@ -2,8 +2,6 @@
 // array.cc
 //
 
-#include "common.h"
-
 #include "object/object.h"
 #include "object/array.h"
 #include "allocator.h"

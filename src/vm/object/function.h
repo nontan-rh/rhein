@@ -5,8 +5,6 @@
 #ifndef FUNCTION_H
 #define FUNCTION_H
 
-#include "common.h"
-
 #include <cstdint>
 
 #include "object/object.h"

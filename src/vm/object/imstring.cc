@@ -2,8 +2,6 @@
 // imstring.cc - Immutable & unique string
 //
 
-#include "common.h"
-
 #include <cstdio>
 #include <cstring>
 #include <cassert>
@@ -62,8 +60,8 @@ class rhein::StringHashTable {
 
     static void* operator new (size_t /* size */, void* p) { return p; }
 
-    static const double rehash_ratio = 0.75;
-    static const unsigned default_table_size = 16;
+    const double rehash_ratio = 0.75;
+    const unsigned default_table_size = 16;
     StringHashTableNode* table;
     unsigned table_size;
     unsigned item_num;
@@ -265,7 +263,7 @@ String::toArray(State* state, Array*& array) {
 }
 
 void
-String::dump() {
+String::dump() const {
     for (unsigned i = 0; i < length; i++) {
         fprintf(stderr, "%c", body[i]);
     }

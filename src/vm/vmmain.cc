@@ -2,8 +2,6 @@
 // vmmain.cc
 //
 
-#include "common.h"
-
 #include <cstdio>
 #include <gc.h>
 

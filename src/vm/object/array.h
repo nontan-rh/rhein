@@ -5,8 +5,6 @@
 #ifndef ARRAY_H
 #define ARRAY_H
 
-#include "common.h"
-
 #include <cstdint>
 
 #include "object/object.h"

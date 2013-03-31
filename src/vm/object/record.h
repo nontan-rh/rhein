@@ -5,8 +5,6 @@
 #ifndef RECORD_H
 #define RECORD_H
 
-#include "common.h"
-
 #include "object/object.h"
 #include "object/hashtable.h"
 

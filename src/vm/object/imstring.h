@@ -5,8 +5,6 @@
 #ifndef IMSTRING_H
 #define IMSTRING_H
 
-#include "common.h"
-
 #include <cstddef>
 
 #include "object/object.h"
@@ -51,7 +49,7 @@ public:
     bool toArray(State* state, Array*& array);
 
     // For debugging
-    void dump();
+    void dump() const;
 };
 
 class StringHashTable;

@@ -2,8 +2,6 @@
 // basic.h
 //
 
-#include "common.h"
-
 #include "vm.h"
 
 namespace rhein {
