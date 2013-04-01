@@ -5,8 +5,13 @@ cmake_minimum_required(VERSION 2.6)
 
 project(rheinvm)
 
+<<<<<<< local
+set(CMAKE_C_FLAGS "-g -W -Wall -Wextra -O0")
+set(CMAKE_CXX_FLAGS "-g -W -Wall -Wextra -O0")
+=======
 set(CMAKE_C_FLAGS "-g -W -Wall -Wextra -O2")
 set(CMAKE_CXX_FLAGS "-g -W -Wall -Wextra -O2 -std=c++11")
+>>>>>>> other
 
 include_directories(./)
 add_executable(

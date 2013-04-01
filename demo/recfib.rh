@@ -1,10 +1,10 @@
 
 def main() {
-	print(fib(39))
+    print(fib(39))
 }
 
 def fib(x : int) {
-	if x < 2 { x }
-	else { fib(x - 2) + fib(x - 1) }
+    if x < 2 { x }
+    else { fib(x - 2) + fib(x - 1) }
 }
 
