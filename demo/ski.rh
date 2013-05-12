@@ -1,18 +1,18 @@
 
 class list {
-	car, cdr
+    car, cdr
 }
 
 def cons(x, y) {
-	local list = ~list.new()
-	list.car = x
-	list.cdr = y
-	list
+    local list = ~list.new()
+    list.car = x
+    list.cdr = y
+    list
 }
 
 def list_length(x) {
     local count = 0
-    while x ne null {
+    while x ne nil {
         count = count + 1
         x = x.cdr
     }
@@ -20,15 +20,15 @@ def list_length(x) {
 }
 
 def list(x) {
-    cons(x, null)
+    cons(x, nil)
 }
 
 def list(x, y) {
-    cons(x, cons(y, null))
+    cons(x, cons(y, nil))
 }
 
 def concateate(x, y) {
-    if x eq null {
+    if x eq nil {
         y
     } else {
         cons(x.car, concateate(x.cdr, y))
@@ -36,25 +36,25 @@ def concateate(x, y) {
 }
 
 def map(fn, list) {
-    if list eq null {
-        null
+    if list eq nil {
+        nil
     } else {
         cons(fn^(list.car), map(fn, list.cdr))
     }
 }
 
-def write(l : list) {
+def write(l < list) {
     write("(")
-    while l ne null {
+    while l ne nil {
         write(l.car)
         l = l.cdr
     }
     write(")")
 }
 
-def print(l : list) {
+def print(l < list) {
     write("(")
-    while l ne null {
+    while l ne nil {
         write(l.car)
         l = l.cdr
     }
@@ -73,51 +73,51 @@ class parse_result {
     v, p
 }
 
-def new(obj : parse_result, v, p) {
-	obj = ~parse_result.new()
-	obj.v = v
-	obj.p = p
-	obj
+def new(obj < parse_result, v, p) {
+    obj = ~parse_result.new()
+    obj.v = v
+    obj.p = p
+    obj
 }
 
 def parse_ccexpr(s, p) {
-	local e_res, cep_res
-	e_res = parse_expr(s, p)
-	cep_res = parse_ccexpr_prime(s, e_res.p)
+    local e_res, cep_res
+    e_res = parse_expr(s, p)
+    cep_res = parse_ccexpr_prime(s, e_res.p)
 
-	~parse_result.new(cons(e_res.v, cep_res.v), cep_res.p)
+    ~parse_result.new(cons(e_res.v, cep_res.v), cep_res.p)
 }
 
 def parse_ccexpr_prime(s, p) {
-	local e_res, cep_res
-	if or { p >= s.length(); s[p] eq ?) } { ~parse_result.new(null, p) }
-	else {
-		e_res = parse_expr(s, p)
-		cep_res = parse_ccexpr_prime(s, e_res.p)
-		
-		~parse_result.new(cons(e_res.v, cep_res.v), cep_res.p)
-	}
+    local e_res, cep_res
+    if or { p >= s.length(); s[p] eq ?) } { ~parse_result.new(nil, p) }
+    else {
+        e_res = parse_expr(s, p)
+        cep_res = parse_ccexpr_prime(s, e_res.p)
+        
+        ~parse_result.new(cons(e_res.v, cep_res.v), cep_res.p)
+    }
 }
 
 def parse_expr(s, p) {
-	local ch = s[p], res
-	
-	if or { ch eq ?S; ch eq ?K; ch eq ?I } {
-		~parse_result.new(ch, p + 1)
-	} elif ch eq ?( {
-		res = parse_ccexpr(s, p + 1)
-		res.p = res.p + 1
-		res
-	} else {
-		die("Invalid character")
-	}
+    local ch = s[p], res
+    
+    if or { ch eq ?S; ch eq ?K; ch eq ?I } {
+        ~parse_result.new(ch, p + 1)
+    } elif ch eq ?( {
+        res = parse_ccexpr(s, p + 1)
+        res.p = res.p + 1
+        res
+    } else {
+        die("Invalid character")
+    }
 }
 
 def eval_force(t) {
     def force_each (x) {
         if x.is_a(~list) {
             x = eval_all(eval_force(x))
-            if x.cdr eq null { x.car }
+            if x.cdr eq nil { x.car }
             else { x }
         }
         else { x }
@@ -127,7 +127,7 @@ def eval_force(t) {
 }
 
 def eval_all(t) {
-    local prev = null, curr = t
+    local prev = nil, curr = t
 
     while (prev ne curr) {
         prev = curr

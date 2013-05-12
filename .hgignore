@@ -3,3 +3,4 @@ syntax:glob
 *.swo
 *.pyc
 *.pyo
+.DS_Store

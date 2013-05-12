@@ -1,0 +1,58 @@
+Instructions
+
+add sub mul div mod eq ne gt lt ge le eq ne
+... Opr1 Opr2 -> ... Res
+
+inc dec not neg
+... Opr -> ... Res
+
+jump
+... -> ... (Branch)
+
+ifjump unlessjump
+... Cond -> ... (Branch or not)
+
+call N
+... ArgN *** Arg1 Func -> ... Res
+
+ret
+... Val -> ... (Exit)
+
+ranew
+... Size -> ... Ary
+
+raref
+... Ary Ind -> ... Ary Res
+
+raset
+... Ary Ind Val -> ... Ary Ind
+
+iref
+... Obj Ind -> ... Res
+
+iset
+... Val Obj Ind -> ... Val
+
+mref
+... Obj -> ... Res
+
+mset
+... Val Obj -> ... Val
+
+lfref lvref laref gfref gvref
+... -> ... Res
+
+lfset lvset laset gvset
+... Val -> ... Val
+
+load loadundef loadnull loadtrue loadfalse
+... -> ... Val
+
+dup
+... Val -> ... Val Val
+
+pop
+... Val -> ...
+
+escape N
+... ValN *** Val1 Val0 -> ... Val0

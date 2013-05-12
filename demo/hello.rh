@@ -1,6 +1,5 @@
-
-def main(){
-    local name = input("What's your name? >")
-    print("Hello", name)
+def main() {
+    local a = input("What is your name>")
+    print("Hello", a)
 }
 

@@ -1,9 +1,8 @@
 
 def main() {
     local x,h
-    x = $[1,2+2+2,2,3,4,5,6]
+    x = [1,2+2+2,2,3,4,5,6]
     print(x[0],x[1],x[2],x[3],x[4],x[5],x[6])
-    h = ${"hello":2,"foo":4,"bar":6}
+    h = {"hello"=2,"foo"=4,"bar"=6}
     print(h["hello"], h["foo"], h["bar"])
 }
-
