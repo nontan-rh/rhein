@@ -344,10 +344,10 @@
                               (lappend (concatenate (map generate-code a))
                                          (x->lseq (list #("ret")))))
                       :external-id *initializer-name*
-                      :variable-arguments #f
+                      :variable-arguments 'false
                       :function-slot-count 0
                       :variable-slot-count 0
-                      :argument-class '()))
+                      :parameter-class #()))
     (*bytecode-file*)))
 
 (define-method get-instruction ((a <slot-reference>))
@@ -383,8 +383,8 @@
                                  (map symbol->string (~ a 'members)))))
     (x->lseq
       (list (vector "load" (constant "string" (symbol->string e)))
-            (vector "load" (constant "string" i))
-            (vector "gfref" "!!register-class")
+            (vector "loadklass" i)
+            (vector "gfref" "!!register_class")
             (vector "call" 2)))))
 
 (define-method generate-code ((a <rh-function>))
@@ -398,15 +398,15 @@
                               (list->vector
                                 (lappend (generate-code (~ a 'code))
                                            (x->lseq (list #("ret"))))))
-                      :variable-arguments #f
+                      :variable-arguments 'false
                       :function-slot-count (~ a 'function-slot-count)
                       :variable-slot-count (~ a 'variable-slot-count)
-                      :parameter-class (map (cut ~ <> 'type) (~ a 'parameters))))
+                      :parameter-class (list->vector (map (cut ~ <> 'type) (~ a 'parameters)))))
     (if (*is-global-context*)
       (x->lseq
         (list (vector "load" (constant "string" (symbol->string e)))
-              (vector "load" (constant "string" i))
-              (vector "gfref" "!!register-function")
+              (vector "gfref" i)
+              (vector "gfref" "!!register_function")
               (vector "call" 2)))
       (x->lseq
         (list (vector "enclose" i)
@@ -751,7 +751,10 @@
   (list
     (cons "type" "function")
     (cons "name" (~ o 'internal-id))
+    (cons "varg" (~ o 'variable-arguments))
+    (cons "argument_type" (~ o 'parameter-class))
     (cons "function_size" (~ o 'function-slot-count))
     (cons "variable_size" (~ o 'variable-slot-count))
     (cons "stack_size" (~ o 'stack-size))
     (cons "code" (~ o 'code))))
+

@@ -57,10 +57,12 @@ sub BConst {
 		$name,
 		Enum(Byte("type"),
 			INT => 0,
-			STRING => 1,
+                        CHAR => 1,
+			STRING => 2,
 		),
 		Switch("data", sub { $_->ctx->{type}; }, {
 			INT => Int("value"),
+                        CHAR => UBInt32("value"),
 			STRING => Str("value"),
 		}));
 }
@@ -81,24 +83,16 @@ sub BFunc {
 		Array(sub { $_->ctx->{bcode_size}->{value}; }, UBInt32("bcode")));
 }
 
-sub BVar {
-	Struct(
-		"var",
-		Str("id"))
-}
-
 sub BObj {
 	Struct(
 		"obj",
 		Enum(Byte("type"),
 			CLASS => 0,
 			FUNC => 1,
-			VAR => 2,
 		),
 		Switch("data", sub { $_->ctx->{type}; }, {
 			CLASS => BClass(),
 			FUNC => BFunc(),
-			VAR => BVar(),
 		}));
 }
 

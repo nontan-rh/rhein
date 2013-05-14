@@ -9,7 +9,7 @@ include_directories(./)
 add_executable(
     rheinvm
     vmmain.cc vm.cc operate.cc byteio.cc basic/basic.cc object/object.cc object/array.cc
-    object/function.cc object/imstring.cc object/record.cc object/hashtable.cc)
+    object/function.cc object/imstring.cc object/record.cc object/hashtable.cc basic/builtin.cc)
 
 target_link_libraries(
     rheinvm

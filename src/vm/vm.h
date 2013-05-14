@@ -20,7 +20,6 @@ public:
     enum {
         Class,
         Function,
-        Variable,
     };
 };
 
@@ -44,7 +43,6 @@ class State {
     //State& operator=(const State& /* rht */) = delete;
 
     bool readObject(FILE* fp);
-    bool readVariable(FILE* fp);
     bool readFunction(FILE* fp);
     bool readKlass(FILE* fp);
 
@@ -76,6 +74,7 @@ public:
 
     // Installation
     bool addFunction(Function* func); 
+    bool addFunction(Function* func, const String* name); 
     bool addVariable(String* id);
     bool addKlass(Klass* klass);
 
@@ -101,6 +100,11 @@ public:
     
     // Module loader API
     bool loadModule(Module* module);
+
+    // For debugging
+    void dumpFunctions();
+    void dumpClasses();
+    void dumpVariables();
 };
 
 class Module {

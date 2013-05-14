@@ -27,8 +27,10 @@ struct Insn {
         Mod,
         Inc,
         Dec,
+        Neg,
+        Not,
         Eq,
-        Ne,
+        Ne, // 10
         Gt,
         Lt,
         Ge,
@@ -38,7 +40,7 @@ struct Insn {
         UnlessJump,
         Call,
         Ret,
-        Ranew,
+        Ranew, // 20
         Raref,
         Raset,
         Iref,
@@ -48,7 +50,7 @@ struct Insn {
         Lfref,
         Lfset,
         Lvref,
-        Lvset,
+        Lvset, // 30
         Laref,
         Laset,
         Gfref,
@@ -58,7 +60,7 @@ struct Insn {
         LoadKlass,
         LoadUndef,
         LoadNull,
-        LoadTrue,
+        LoadTrue, // 40
         LoadFalse,
         Enclose,
         Dup,
@@ -254,9 +256,13 @@ State::initializeString() {
 
 bool
 State::addFunction(Function* func) {
-    Value name = obj2value(func->getName());
+    return addFunction(func, func->getName());
+}
+
+bool
+State::addFunction(Function* func, const String* name) {
     Value old;
-    if (func_slots->find(name, old)) {
+    if (func_slots->find(obj2value(name), old)) {
         Object* fold = get_obj<Object>(old);
         if (fold->getKlass() == native_function_klass
             || fold->getKlass() == bytecode_function_klass) {
@@ -265,14 +271,14 @@ State::addFunction(Function* func) {
             method->addFunction(this, (Function*)fold);
             method->addFunction(this, func);
 
-            return func_slots->assign(name, obj2value(method));
+            return func_slots->assign(obj2value(name), obj2value(method));
         } else if (fold->getKlass() == method_klass) {
             return static_cast<Method*>(fold)->addFunction(this, func);
         } else {
             exit(1);
         }
     }
-    return func_slots->insert(this, obj2value(func->getName()), obj2value(func));
+    return func_slots->insert(this, obj2value(name), obj2value(func));
 }
 
 bool
@@ -288,6 +294,21 @@ State::addVariable(String* id) {
 bool
 State::loadModule(Module* module) {
     return module->initialize(this);
+}
+
+void
+State::dumpClasses() {
+    klass_slots->dump();
+}
+
+void
+State::dumpFunctions() {
+    func_slots->dump();
+}
+
+void
+State::dumpVariables() {
+    var_slots->dump();
 }
 
 Value
@@ -426,6 +447,8 @@ rhein::execute(State* state, BytecodeFunction* bfn, unsigned argc_, Value* args_
             case Insn::Mod: BINARY_OP(op_mod)
             case Insn::Inc: UNARY_OP(op_inc)
             case Insn::Dec: UNARY_OP(op_dec)
+            case Insn::Neg: UNARY_OP(op_neg)
+            case Insn::Not: UNARY_OP(op_not)
             case Insn::Eq: BINARY_OP(op_eq)
             case Insn::Ne: BINARY_OP(op_ne)
             case Insn::Gt: BINARY_OP(op_gt)

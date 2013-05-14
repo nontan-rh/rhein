@@ -11,6 +11,8 @@ namespace rhein {
 
 bool op_inc(Value v, Value& dest);
 bool op_dec(Value v, Value& dest);
+bool op_neg(Value v, Value& dest);
+bool op_not(Value v, Value& dest);
 bool op_add(Value lft, Value rht, Value& dest);
 bool op_sub(Value lft, Value rht, Value& dest);
 bool op_mul(Value lft, Value rht, Value& dest);

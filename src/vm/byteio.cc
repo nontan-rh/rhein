@@ -121,7 +121,6 @@ State::readFunction(FILE* fp) {
     unsigned long variable_slot_num;
     unsigned long stack_size;
     BinaryReader::readString(fp, this, function_name);
-    //function_name->dump();
     BinaryReader::readByte(fp, variable_arg);
     BinaryReader::readBER(fp, argument_num);
     argument_types = new Klass*[argument_num];
@@ -129,7 +128,6 @@ State::readFunction(FILE* fp) {
         String* type_name;
         Value klass;
         BinaryReader::readString(fp, this, type_name);
-        //type_name->dump();
         getKlass(type_name, klass);
         argument_types[i] = get_obj<Klass>(klass);
     }
@@ -193,14 +191,6 @@ State::readFunction(FILE* fp) {
 }
 
 bool
-State::readVariable(FILE* fp) {
-    String* variable_name;
-    BinaryReader::readString(fp, this, variable_name);
-    addVariable(variable_name);
-    return true;
-}
-
-bool
 State::readObject(FILE* fp) {
     unsigned char byte;
     BinaryReader::readByte(fp, byte);
@@ -210,9 +200,6 @@ State::readObject(FILE* fp) {
             break;
         case ObjectSigniture::Function:
             readFunction(fp);
-            break;
-        case ObjectSigniture::Variable:
-            readVariable(fp);
             break;
         default:
             return false;
@@ -227,7 +214,6 @@ State::loadFile(FILE* fp) {
     for (unsigned i = 0; i < item_num; i++) {
         readObject(fp);
     }
-    //func_slots->dump();
     return true;
 }
 

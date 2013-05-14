@@ -23,6 +23,26 @@ bool rhein::op_dec(Value v, Value& dest) {
     return false;
 }
 
+bool rhein::op_neg(Value v, Value& dest) {
+    if (is_int(v)) {
+        dest = int2value(-get_int(v));
+        return true;
+    }
+    return false;
+}
+
+bool rhein::op_not(Value v, Value& dest) {
+    if (is_true(v)) {
+        dest = Cfalse;
+        return true;
+    } else if (is_false(v)) {
+        dest = Ctrue;
+        return true;
+    }
+    return false;
+}
+
+
 bool rhein::op_add(Value lft, Value rht, Value& dest) {
     if (is_int(lft) && is_int(rht)) {
         dest = int2value(get_int(lft) + get_int(rht));
