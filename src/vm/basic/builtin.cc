@@ -47,6 +47,17 @@ register_class(State* state, unsigned argc, Value* args) {
     return Cnull;
 }
 
+static Value
+register_variable(State* state, unsigned argc, Value* args) {
+    if (!((argc == 2)
+          && get_klass(state, args[0]) == state->string_klass)) {
+        fatal("Invalid arguments");
+    }
+
+    state->addVariable((String*)args[0], args[1]);
+    return Cnull;
+}
+
 BuiltinModule*
 BuiltinModule::create(State* state) {
     void* p = state->ator->allocateStruct<BuiltinModule>();
@@ -60,6 +71,7 @@ BuiltinModule::initialize(State* state) {
     state->s_prv->getString(n), x))
     ADD_FUNC("!!register_function", register_function);
     ADD_FUNC("!!register_class", register_class);
+    ADD_FUNC("!!register_variable", register_variable);
 #undef ADD_FUNC
     return false;
 }

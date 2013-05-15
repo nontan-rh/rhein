@@ -292,8 +292,8 @@ State::addKlass(Klass* klass, const String* name) {
 }
 
 bool
-State::addVariable(String* id) {
-    return var_slots->insert(this, obj2value(id), Cnull);
+State::addVariable(String* id, Value val) {
+    return var_slots->insert(this, obj2value(id), val);
 }
 
 bool

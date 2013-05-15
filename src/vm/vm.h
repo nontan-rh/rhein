@@ -75,7 +75,7 @@ public:
     // Installation
     bool addFunction(Function* func); 
     bool addFunction(Function* func, const String* name); 
-    bool addVariable(String* id);
+    bool addVariable(String* id, Value val);
     bool addKlass(Klass* klass, const String* name);
     bool addKlass(Klass* klass);
 
