@@ -16,6 +16,8 @@ public:
     bool initialize(State* state);
 };
 
+Value fn_load(State* state, unsigned argc, Value* args);
+
 }
 
 }

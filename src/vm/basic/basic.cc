@@ -12,6 +12,7 @@
 #include "object/array.h"
 #include "object/hashtable.h"
 #include "vm.h"
+#include "loader.h"
 #include "basic/basic.h"
 #include "error.h"
 
@@ -283,14 +284,11 @@ fn_load(State* state, unsigned argc, Value* args) {
     fn = (char*)malloc(sizeof(char) * (len + 1));
     memcpy(fn, buf, len);
     fn[len] = '\0';
-    FILE* fp = fopen(fn, "r");
+
+    load_script(state, fn);
+
     free(fn);
-    if (fp == nullptr) {
-        fprintf(stderr, "Cannot open bytecode file\n");
-        return 1;
-    }
-    state->loadFile(fp);
-    fclose(fp);
+
     return Ctrue;
 }
 
