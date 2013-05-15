@@ -417,9 +417,12 @@
 
 (define-method generate-code ((a <rh-global-declaration>))
   (define (generate-each x)
-    (lappend (generate-code (~ a 'initial-value))
+    (lappend (if (null? (~ x 'initial-value))
+               (x->lseq (list (vector "loadundef")))
+               (generate-code (~ x 'initial-value)))
              (x->lseq
-               (list (vector "load" (constant "string" (symbol->string (~ a 'id))))
+               (list (vector "load" (constant "string" (symbol->string (~ x 'id))))
+                     (vector "gfref" "!!register_variable")
                      (vector "call" 2)))))
   (unless (*is-global-context*)
     (error "Cannot define global variable in local context"))
@@ -589,8 +592,8 @@
            (x->lseq (list (vector "pop")))))
 
 (define-method generate-code ((a <rh-hash-literal>))
-  (lappend (generate-array (map (cut ~ <> 'key) (~ a 'contains)))
-           (generate-array (map (cut ~ <> 'value) (~ a 'contains)))
+  (lappend (generate-array (map (cut ~ <> 'value) (~ a 'contains)))
+           (generate-array (map (cut ~ <> 'key) (~ a 'contains)))
            (x->lseq (list (vector "loadklass" "hashtable")
                           (vector "gfref" "literal")
                           (vector "call" 3)))))
@@ -612,10 +615,10 @@
                               (list->vector
                                 (lappend (generate-code (~ a 'code))
                                            (x->lseq (list (vector "ret"))))))
-                      :variable-arguments #f
+                      :variable-arguments 'false
                       :function-slot-count (~ a 'function-slot-count)
                       :variable-slot-count (~ a 'variable-slot-count)
-                      :parameter-class (map (cut ~ <> 'type) (~ a 'parameters))))
+                      :parameter-class (list->vector (map (lambda (x) (symbol->string (~ x 'type))) (~ a 'parameters)))))
       (x->lseq
         (list (vector "enclose" i)))))
 
@@ -727,7 +730,7 @@
               (unless (>= h 3)
                 (error "Stack underflow" c))
               (lp (+ c 1) (- h 2))]
-             [(lfref lvref laref gfref gvref
+             [(lfref lvref laref gfref gvref enclose
                load loadklass loadundef loadnull loadtrue loadfalse)
               (lp (+ c 1) (+ h 1))]
              [(label)
