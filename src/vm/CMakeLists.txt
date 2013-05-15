@@ -1,6 +1,10 @@
 
 set(CMAKE_C_FLAGS "-g -W -Wall -Wextra -O0")
-set(CMAKE_CXX_FLAGS "-g -W -Wall -Wextra -O0 -std=c++11")
+if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+	set(CMAKE_CXX_FLAGS "-g -W -Wall -Wextra -O0 -std=c++11 -stdlib=libc++")
+else()
+	set(CMAKE_CXX_FLAGS "-g -W -Wall -Wextra -O0 -std=c++11")
+endif()
 
 include_directories(./)
 add_executable(
