@@ -31,7 +31,19 @@ register_function(State* state, unsigned argc, Value* args) {
 }
 
 static Value
-register_class(State* /* state */, unsigned /* argc */, Value* /* args */) {
+register_class(State* state, unsigned argc, Value* args) {
+    if (!(argc == 2)) {
+        fatal("Invalid arguments");
+    }
+
+    Klass* klass = get_klass(state, args[0]);
+    Value name = args[1];
+
+    if (get_klass(state, name) == state->string_klass) {
+        fatal("Invalid arguments");
+    }
+
+    state->addKlass(klass, (String*)name);
     return Cnull;
 }
 

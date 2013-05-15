@@ -51,10 +51,12 @@
   (write-4byte (char->integer (string-ref val 0))))
 
 (define (assemble jasm)
-  (unless (vector? jasm)
-    (error "top level must be an array"))
-  (write-ber (vector-length jasm))
-  (vector-for-each (^(_ v) (assemble-obj v)) jasm))
+  (unless (list? jasm)
+    (error "top level must be an object"))
+  (write-string (cdr (assoc "initializer" jasm)))
+  (let1 objects (cdr (assoc "objects" jasm))
+    (write-ber (vector-length objects))
+    (vector-for-each (^(_ v) (assemble-obj v)) objects)))
 
 (define (assemble-obj jasm)
   (let1 type (assoc "type" jasm)

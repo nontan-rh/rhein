@@ -3,6 +3,7 @@
 //
 
 #include <cstdio>
+#include <cstring>
 
 #include "object/object.h"
 #include "object/imstring.h"
@@ -269,6 +270,30 @@ fn_is_a(State* state, unsigned argc, Value* args) {
     return Cfalse;
 }
 
+Value
+fn_load(State* state, unsigned argc, Value* args) {
+    if (!(argc == 1)) {
+        fatal("Invalid arguments");
+    }
+
+    char *fn;
+    const char *buf;
+    size_t len;
+    ((String*)args[0])->getCStr(buf, len);
+    fn = (char*)malloc(sizeof(char) * (len + 1));
+    memcpy(fn, buf, len);
+    fn[len] = '\0';
+    FILE* fp = fopen(fn, "r");
+    free(fn);
+    if (fp == nullptr) {
+        fprintf(stderr, "Cannot open bytecode file\n");
+        return 1;
+    }
+    state->loadFile(fp);
+    fclose(fp);
+    return Ctrue;
+}
+
 BasicModule*
 BasicModule::create(State* state) {
     void* p = state->ator->allocateStruct<BasicModule>();
@@ -294,6 +319,7 @@ BasicModule::initialize(State* state) {
     ADD_FUNC(length);
     ADD_FUNC(die);
     ADD_FUNC(is_a);
+    ADD_FUNC(load);
 #undef ADD_FUNC
     return false;
 }

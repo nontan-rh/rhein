@@ -314,7 +314,8 @@
 (define-class <rhein-bytecode-file> ()
   ((object-name-generator :init-form (make <name-generator> :prefix "!!"))
    (functions :init-form (make-hash-table 'string=?))
-   (classes :init-form (make-hash-table 'string=?))))
+   (classes :init-form (make-hash-table 'string=?))
+   (initializer-id)))
 
 (define-method add-object ((o <compiled-function>))
   (hash-table-put! (~ (*bytecode-file*) 'functions) (~ o 'internal-id) o))
@@ -329,7 +330,7 @@
 (define *is-global-context* (make-parameter #f))
 (define *label-generator* (make-parameter #f))
 
-(define *initializer-name* "!!initialize")
+(define *initializer-name* (make-parameter #f))
 
 (define (constant t v)
   (list (cons "type" t) (cons "value" v)))
@@ -338,12 +339,14 @@
   (parameterize ([*bytecode-file* (make <rhein-bytecode-file>)]
                  [*is-global-context* #t]
                  [*label-generator* (make <label-generator>)])
+    (*initializer-name* (generate-object-name))
+    (set! (~ (*bytecode-file*) 'initializer-id) (*initializer-name*))
     (add-object (make <compiled-function>
-                      :internal-id *initializer-name*
+                      :internal-id (*initializer-name*)
                       :code (list->vector
                               (lappend (concatenate (map generate-code a))
                                          (x->lseq (list #("ret")))))
-                      :external-id *initializer-name*
+                      :external-id (*initializer-name*)
                       :variable-arguments 'false
                       :function-slot-count 0
                       :variable-slot-count 0
@@ -734,11 +737,14 @@
 ;; Constructing output
 
 (define (assembly-output f)
-  (append
-    (map (lambda (x) (class-assembly-output (cdr x)))
-      (hash-table->alist (~ f 'classes)))
-    (map (lambda (x) (function-assembly-output (cdr x)))
-      (hash-table->alist (~ f 'functions)))))
+  (list
+    (cons "initializer" (~ f 'initializer-id))
+    (cons "objects"
+          (list->vector (append
+            (map (lambda (x) (class-assembly-output (cdr x)))
+                 (hash-table->alist (~ f 'classes)))
+            (map (lambda (x) (function-assembly-output (cdr x)))
+                 (hash-table->alist (~ f 'functions))))))))
 
 (define (class-assembly-output o)
   (list

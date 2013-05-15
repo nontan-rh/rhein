@@ -209,11 +209,14 @@ State::readObject(FILE* fp) {
 
 bool
 State::loadFile(FILE* fp) {
+    String* init_name;
+    BinaryReader::readString(fp, this, init_name);
     unsigned long item_num;
     if (!BinaryReader::readBER(fp, item_num)) { return false; }
     for (unsigned i = 0; i < item_num; i++) {
         readObject(fp);
     }
+    execute(this, init_name, 0, nullptr);
     return true;
 }
 

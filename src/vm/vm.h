@@ -76,6 +76,7 @@ public:
     bool addFunction(Function* func); 
     bool addFunction(Function* func, const String* name); 
     bool addVariable(String* id);
+    bool addKlass(Klass* klass, const String* name);
     bool addKlass(Klass* klass);
 
     void setStringProvider(StringProvider* s) { s_prv = s; } 

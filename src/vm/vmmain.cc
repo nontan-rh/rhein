@@ -33,7 +33,6 @@ int main(int argc, char** argv) {
     state->loadFile(fp);
     fclose(fp);
 
-    execute(state, state->s_prv->getString("!!initialize"), 0, nullptr);
     execute(state, state->s_prv->getString("main"), 0, nullptr);
     return 0;
 }

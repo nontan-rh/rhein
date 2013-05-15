@@ -283,7 +283,12 @@ State::addFunction(Function* func, const String* name) {
 
 bool
 State::addKlass(Klass* klass) {
-    return klass_slots->insert(this, obj2value(klass->getName()), obj2value(klass));
+    return addKlass(klass, klass->getName());
+}
+
+bool
+State::addKlass(Klass* klass, const String* name) {
+    return klass_slots->insert(this, obj2value(name), obj2value(klass));
 }
 
 bool
