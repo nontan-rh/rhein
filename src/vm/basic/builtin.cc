@@ -39,7 +39,7 @@ register_class(State* state, unsigned argc, Value* args) {
     Klass* klass = get_klass(state, args[0]);
     Value name = args[1];
 
-    if (get_klass(state, name) == state->string_klass) {
+    if (get_klass(state, name) != state->string_klass) {
         fatal("Invalid arguments");
     }
 
