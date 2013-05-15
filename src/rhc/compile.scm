@@ -360,7 +360,7 @@
        (vector "gvref" (symbol->string (~ a 'offset)))
        (vector "lvref" (~ a 'depth) (~ a 'offset)))]
     [(argument)
-     (vector "aref" (~ a 'depth) (~ a 'offset))]
+     (vector "laref" (~ a 'depth) (~ a 'offset))]
     [(function)
      (if (eq? 'global (~ a 'depth))
        (vector "gfref" (symbol->string (~ a 'offset)))
@@ -404,7 +404,7 @@
                       :variable-arguments 'false
                       :function-slot-count (~ a 'function-slot-count)
                       :variable-slot-count (~ a 'variable-slot-count)
-                      :parameter-class (list->vector (map (cut ~ <> 'type) (~ a 'parameters)))))
+                      :parameter-class (list->vector (map (lambda (x) (symbol->string (~ x 'type))) (~ a 'parameters)))))
     (if (*is-global-context*)
       (x->lseq
         (list (vector "load" (constant "string" (symbol->string e)))
@@ -465,9 +465,11 @@
 (define-method generate-code ((a <rh-while-expression>))
   (let ([loop-label (generate-label)]
         [exit-label (generate-label)])
-    (lappend (x->lseq (list (vector "label" loop-label)))
+    (lappend (x->lseq (list (vector "loadundef")
+                            (vector "label" loop-label)))
              (generate-code (~ a 'condition-expression))
-             (x->lseq (list (vector "unlessjump" exit-label)))
+             (x->lseq (list (vector "unlessjump" exit-label)
+                            (vector "pop")))
              (generate-code (~ a 'code))
              (x->lseq (list (vector "jump" loop-label)
                             (vector "label" exit-label))))))
@@ -525,7 +527,7 @@
        (let1 r (~ x 'reference)
          (case (~ r 'kind)
            [(argument)
-            (x->lseq (list (vector "aset" (~ r 'depth) (~ r 'offset))))]
+            (x->lseq (list (vector "laset" (~ r 'depth) (~ r 'offset))))]
            [(variable)
             (if (eq? (~ r 'depth) 'global)
               (x->lseq (list (vector "gvset" (symbol->string (~ r 'offset)))))
@@ -645,7 +647,7 @@
   (let* ([bc (~ o 'code)]
          [bl (vector-length (~ o 'code))]
          [st (make-vector bl #f)]
-         [jt (make-hash-table 'string=?)])
+         [jt (make-hash-table 'eq?)])
     ;; Make jump table
     (let lp ([c 0])
       (if (>= c bl)
@@ -658,18 +660,20 @@
     ;; Stack check
     (let lp ([c 0] [h 0])
       (cond
-        [(and (vector-ref st c) (= (vector-ref st c)))
+        [(and (vector-ref st c) (= (vector-ref st c) h))
          ;; Correct, so stop traversing this node
          ]
         [(vector-ref st c)
-         (error "Stack height mismatch")]
+         (write bc) (newline)
+         (write st) (newline)
+         (error "Stack height mismatch" c h)]
         [else
          (vector-set! st c h)
          (let1 i (vector-ref bc c)
            (case (string->symbol (vector-ref i 0))
              [(jump)
               ;; Branch
-              (let1 dest (hash-table-ref jt (vector-ref i 1) #f)
+              (let1 dest (hash-table-get jt (vector-ref i 1) #f)
                 (unless dest
                   (error "No such label"))
                 (lp dest h))]
@@ -677,10 +681,10 @@
               ;; Conditional branch
               (unless (>= h 1)
                 (error "Stack underflow" c))
-              (let1 dest (hash-table-ref jt (vector-ref i 1) #f)
+              (let1 dest (hash-table-get jt (vector-ref i 1) #f)
                 (unless dest
                   (error "No such label"))
-                (lp dest h)
+                (lp dest (- h 1))
                 (lp (+ c 1) (- h 1)))]
              [(add sub mul div mod eq ne gt lt ge le)
               ;; Binary operator
@@ -726,6 +730,8 @@
              [(lfref lvref laref gfref gvref
                load loadklass loadundef loadnull loadtrue loadfalse)
               (lp (+ c 1) (+ h 1))]
+             [(label)
+              (lp (+ c 1) h)]
              [(dup)
               (unless (>= h 1)
                 (error "Stack underflow"))

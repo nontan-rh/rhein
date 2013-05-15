@@ -1,6 +1,6 @@
 
 def main() {
-    local x = true, y = false, z = null
+    local x = true, y = false, z = nil
     print(x)
     print(y)
     print(z)
