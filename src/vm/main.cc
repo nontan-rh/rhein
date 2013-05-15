@@ -1,5 +1,5 @@
 //
-// vmmain.cc
+// main.cc
 //
 
 #include <cstdio>
@@ -18,7 +18,7 @@ int main(int argc, char** argv) {
     GC_init();
 
     if (argc != 2) {
-        fprintf(stderr, "Usage: rheinvm <bytecode>\n");
+        fprintf(stderr, "Usage: rhein <bytecode>\n");
         return 1;
     }
 
