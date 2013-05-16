@@ -26,6 +26,8 @@ register_function(State* state, unsigned argc, Value* args) {
         fatal("Invalid arguments");
     }
 
+    get_obj<Function>(fn)->resolve(state);
+
     state->addFunction((Function*)fn, (String*)name);
     return Cnull;
 }

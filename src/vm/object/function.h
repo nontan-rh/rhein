@@ -27,13 +27,15 @@ protected:
     String* name;
     bool variable_arg;
     unsigned arg_count;
+    String** arg_klass_id;
     Klass** arg_klass;
     Frame* closure;
 
     Function(Klass* klass, String* name_, bool variable_arg_, unsigned arg_count_,
-        Klass** arg_klass_)
-        : Object(klass), name(name_), variable_arg(variable_arg_), arg_count(arg_count_),
-          arg_klass(arg_klass_), closure(nullptr) { }
+        String** arg_klass_id_)
+        : Object(klass), name(name_), variable_arg(variable_arg_),
+          arg_count(arg_count_), arg_klass_id(arg_klass_id_), arg_klass(nullptr),
+          closure(nullptr) { }
 
 public:
     Klass** getArgumentKlass() const { return arg_klass; }
@@ -41,6 +43,8 @@ public:
     bool isVariableArgument() const { return variable_arg; }
     const String* getName() const { return name; }
     Frame* getClosure() const { return closure; }
+
+    bool resolve(State* state);
 };
 
 class NativeFunction : public Function {
@@ -52,18 +56,21 @@ class NativeFunction : public Function {
     NativeFunctionBody body;
     bool copied;
 
-    NativeFunction(State* state, String* name, bool variable_arg, unsigned arg_count,
-        Klass** arg_klass, NativeFunctionBody body);
+    NativeFunction(State* state, String* name, bool variable_arg,
+        unsigned arg_count, String** arg_klass_id, NativeFunctionBody body);
 
 public:
     unsigned long hash() { return reinterpret_cast<unsigned long>(this); }
 
-    static NativeFunction* create(State* state, String* name, NativeFunctionBody body) {
+    static NativeFunction* create(State* state, String* name,
+        NativeFunctionBody body) {
+
         return create(state, name, true, 0, nullptr, body);
     }
 
-    static NativeFunction* create(State* state, String* name, bool variable_arg, unsigned arg_count,
-        Klass** arg_klass, NativeFunctionBody body);
+    static NativeFunction* create(State* state, String* name,
+        bool variable_arg, unsigned arg_count, String** arg_klass_id,
+        NativeFunctionBody body);
 
     NativeFunctionBody getBody() const { return body; }
 
@@ -86,16 +93,17 @@ class BytecodeFunction : public Function {
     unsigned bytecode_size;
     uint32_t* bytecode;
 
-    BytecodeFunction(State* state, String* name_, bool variable_arg_, unsigned argc_,
-        Klass** arg_klass_, unsigned func_slot_size_, unsigned var_slot_size_,
-        unsigned stack_size_, unsigned constant_table_size_,
-        Value* constant_table_, unsigned bytecode_size_, uint32_t* bytecode_);
+    BytecodeFunction(State* state, String* name_, bool variable_arg_,
+        unsigned argc_, String** arg_klass_id_, unsigned func_slot_size_,
+        unsigned var_slot_size_, unsigned stack_size_,
+        unsigned constant_table_size_, Value* constant_table_,
+        unsigned bytecode_size_, uint32_t* bytecode_);
 
 public:
     unsigned long hash() { return reinterpret_cast<unsigned long>(this); }
 
     static BytecodeFunction* create(State* state, String* name,
-        bool variable_arg, unsigned argc, Klass** arg_klass,
+        bool variable_arg, unsigned argc, String** arg_klass_id,
         unsigned func_slot_size, unsigned var_slot_size, unsigned stack_size,
         unsigned constant_table_size, Value* constant_table,
         unsigned bytecode_size, uint32_t* bytecode);
