@@ -116,20 +116,16 @@ State::readFunction(FILE* fp) {
     String* function_name;
     unsigned char variable_arg;
     unsigned long argument_num;
-    Klass** argument_types;
+    String** argument_type_ids;
     unsigned long function_slot_num;
     unsigned long variable_slot_num;
     unsigned long stack_size;
     BinaryReader::readString(fp, this, function_name);
     BinaryReader::readByte(fp, variable_arg);
     BinaryReader::readBER(fp, argument_num);
-    argument_types = new Klass*[argument_num];
+    argument_type_ids = new String*[argument_num];
     for (unsigned long i = 0; i < argument_num; i++) {
-        String* type_name;
-        Value klass;
-        BinaryReader::readString(fp, this, type_name);
-        getKlass(type_name, klass);
-        argument_types[i] = get_obj<Klass>(klass);
+        BinaryReader::readString(fp, this, argument_type_ids[i]);
     }
     BinaryReader::readBER(fp, function_slot_num);
     BinaryReader::readBER(fp, variable_slot_num);
@@ -179,7 +175,7 @@ State::readFunction(FILE* fp) {
         function_name,
         (bool)variable_arg,
         argument_num,
-        argument_types,
+        argument_type_ids,
         function_slot_num,
         variable_slot_num,
         stack_size,

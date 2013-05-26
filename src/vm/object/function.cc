@@ -10,17 +10,35 @@
 
 using namespace rhein;
 
+bool
+Function::resolve(State* state) {
+    arg_klass = state->ator->allocateBlock<Klass*>(arg_count);
+
+    for (unsigned i = 0; i < arg_count; i++) {
+        Value klass;
+        if (!state->getKlass(arg_klass_id[i], klass)) {
+            return false;
+        }
+
+        arg_klass[i] = (Klass*)klass;
+    }
+
+    return true;
+}
+
 NativeFunction::NativeFunction(State* state, String* name, bool variable_arg,
-    unsigned arg_count, Klass** arg_klass, NativeFunctionBody body_)
-    : Function(state->native_function_klass, name, variable_arg, arg_count, arg_klass),
+    unsigned arg_count, String** arg_klass_id, NativeFunctionBody body_)
+    : Function(state->native_function_klass, name, variable_arg, arg_count,
+        arg_klass_id),
       body(body_) { }
 
 NativeFunction*
-NativeFunction::create(State* state, String* name, bool variable_arg, unsigned arg_count,
-    Klass** arg_klass, NativeFunctionBody body) { 
+NativeFunction::create(State* state, String* name, bool variable_arg,
+    unsigned arg_count, String** arg_klass_id, NativeFunctionBody body) {
 
     void* p = state->ator->allocateObject<NativeFunction>();
-    return new (p) NativeFunction(state, name, variable_arg, arg_count, arg_klass, body);
+    return new (p) NativeFunction(state, name, variable_arg, arg_count,
+        arg_klass_id, body);
 }
 
 NativeFunction*
@@ -39,11 +57,12 @@ NativeFunction::enclose(State* state, Frame* closure) {
 }
 
 BytecodeFunction::BytecodeFunction(State* state, String* name_,
-    bool variable_arg_, unsigned argc_, Klass** arg_klass_,
+    bool variable_arg_, unsigned argc_, String** arg_klass_id_,
     unsigned func_slot_size_, unsigned var_slot_size_,
     unsigned stack_size_, unsigned constant_table_size_,
     Value* constant_table_, unsigned bytecode_size_, uint32_t* bytecode_)
-    : Function(state->bytecode_function_klass, name_, variable_arg_, argc_, arg_klass_),
+    : Function(state->bytecode_function_klass, name_, variable_arg_, argc_,
+        arg_klass_id_),
       copied(false),
       stack_size(stack_size_), func_slot_size(func_slot_size_),
       var_slot_size(var_slot_size_),
@@ -54,15 +73,15 @@ BytecodeFunction::BytecodeFunction(State* state, String* name_,
 
 BytecodeFunction*
 BytecodeFunction::create(State* state, String* name,
-    bool variable_arg, unsigned argc, Klass** arg_klass,
+    bool variable_arg, unsigned argc, String** arg_klass_id,
     unsigned func_slot_size, unsigned var_slot_size, unsigned stack_size,
     unsigned constant_table_size, Value* constant_table,
     unsigned bytecode_size, uint32_t* bytecode) {
 
     void* p = state->ator->allocateObject<BytecodeFunction>();
-    return new (p) BytecodeFunction(state, name, variable_arg, argc, arg_klass,
-        func_slot_size, var_slot_size, stack_size, constant_table_size, constant_table,
-        bytecode_size, bytecode);
+    return new (p) BytecodeFunction(state, name, variable_arg, argc, arg_klass_id,
+        func_slot_size, var_slot_size, stack_size, constant_table_size,
+        constant_table, bytecode_size, bytecode);
 }
 
 BytecodeFunction*
