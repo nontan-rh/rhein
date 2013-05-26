@@ -1,0 +1,9 @@
+
+def fn(a, c, &rest b) {
+    b
+}
+
+def main() {
+    print(fn(1,2,3,4)[2])
+}
+

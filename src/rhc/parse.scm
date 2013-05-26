@@ -113,6 +113,7 @@
     (NIL . ,($memoize ($keyword-space "nil")))
     (LOCAL . ,($keyword-concat "local"))
     (DEF . ,($keyword-concat "def"))
+    (REST . ,($keyword-concat "&rest"))
     (CLASS . ,($keyword-concat "class"))
     (GLOBAL . ,($keyword-concat "global"))
     (pre-concatenative-token . ,($memoize ($/ 'RPAREN 'RBRACE 'RBRACKET
@@ -122,11 +123,15 @@
     (disabled-keyword . ,($memoize ($/ 'NEG 'NOT 'EQ 'NE 'IF 'ELIF 'ELSE
                                        'WHILE 'AND 'OR 'BREAK 'TRUE 'FALSE
                                        'NIL 'LOCAL 'DEF 'CLASS 'GLOBAL)))
-    (parameter . ,($do ([id <- 'IDENT]
+    (parameter-opt . ,($/ ($do ('REST
+                                [id <- 'IDENT])
+                            (make <rh-parameter> :id id :attr 'rest))
+                          ($do ([id <- 'IDENT])
+                            (make <rh-parameter> :id id :attr '() ))))
+    (parameter . ,($do ([p <- 'parameter-opt]
                         [type <- ($? ($seq 'LT 'IDENT))])
-                    (if (null? type)
-                      (make <rh-parameter> :id id :type 'any)
-                      (make <rh-parameter> :id id :type (cadr type)))))
+                    (set! (~ p 'type) (if (null? type) 'any (cadr type)))
+                    p))
     (named-function-parameter-list . ,($do ('LPAREN
                                             [p <- ($sep-end-by 'parameter 'COMMA)]
                                             'RPAREN)

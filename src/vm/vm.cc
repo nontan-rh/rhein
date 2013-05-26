@@ -6,6 +6,7 @@
 using namespace std;
 
 #include <cstdint>
+#include <cstring>
 
 #include "object/object.h"
 #include "object/imstring.h"
@@ -486,7 +487,7 @@ rhein::execute(State* state, BytecodeFunction* bfn, unsigned argc_, Value* args_
             case Insn::Call: {
                 uint32_t argc = getInsnArgU(insn);
                 Value func = *sp++;
-                Value* args = sp;
+                Value* stack_args = sp;
 
                 if (!is_obj(func)) {
                     fatal("Not callable object");
@@ -500,9 +501,23 @@ rhein::execute(State* state, BytecodeFunction* bfn, unsigned argc_, Value* args_
                     closure = ((Method*)func)->getClosure();
                 }
 
-                Object* ofunc = get_obj<Object>(func);
+                Function* ofunc = get_obj<Function>(func);
+
                 if (ofunc->getKlass() == state->bytecode_function_klass) {
                     fn = (BytecodeFunction*)ofunc;
+                    unsigned arg_count = fn->getArgumentCount() + (fn->isVariableArgument() ? 1 : 0);
+                    Value* args = state->ator->allocateRawArray(arg_count);
+                    memcpy(args, stack_args, fn->getArgumentCount());
+
+                    if (fn->isVariableArgument()) {
+                        unsigned vargs_count = argc - fn->getArgumentCount();
+                        Array* vargs = Array::create(state, vargs_count);
+                        for (unsigned i = 0; i < vargs_count; i++) {
+                            vargs->eltSet(i, sp[i + fn->getArgumentCount()]);
+                        }
+                        args[fn->getArgumentCount()] = obj2value(vargs);
+                    }
+
                     if (closure == nullptr) {
                         closure = fn->getClosure();
                     }

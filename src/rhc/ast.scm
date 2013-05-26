@@ -24,7 +24,8 @@
 
 (define-class <rh-parameter> (<rh-ast>)
   ((id :init-keyword :id)
-   (type :init-keyword :type)))
+   (type)
+   (attr :init-keyword :attr)))
 
 (define-class <rh-global-declaration> (<rh-ast>)
   ((declarations :init-keyword :declarations)))

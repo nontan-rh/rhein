@@ -390,21 +390,37 @@
             (vector "gfref" "!!register_class")
             (vector "call" 2)))))
 
+(define (analyse-parameter ps)
+  ;; Check for variable arguments
+  (let ([varg #f])
+    (if (null? ps)
+      #f
+      (let ([lst (last ps)]
+            [other (take ps (- (length ps) 1))])
+        (when (eq? (~ lst 'attr) 'rest)
+          (set! varg lst)
+          (set! ps other))))
+    (when (any (^x (eq? (~ x 'attr) 'rest)) ps)
+      (error "&rest argument must be in the last of arguments"))
+    (values varg ps)))
+
 (define-method generate-code ((a <rh-function>))
   (let ([i (generate-object-name)]
         [e (~ a 'id)])
-    (add-object (make <compiled-function>
-                      :internal-id i
-                      :external-id (symbol->string e)
-                      :code (parameterize ([*is-global-context* #f]
-                                           [*label-generator* (make <label-generator>)])
-                              (list->vector
-                                (lappend (generate-code (~ a 'code))
-                                           (x->lseq (list #("ret"))))))
-                      :variable-arguments 'false
-                      :function-slot-count (~ a 'function-slot-count)
-                      :variable-slot-count (~ a 'variable-slot-count)
-                      :parameter-class (list->vector (map (lambda (x) (symbol->string (~ x 'type))) (~ a 'parameters)))))
+    (receive [varg ps] (analyse-parameter (~ a 'parameters))
+      (let1 classes (list->vector (map (^x (symbol->string (~ x 'type))) ps))
+            (add-object (make <compiled-function>
+                              :internal-id i
+                              :external-id (symbol->string e)
+                              :code (parameterize ([*is-global-context* #f]
+                                                   [*label-generator* (make <label-generator>)])
+                                      (list->vector
+                                        (lappend (generate-code (~ a 'code))
+                                                   (x->lseq (list #("ret"))))))
+                              :variable-arguments (if varg 'true 'false)
+                              :function-slot-count (~ a 'function-slot-count)
+                              :variable-slot-count (~ a 'variable-slot-count)
+                              :parameter-class classes))))
     (if (*is-global-context*)
       (x->lseq
         (list (vector "load" (constant "string" (symbol->string e)))
