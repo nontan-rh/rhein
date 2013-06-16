@@ -20,29 +20,29 @@ class HashTable : public Object {
     
     HashTableNode* table;
     unsigned table_size;
-    unsigned item_num;
+    unsigned num_entries;
 
-    HashTable(State* state);
+    HashTable(State* R);
 
-    void rehash(State* state);
+    void rehash(State* R);
 
 public:
-    static HashTable* create(State* state);
-    static HashTable* literal(State* state, Array* key, Array* value);
+    static HashTable* create(State* R);
+    static HashTable* literal(State* R, Array* key, Array* value);
 
-    unsigned getItemNumber() const { return item_num; }
+    unsigned get_num_entries() const { return num_entries; }
 
     bool find(Value key, Value& result) const;
-    bool insert(State* state, Value key, Value value);
-    bool insertAnyway(State* state, Value key, Value value);
+    bool insert_if_absent(State* R, Value key, Value value);
+    bool insert(State* R, Value key, Value value);
     bool assign(Value key, Value value);
-    bool remove(State* state, Value key);
-    bool import(State* state, HashTable *table);
+    bool remove(State* R, Value key);
+    bool import(State* R, HashTable *table);
 
     // Override
-    bool indexRef(State* state, Value index, Value& dest) const;
+    bool index_ref(State* R, Value index, Value& dest) const;
     // Override
-    bool indexSet(State* state, Value index, Value value);
+    bool index_set(State* R, Value index, Value value);
 
     // For debugging
     void dump();

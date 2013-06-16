@@ -113,27 +113,27 @@ protected:
     virtual ~Object() = default;
 
 public:
-    virtual unsigned long hash() { return reinterpret_cast<unsigned long>(this); }
+    virtual unsigned long get_hash() { return reinterpret_cast<unsigned long>(this); }
 
-    virtual Klass* getKlass() { return klass; }
+    virtual Klass* get_class() { return klass; }
 
-    virtual String* stringRepr(State* state);
+    virtual String* get_string_representation(State* R);
 
     // Bytecode level object interface
     // Always fails by default
-    virtual bool indexRef(State* /* state */, Value /* index */, Value& /* dest */) const {
+    virtual bool index_ref(State* /* R */, Value /* index */, Value& /* dest */) const {
         return false;
     }
 
-    virtual bool indexSet(State* /* state */, Value /* index */, Value /* value */) {
+    virtual bool index_set(State* /* R */, Value /* index */, Value /* value */) {
         return false;
     }
 
-    virtual bool slotRef(State* /* state */, String* /* id */, Value& /* dest */) const {
+    virtual bool slot_ref(State* /* R */, String* /* id */, Value& /* dest */) const {
         return false;
     }
 
-    virtual bool slotSet(State* /* state */, String* /* id */, Value /* value */) {
+    virtual bool slot_set(State* /* R */, String* /* id */, Value /* value */) {
         return false;
     }
 };
@@ -145,7 +145,7 @@ class Klass : public Object {
 
     friend class State;
 
-    void setName(String* name_) {
+    void set_name(String* name_) {
         name = name_;
     }
 
@@ -158,18 +158,18 @@ protected:
         : Object(nullptr), name(name_), parent(parent_), record_info(record_info_) { }
 
 public:
-    static Klass* create(State* state, String* name, Klass* parent) {
-        return create(state, name, parent, 0, nullptr);
+    static Klass* create(State* R, String* name, Klass* parent) {
+        return create(R, name, parent, 0, nullptr);
     }
 
-    static Klass* create(State* state, String* name, Klass* parent, unsigned slot_num, String** slot_ids);
+    static Klass* create(State* R, String* name, Klass* parent, unsigned slot_num, String** slot_ids);
 
-    String* getName() const { return name; }
+    String* get_name() const { return name; }
     // Override
-    Klass* getKlass() { return this; }
-    Klass* getParent() const { return parent; }
-    bool hasRecordInfo() const { return record_info != nullptr; }
-    const RecordInfo* getRecordInfo() const { return record_info; }
+    Klass* get_class() { return this; }
+    Klass* get_parent() const { return parent; }
+    bool has_record_info() const { return record_info != nullptr; }
+    const RecordInfo* get_record_info() const { return record_info; }
 };
 
 inline unsigned long
@@ -186,7 +186,7 @@ Value::get_hash() const {
 		case Type::Char:
 			return u.v_char;
 		case Type::Object:
-			return u.v_obj->hash();
+			return u.v_obj->get_hash();
 		}
 		return 0;
 	}

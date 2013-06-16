@@ -45,10 +45,10 @@ struct StringHashTableNode {
         : next(next_), key_hash(key_hash_), length(length_), key(key_), value(value_) { }
     
     static StringHashTableNode* create(
-        State* state, StringHashTableNode* next, unsigned long key_hash,
+        State* R, StringHashTableNode* next, unsigned long key_hash,
         size_t length, const char* key, String* value) {
 
-        void *p = state->ator->allocateStruct<StringHashTableNode>();
+        void *p = R->ator->allocateStruct<StringHashTableNode>();
         return new (p) StringHashTableNode(next, key_hash, length, key, value);
     }
 };
@@ -66,17 +66,17 @@ class rhein::StringHashTable {
     unsigned table_size;
     unsigned item_num;
 
-    StringHashTable(State* state) : table_size(default_table_size), item_num(0) {
-        table = state->ator->allocateBlock<StringHashTableNode>(default_table_size);
+    StringHashTable(State* R) : table_size(default_table_size), item_num(0) {
+        table = R->ator->allocateBlock<StringHashTableNode>(default_table_size);
         for (unsigned i = 0; i < default_table_size ; i++) {
             table[i].next = nullptr;
         }
     }
 
 public:
-    static StringHashTable* create(State* state) {
-        void* p = state->ator->allocateStruct<StringHashTable>();
-        return new (p) StringHashTable(state);
+    static StringHashTable* create(State* R) {
+        void* p = R->ator->allocateStruct<StringHashTable>();
+        return new (p) StringHashTable(R);
     }
 
     bool find(const char* key, size_t length, String*& result) {
@@ -95,22 +95,22 @@ public:
         return false;
     }
 
-    void insert(State* state, String* value) {
+    void insert(State* R, String* value) {
         // Check if there is no collision
         String* dummy; assert(!find(value->body, value->length, dummy));
         unsigned long hash_value = calcHash(value->body, value->length);
         value->hash_value = hash_value;
         auto n = table[hash_value % table_size].next;
         table[hash_value % table_size].next = StringHashTableNode::create(
-            state, n, hash_value, value->length, value->body, value);
+            R, n, hash_value, value->length, value->body, value);
 
         item_num++;
         if (item_num > rehash_ratio * table_size) {
-            rehash(state);
+            rehash(R);
         }
     }
 
-    void remove(State* state, String* value) {
+    void remove(State* R, String* value) {
         // Check if there is
         String* dummy; assert(find(value->body, value->length, dummy));
         auto prev = &table[value->hash_value % table_size];
@@ -121,7 +121,7 @@ public:
                     || memcmp(value->body, curr->key, value->length) == 0) {
 
                     prev->next = curr->next;
-                    state->ator->releaseStruct(curr);
+                    R->ator->releaseStruct(curr);
                     return;
                 }
             }
@@ -131,9 +131,9 @@ public:
         // NOTREACHED
     }
 
-    void rehash(State* state) {
+    void rehash(State* R) {
         unsigned newtable_size = table_size * 2 + 1;
-        StringHashTableNode* newtable = state->ator->allocateBlock<StringHashTableNode>(newtable_size);
+        StringHashTableNode* newtable = R->ator->allocateBlock<StringHashTableNode>(newtable_size);
         for(unsigned i = 0; i < table_size; i++) {
             StringHashTableNode* node = table[i].next;
             for(; node != nullptr; ) {
@@ -144,37 +144,37 @@ public:
                 node = oldnext;
             }
         }
-        state->ator->releaseBlock(table);
+        R->ator->releaseBlock(table);
         table_size = newtable_size;
         table = newtable;
     }
 };
 
-StringProvider::StringProvider(State* state)
-    : owner(state) {
+StringProvider::StringProvider(State* R)
+    : owner(R) {
     assert(!owner->hasStringProvider());
-    string_hash_table = StringHashTable::create(state);
+    string_hash_table = StringHashTable::create(R);
     owner->setStringProvider(this);
 }
 
 StringProvider*
-StringProvider::create(State* state) {
-    void *p = state->ator->allocateStruct<StringProvider>();
-    return new (p) StringProvider(state);
+StringProvider::create(State* R) {
+    void *p = R->ator->allocateStruct<StringProvider>();
+    return new (p) StringProvider(R);
 }
 
-String::String(State* state, const char* body_, size_t length_)
-    : Object(state->string_klass), body(body_), length(length_),
+String::String(State* R, const char* body_, size_t length_)
+    : Object(R->string_klass), body(body_), length(length_),
       hash_value(0) { }
 
 String*
-String::create(State* state, const char* body, size_t length) {
-    void* p = state->ator->allocateObject<String>();
-    return new (p) String(state, body, length);
+String::create(State* R, const char* body, size_t length) {
+    void* p = R->ator->allocateObject<String>();
+    return new (p) String(R, body, length);
 }
 
 String*
-StringProvider::getString(const char* buffer, size_t length) {
+StringProvider::get_string(const char* buffer, size_t length) {
     String *registered;
     if (string_hash_table->find(buffer, length, registered)) {
         return registered;
@@ -188,18 +188,18 @@ StringProvider::getString(const char* buffer, size_t length) {
 }
 
 String*
-StringProvider::getString(const char* cstr) {
-    return getString(cstr, strlen(cstr));
+StringProvider::get_string(const char* cstr) {
+    return get_string(cstr, strlen(cstr));
 }
 
 void
-String::getCStr(const char*& b, size_t& l) const {
+String::get_cstr(const char*& b, size_t& l) const {
     b = body;
     l = length;
 }
 
 bool
-String::indexRef(State* /* state */, Value vindex, Value& dest) const {
+String::index_ref(State* /* R */, Value vindex, Value& dest) const {
     if (!vindex.is(Value::Type::Int)) {
         return false;
     }
@@ -214,48 +214,48 @@ String::indexRef(State* /* state */, Value vindex, Value& dest) const {
 }
 
 String*
-String::stringRepr(State* /* state */) {
+String::get_string_representation(State* /* R */) {
     return this;
 }
 
 String*
-String::append(State* state, String* rht) {
+String::append(State* R, String* rht) {
     size_t newlength = this->length + rht->length;
-    char* buffer = state->ator->allocateBlock<char>(newlength);
+    char* buffer = R->ator->allocateBlock<char>(newlength);
     memcpy(buffer, this->body, this->length);
     memcpy(buffer + this->length, rht->body, rht->length);
-    String* ret = state->s_prv->getString(buffer, newlength);
-    state->ator->releaseBlock(buffer);
+    String* ret = R->s_prv->get_string(buffer, newlength);
+    R->ator->releaseBlock(buffer);
     return ret;
 }
 
 String*
-String::head(State* state, size_t end) {
+String::head(State* R, size_t end) {
     if (end > length) {
         throw;
     }
-    return state->s_prv->getString(body, end);
+    return R->s_prv->get_string(body, end);
 }
 
 String*
-String::tail(State* state, size_t begin) {
+String::tail(State* R, size_t begin) {
     if (begin >= length) {
         throw;
     }
-    return state->s_prv->getString(body + begin, length - begin);
+    return R->s_prv->get_string(body + begin, length - begin);
 }
 
 String*
-String::sub(State* state, size_t begin, size_t end) {
+String::sub(State* R, size_t begin, size_t end) {
     if (end > length || begin >= length || end < begin) {
         throw;
     }
-    return state->s_prv->getString(body + begin, end - begin);
+    return R->s_prv->get_string(body + begin, end - begin);
 }
 
 bool
-String::toArray(State* state, Array*& array) {
-    array = Array::create(state, length);
+String::to_array(State* R, Array*& array) {
+    array = Array::create(R, length);
 
     for (unsigned i = 0; i < length; i++) {
         array->elt_set(i, Value::by_char(body[i]));

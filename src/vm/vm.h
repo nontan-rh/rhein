@@ -115,12 +115,12 @@ protected:
     virtual ~Module() = default;
 
 public:
-    virtual bool initialize(State* state) = 0;
+    virtual bool initialize(State* R) = 0;
 };
 
 struct Frame {
 private:
-    Frame(State* state, BytecodeFunction* fn_, Frame* parent_, Frame* closure_,
+    Frame(State* R, BytecodeFunction* fn_, Frame* parent_, Frame* closure_,
         unsigned argc_, Value* args_);
 
     static void* operator new (size_t /* size */, void* p) { return p; }
@@ -136,10 +136,10 @@ public:
     const uint32_t* pc;
     Value* sp;
 
-    static Frame* create(State* state, BytecodeFunction* fn, Frame* parent, Frame* closure,
+    static Frame* create(State* R, BytecodeFunction* fn, Frame* parent, Frame* closure,
         unsigned argc, Value* args) {
-        void* p = state->ator->allocateStruct<Frame>();
-        return new (p) Frame(state, fn, parent, closure, argc, args);
+        void* p = R->ator->allocateStruct<Frame>();
+        return new (p) Frame(R, fn, parent, closure, argc, args);
     }
 
     // Variables
@@ -151,8 +151,8 @@ public:
     bool laset(unsigned depth, unsigned offset, Value value);
 };
 
-Value execute(State* state, String* entry_point, unsigned argc, Value* argv);
-Value execute(State* state, BytecodeFunction* bfn, unsigned argc, Value* args);
+Value execute(State* R, String* entry_point, unsigned argc, Value* argv);
+Value execute(State* R, BytecodeFunction* bfn, unsigned argc, Value* args);
 
 }
 

@@ -10,38 +10,38 @@
 using namespace rhein;
 
 Array*
-Array::create(State* state, Int size) {
+Array::create(State* R, Int size) {
     if (size < 0) {
         return nullptr;
     }
-    void* p = state->ator->allocateObject<Array>();
-    return new (p) Array(state, size);
+    void* p = R->ator->allocateObject<Array>();
+    return new (p) Array(R, size);
 }
 
-Array::Array(State* state, Int size_) : Object(state->array_klass), size(size_) {
+Array::Array(State* R, Int size_) : Object(R->array_klass), size(size_) {
     allocated_size = 1;
     while (size > allocated_size) {
         allocated_size *= 2;
     }
 
-    body = state->ator->allocateRawArray(allocated_size);
+    body = R->ator->allocateRawArray(allocated_size);
 }
 
 bool
-Array::toString(State* state, String*& dest) {
-    char* buf = state->ator->allocateBlock<char>(size);
+Array::to_string(State* R, String*& dest) {
+    char* buf = R->ator->allocateBlock<char>(size);
     
     for (Int i = 0; i < size; i++) {
         if (!body[i].is(Value::Type::Char)) {
-            state->ator->releaseBlock(buf);
+            R->ator->releaseBlock(buf);
             return false;
         }
 
         buf[i] = body[i].get_char();
     }
 
-    dest = state->s_prv->getString(buf, size);
-    state->ator->releaseBlock(buf);
+    dest = R->s_prv->get_string(buf, size);
+    R->ator->releaseBlock(buf);
     return true;
 }
 

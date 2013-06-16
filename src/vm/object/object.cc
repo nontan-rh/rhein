@@ -10,19 +10,19 @@
 using namespace rhein;
 
 String*
-Object::stringRepr(State* state) {
-    return state->s_prv->getString("#<obj>");
+Object::get_string_representation(State* R) {
+    return R->s_prv->get_string("#<obj>");
 }
 
 Klass*
-Klass::create(State* state, String* name, Klass* parent, unsigned slot_num, String** slot_ids) {
-    void* p = state->ator->allocateObject<Klass>();
+Klass::create(State* R, String* name, Klass* parent, unsigned slot_num, String** slot_ids) {
+    void* p = R->ator->allocateObject<Klass>();
     RecordInfo* record_info;
 
     if (parent != nullptr) {
-        record_info = RecordInfo::create(state, parent->record_info, slot_num, slot_ids);
+        record_info = RecordInfo::create(R, parent->record_info, slot_num, slot_ids);
     } else {
-        record_info = RecordInfo::create(state, nullptr, slot_num, slot_ids);
+        record_info = RecordInfo::create(R, nullptr, slot_num, slot_ids);
     }
 
     return new (p) Klass(name, parent, record_info);
@@ -42,7 +42,7 @@ Value::get_klass(State *R) {
 	case Type::Char:
 		return R->char_klass;
 	case Type::Object:
-		return u.v_obj->getKlass();
+		return u.v_obj->get_class();
 	}
 	return nullptr;
 }

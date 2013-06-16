@@ -15,7 +15,8 @@ add_executable(
 
 target_link_libraries(
     rhein
-    gc)
+    gc
+    ${ITK_LIBRARIES})
 
 install(TARGETS rhein RUNTIME DESTINATION bin)
 

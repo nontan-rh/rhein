@@ -19,30 +19,30 @@ class String : public Object {
     friend class StringProvider;
     friend class StringHashTable;
 
-    String(State* state, const char* body_, size_t length_);
+    String(State* R, const char* body_, size_t length_);
     
     const char* body;
     size_t length;
     unsigned long hash_value;
 
-    static String* create(State* state, const char* body, size_t length);
+    static String* create(State* R, const char* body, size_t length);
 public:
     unsigned long hash() { return hash_value; }
 
-    String* stringRepr(State* state);
-    void getCStr(const char*& body, size_t& length) const;
+    String* get_string_representation(State* R);
+    void get_cstr(const char*& body, size_t& length) const;
 
     // Override
-    bool indexRef(State* state, Value index, Value& value) const;
+    bool index_ref(State* R, Value index, Value& value) const;
 
-    Int getLength() const { return length; }
+    Int get_length() const { return length; }
 
-    String* append(State* state, String* rht);
-    String* head(State* state, size_t end);
-    String* tail(State* state, size_t begin);
-    String* sub(State* state, size_t begin, size_t end);
+    String* append(State* R, String* rht);
+    String* head(State* R, size_t end);
+    String* tail(State* R, size_t begin);
+    String* sub(State* R, size_t begin, size_t end);
 
-    bool toArray(State* state, Array*& array);
+    bool to_array(State* R, Array*& array);
 
     // For debugging
     void dump() const;
@@ -56,12 +56,12 @@ class StringProvider {
     State* owner;
     StringHashTable* string_hash_table;
 
-    StringProvider(State* state);
+    StringProvider(State* R);
 
 public:
-    static StringProvider* create(State* state);
-    String* getString(const char* buffer, size_t length);
-    String* getString(const char* cstr);
+    static StringProvider* create(State* R);
+    String* get_string(const char* buffer, size_t length);
+    String* get_string(const char* cstr);
 };
 
 };

@@ -32,7 +32,7 @@ BinaryReader::read32Bit(FILE* fp, uint32_t& word) {
 }
 
 bool
-BinaryReader::readString(FILE* fp, State* state, String*& result) {
+BinaryReader::readString(FILE* fp, State* R, String*& result) {
     unsigned long length;
     if(!BinaryReader::readBER(fp, length)) {
         result = nullptr;
@@ -47,7 +47,7 @@ BinaryReader::readString(FILE* fp, State* state, String*& result) {
         }
         buffer[i] = (char)fgetc(fp);
     }
-    result = state->s_prv->getString(buffer, length);
+    result = R->s_prv->get_string(buffer, length);
     delete[] buffer;
     return true;
 }

@@ -22,13 +22,13 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    State *state = new (GC_malloc(sizeof(State))) State();
-    state->loadModule(BasicModule::create(state));
-    state->loadModule(BuiltinModule::create(state));
+    State *R = new (GC_malloc(sizeof(State))) State();
+    R->loadModule(BasicModule::create(R));
+    R->loadModule(BuiltinModule::create(R));
 
-    load_script(state, argv[1]);
+    load_script(R, argv[1]);
 
-    execute(state, state->s_prv->getString("main"), 0, nullptr);
+    execute(R, R->s_prv->get_string("main"), 0, nullptr);
     return 0;
 }
 

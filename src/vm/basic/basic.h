@@ -12,11 +12,11 @@ class BasicModule : public Module {
     //BasicModule() = default;
 
 public:
-    static BasicModule* create(State* state);
-    bool initialize(State* state);
+    static BasicModule* create(State* R);
+    bool initialize(State* R);
 };
 
-Value fn_load(State* state, unsigned argc, Value* args);
+Value fn_load(State* R, unsigned argc, Value* args);
 
 }
 

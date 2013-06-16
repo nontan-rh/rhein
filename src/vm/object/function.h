@@ -20,52 +20,50 @@ typedef Value (*NativeFunctionBody)(State*, unsigned, Value*);
 class Function : public Object {
 protected:
     String* name;
-    bool variable_arg;
+    bool variadic;
     unsigned arg_count;
     String** arg_klass_id;
     Klass** arg_klass;
     Frame* closure;
 
-    Function(Klass* klass, String* name_, bool variable_arg_, unsigned arg_count_,
+    Function(Klass* klass, String* name_, bool variadic_, unsigned arg_count_,
         String** arg_klass_id_)
-        : Object(klass), name(name_), variable_arg(variable_arg_),
+        : Object(klass), name(name_), variadic(variadic_),
           arg_count(arg_count_), arg_klass_id(arg_klass_id_), arg_klass(nullptr),
           closure(nullptr) { }
 
 public:
-    Klass** getArgumentKlass() const { return arg_klass; }
-    unsigned getArgumentCount() const { return arg_count; }
-    bool isVariableArgument() const { return variable_arg; }
-    const String* getName() const { return name; }
-    Frame* getClosure() const { return closure; }
+    Klass** get_arg_classes() const { return arg_klass; }
+    unsigned get_num_args() const { return arg_count; }
+    bool is_variadic() const { return variadic; }
+    const String* get_name() const { return name; }
+    Frame* get_closure() const { return closure; }
 
-    bool resolve(State* state);
+    bool resolve(State* R);
 };
 
 class NativeFunction : public Function {
     NativeFunctionBody body;
     bool copied;
 
-    NativeFunction(State* state, String* name, bool variable_arg,
+    NativeFunction(State* R, String* name, bool variable_arg,
         unsigned arg_count, String** arg_klass_id, NativeFunctionBody body);
 
 public:
-    unsigned long hash() { return reinterpret_cast<unsigned long>(this); }
-
-    static NativeFunction* create(State* state, String* name,
+    static NativeFunction* create(State* R, String* name,
         NativeFunctionBody body) {
 
-        return create(state, name, true, 0, nullptr, body);
+        return create(R, name, true, 0, nullptr, body);
     }
 
-    static NativeFunction* create(State* state, String* name,
+    static NativeFunction* create(State* R, String* name,
         bool variable_arg, unsigned arg_count, String** arg_klass_id,
         NativeFunctionBody body);
 
-    NativeFunctionBody getBody() const { return body; }
+    NativeFunctionBody get_body() const { return body; }
 
-    NativeFunction* copy(State* state);
-    NativeFunction* enclose(State* state, Frame* closure);
+    NativeFunction* copy(State* R);
+    NativeFunction* enclose(State* R, Frame* closure);
 };
 
 class BytecodeFunction : public Function {
@@ -78,7 +76,7 @@ class BytecodeFunction : public Function {
     unsigned bytecode_size;
     uint32_t* bytecode;
 
-    BytecodeFunction(State* state, String* name_, bool variable_arg_,
+    BytecodeFunction(State* R, String* name_, bool variable_arg_,
         unsigned argc_, String** arg_klass_id_, unsigned func_slot_size_,
         unsigned var_slot_size_, unsigned stack_size_,
         unsigned constant_table_size_, Value* constant_table_,
@@ -87,20 +85,20 @@ class BytecodeFunction : public Function {
 public:
     unsigned long hash() { return reinterpret_cast<unsigned long>(this); }
 
-    static BytecodeFunction* create(State* state, String* name,
+    static BytecodeFunction* create(State* R, String* name,
         bool variable_arg, unsigned argc, String** arg_klass_id,
         unsigned func_slot_size, unsigned var_slot_size, unsigned stack_size,
         unsigned constant_table_size, Value* constant_table,
         unsigned bytecode_size, uint32_t* bytecode);
 
-    unsigned getStackSize() const { return stack_size; }
-    unsigned getFunctionSlotSize() const { return func_slot_size; }
-    unsigned getVariableSlotSize() const { return var_slot_size; }
-    const uint32_t* getBytecode() const { return bytecode; }
-    const Value* getConstantTable() const { return constant_table; }
+    unsigned get_stack_size() const { return stack_size; }
+    unsigned get_function_slot_num() const { return func_slot_size; }
+    unsigned get_variable_slot_num() const { return var_slot_size; }
+    const uint32_t* get_bytecode() const { return bytecode; }
+    const Value* get_constant_table() const { return constant_table; }
 
-    BytecodeFunction* copy(State* state);
-    BytecodeFunction* enclose(State* state, Frame* closure);
+    BytecodeFunction* copy(State* R);
+    BytecodeFunction* enclose(State* R, Frame* closure);
 };
 
 class DispatcherNode;
@@ -110,19 +108,19 @@ class Method : public Object {
     DispatcherNode* node;
     Frame* closure;
 
-    Method(State* state);
+    Method(State* R);
 
 public:
-    static Method* create(State* state);
+    static Method* create(State* R);
 
-    bool hasClosure() const { return (closure != nullptr); }
-    Frame* getClosure() const { return closure; }
+    bool has_closure() const { return (closure != nullptr); }
+    Frame* get_closure() const { return closure; }
 
-    bool dispatch(State* state, unsigned argc, Value* args, Value& result);
-    bool addFunction(State* state, Function* func);
+    bool dispatch(State* R, unsigned argc, Value* args, Value& result);
+    bool add_function(State* R, Function* func);
 
-    Method* copy(State* state);
-    Method* enclose(State* state, Frame* closure);
+    Method* copy(State* R);
+    Method* enclose(State* R, Frame* closure);
 };
 
 }

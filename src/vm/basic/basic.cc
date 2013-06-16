@@ -20,7 +20,7 @@ namespace rhein {
 namespace basic {
 
 void
-print_value(State* state, Value v) {
+print_value(State* R, Value v) {
     if (v.is(Value::Type::Int)) {
         printf("%d", v.get_int());
     } else if (v.is(Value::Type::Char)) {
@@ -34,10 +34,10 @@ print_value(State* state, Value v) {
     } else if (v.is(Value::Type::Nil)) {
         printf("nil");
     } else if (v.is(Value::Type::Object)) {
-        String* str = v.get_obj<Object>()->stringRepr(state);
+        String* str = v.get_obj<Object>()->get_string_representation(R);
         const char* cstr;
         size_t len;
-        str->getCStr(cstr, len);
+        str->get_cstr(cstr, len);
         for (unsigned i = 0; i < len; i++) {
             printf("%c", cstr[i]);
         }
@@ -47,12 +47,12 @@ print_value(State* state, Value v) {
 }
 
 Value
-fn_print(State* state, unsigned argc, Value* args) {
+fn_print(State* R, unsigned argc, Value* args) {
     if (argc >= 1) {
-        print_value(state, args[0]);
+        print_value(R, args[0]);
         for (unsigned i = 1; i < argc; i++) {
             printf(" ");
-            print_value(state, args[i]);
+            print_value(R, args[i]);
         }
     }
     printf("\n");
@@ -60,7 +60,7 @@ fn_print(State* state, unsigned argc, Value* args) {
 }
 
 Value
-fn_write(State* state, unsigned argc, Value* args) {
+fn_write(State* R, unsigned argc, Value* args) {
     if (argc != 1) {
         fatal("Invalid arguments");
     }
@@ -79,10 +79,10 @@ fn_write(State* state, unsigned argc, Value* args) {
     } else if (v.is(Value::Type::Nil)) {
         printf("nil");
     } else if (v.is(Value::Type::Object)) {
-        String* str = v.get_obj<Object>()->stringRepr(state);
+        String* str = v.get_obj<Object>()->get_string_representation(R);
         const char* cstr;
         size_t len;
-        str->getCStr(cstr, len);
+        str->get_cstr(cstr, len);
         for (unsigned i = 0; i < len; i++) {
             printf("%c", cstr[i]);
         }
@@ -93,54 +93,54 @@ fn_write(State* state, unsigned argc, Value* args) {
 }
 
 Value
-fn_input(State* state, unsigned argc, Value* args) {
+fn_input(State* R, unsigned argc, Value* args) {
     if (argc >= 2) {
         fatal("Invalid arguments");
     }
 
     if (argc == 1) {
-        print_value(state, args[0]);
+        print_value(R, args[0]);
     }
 
     char buf[256];
     scanf("%256s", buf);
 
-    return Value::by_object(state->s_prv->getString(buf));
+    return Value::by_object(R->s_prv->get_string(buf));
 }
 
 Value
-fn_new(State* state, unsigned argc, Value* args) {
+fn_new(State* R, unsigned argc, Value* args) {
     if (argc != 1) {
         fatal("Too many arguments for new");
     }
 
-    Klass* k = args[0].get_klass(state);
-    return Value::by_object(Record::create(state, k));
+    Klass* k = args[0].get_klass(R);
+    return Value::by_object(Record::create(R, k));
 }
 
 Value
-fn_literal(State* state, unsigned argc, Value* args) {
+fn_literal(State* R, unsigned argc, Value* args) {
     if (argc == 0) {
         fatal("Class required");
     }
 
-    Klass* k = args[0].get_klass(state);
-    if (k == state->array_klass) {
-        if (!(argc == 2 && args[1].get_klass(state) == state->array_klass)) {
+    Klass* k = args[0].get_klass(R);
+    if (k == R->array_klass) {
+        if (!(argc == 2 && args[1].get_klass(R) == R->array_klass)) {
             fatal("Lack of argument");
         }
 
-        return Value::by_object(Array::literal(state,
+        return Value::by_object(Array::literal(R,
         		args[1].get_obj<Array>()));
-    } else if (k == state->hashtable_klass) {
+    } else if (k == R->hashtable_klass) {
         if (!(argc == 3
-            && args[1].get_klass(state) == state->array_klass
-            && args[2].get_klass(state) == state->array_klass)) {
+            && args[1].get_klass(R) == R->array_klass
+            && args[2].get_klass(R) == R->array_klass)) {
 
             fatal("Lack of argument");
         }
 
-        return Value::by_object(HashTable::literal(state,
+        return Value::by_object(HashTable::literal(R,
             args[1].get_obj<Array>(),
             args[2].get_obj<Array>()));
     }
@@ -149,13 +149,13 @@ fn_literal(State* state, unsigned argc, Value* args) {
 }
 
 Value
-fn_to_array(State* state, unsigned argc, Value* args) {
-    if (!(argc == 1 && args[0].get_klass(state) == state->string_klass)) {
+fn_to_array(State* R, unsigned argc, Value* args) {
+    if (!(argc == 1 && args[0].get_klass(R) == R->string_klass)) {
         fatal("Invalid arguments");
     }
 
     Array* array;
-    if (!args[0].get_obj<String>()->toArray(state, array)) {
+    if (!args[0].get_obj<String>()->to_array(R, array)) {
         fatal("Error occurred");
     }
 
@@ -163,13 +163,13 @@ fn_to_array(State* state, unsigned argc, Value* args) {
 }
 
 Value
-fn_to_string(State* state, unsigned argc, Value* args) {
-    if (!(argc == 1 && args[0].get_klass(state) == state->array_klass)) {
+fn_to_string(State* R, unsigned argc, Value* args) {
+    if (!(argc == 1 && args[0].get_klass(R) == R->array_klass)) {
         fatal("Invalid arguments");
     }
 
     String* string;
-    if (!args[0].get_obj<Array>()->toString(state, string)) {
+    if (!args[0].get_obj<Array>()->to_string(R, string)) {
         fatal("Error occurred");
     }
 
@@ -177,73 +177,73 @@ fn_to_string(State* state, unsigned argc, Value* args) {
 }
 
 Value
-fn_append(State* state, unsigned argc, Value* args) {
+fn_append(State* R, unsigned argc, Value* args) {
     if (argc == 0) {
-        return Value::by_object(state->s_prv->getString(""));
+        return Value::by_object(R->s_prv->get_string(""));
     }
 
-    if (args[0].get_klass(state) != state->string_klass) {
+    if (args[0].get_klass(R) != R->string_klass) {
         fatal("Cannot append");
     }
 
     String* result = args[0].get_obj<String>();
     for (unsigned i = 1; i < argc; i++) {
-        if (args[i].get_klass(state) != state->string_klass) {
+        if (args[i].get_klass(R) != R->string_klass) {
             fatal("Cannot append");
         }
 
-        result = result->append(state, args[i].get_obj<String>());
+        result = result->append(R, args[i].get_obj<String>());
     }
     return Value::by_object(result);
 }
 
 Value
-fn_head(State* state, unsigned argc, Value* args) {
+fn_head(State* R, unsigned argc, Value* args) {
     if (!(argc == 2
-        && args[0].get_klass(state) == state->string_klass
-        && args[1].get_klass(state) == state->int_klass)) {
+        && args[0].get_klass(R) == R->string_klass
+        && args[1].get_klass(R) == R->int_klass)) {
 
         fatal("Invalid arguments");
     }
 
-    return Value::by_object(args[0].get_obj<String>()->head(state, args[1].get_int()));
+    return Value::by_object(args[0].get_obj<String>()->head(R, args[1].get_int()));
 }
 
 Value
-fn_tail(State* state, unsigned argc, Value* args) {
+fn_tail(State* R, unsigned argc, Value* args) {
     if (!(argc == 2
-        && args[0].get_klass(state) == state->string_klass
-        && args[1].get_klass(state) == state->int_klass)) {
+        && args[0].get_klass(R) == R->string_klass
+        && args[1].get_klass(R) == R->int_klass)) {
 
         fatal("Invalid arguments");
     }
 
-    return Value::by_object(args[0].get_obj<String>()->tail(state, args[1].get_int()));
+    return Value::by_object(args[0].get_obj<String>()->tail(R, args[1].get_int()));
 }
 
 Value
-fn_sub(State* state, unsigned argc, Value* args) {
+fn_sub(State* R, unsigned argc, Value* args) {
     if (!(argc == 3
-        && args[0].get_klass(state) == state->string_klass
-        && args[1].get_klass(state) == state->int_klass
-        && args[2].get_klass(state) == state->int_klass)) {
+        && args[0].get_klass(R) == R->string_klass
+        && args[1].get_klass(R) == R->int_klass
+        && args[2].get_klass(R) == R->int_klass)) {
 
         fatal("Invalid arguments");
     }
 
-    return Value::by_object(args[0].get_obj<String>()->sub(state, args[1].get_int(), args[2].get_int()));
+    return Value::by_object(args[0].get_obj<String>()->sub(R, args[1].get_int(), args[2].get_int()));
 }
 
 Value
-fn_length(State* state, unsigned argc, Value* args) {
+fn_length(State* R, unsigned argc, Value* args) {
     if (argc != 1) {
         fatal("Invalid arguments");
     }
 
-    if (args[0].get_klass(state) == state->string_klass) {
-        return Value::by_int(args[0].get_obj<String>()->getLength());
-    } else if (args[0].get_klass(state) == state->array_klass) {
-        return Value::by_int(args[0].get_obj<Array>()->getLength());
+    if (args[0].get_klass(R) == R->string_klass) {
+        return Value::by_int(args[0].get_obj<String>()->get_length());
+    } else if (args[0].get_klass(R) == R->array_klass) {
+        return Value::by_int(args[0].get_obj<Array>()->get_length());
     } else {
         fatal("Cannot get length");
     }
@@ -251,9 +251,9 @@ fn_length(State* state, unsigned argc, Value* args) {
 }
 
 Value
-fn_die(State* state, unsigned argc, Value* args) {
+fn_die(State* R, unsigned argc, Value* args) {
     if (argc >= 1) {
-        fn_print(state, argc, args);
+        fn_print(R, argc, args);
         fflush(stdout);
     }
     exit(1);
@@ -261,14 +261,14 @@ fn_die(State* state, unsigned argc, Value* args) {
 }
 
 Value
-fn_is_a(State* state, unsigned argc, Value* args) {
+fn_is_a(State* R, unsigned argc, Value* args) {
     if (!(argc == 2)) {
         fatal("Invalid arguments");
     }
 
-    Klass* objklass = args[0].get_klass(state);
-    Klass* cmpklass = args[1].get_klass(state);
-    for (; objklass != nullptr; objklass = objklass->getParent()) {
+    Klass* objklass = args[0].get_klass(R);
+    Klass* cmpklass = args[1].get_klass(R);
+    for (; objklass != nullptr; objklass = objklass->get_parent()) {
         if (objklass == cmpklass) {
             return Value::k_true();
         }
@@ -277,7 +277,7 @@ fn_is_a(State* state, unsigned argc, Value* args) {
 }
 
 Value
-fn_load(State* state, unsigned argc, Value* args) {
+fn_load(State* R, unsigned argc, Value* args) {
     if (!(argc == 1)) {
         fatal("Invalid arguments");
     }
@@ -285,12 +285,12 @@ fn_load(State* state, unsigned argc, Value* args) {
     char *fn;
     const char *buf;
     size_t len;
-    args[0].get_obj<String>()->getCStr(buf, len);
+    args[0].get_obj<String>()->get_cstr(buf, len);
     fn = (char*)malloc(sizeof(char) * (len + 1));
     memcpy(fn, buf, len);
     fn[len] = '\0';
 
-    load_script(state, fn);
+    load_script(R, fn);
 
     free(fn);
 
@@ -298,16 +298,16 @@ fn_load(State* state, unsigned argc, Value* args) {
 }
 
 BasicModule*
-BasicModule::create(State* state) {
-    void* p = state->ator->allocateStruct<BasicModule>();
+BasicModule::create(State* R) {
+    void* p = R->ator->allocateStruct<BasicModule>();
     return new (p) BasicModule;
 }
 
 
 bool
-BasicModule::initialize(State* state) {
-#define ADD_FUNC(x) state->addFunction(NativeFunction::create(state, \
-    state->s_prv->getString(#x), fn_ ## x));
+BasicModule::initialize(State* R) {
+#define ADD_FUNC(x) R->addFunction(NativeFunction::create(R, \
+    R->s_prv->get_string(#x), fn_ ## x));
     ADD_FUNC(print);
     ADD_FUNC(write);
     ADD_FUNC(input);

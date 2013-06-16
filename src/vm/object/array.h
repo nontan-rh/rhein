@@ -22,14 +22,14 @@ class Array : public Object {
     Int size;
     Int allocated_size;
 
-    Array(State* state, Int size_);
+    Array(State* R, Int size_);
 public:
-    unsigned long hash() { return reinterpret_cast<unsigned long>(this); }
+    unsigned long get_hash() { return reinterpret_cast<unsigned long>(this); }
 
-    static Array* create(State* state, Int size);
-    static Array* literal(State* /* state */, Array* array) { return array; }
+    static Array* create(State* R, Int size);
+    static Array* literal(State* /* R */, Array* array) { return array; }
     
-    Int getLength() const { return size; }
+    Int get_length() const { return size; }
 
     bool elt_ref(Int index, Value& dest) const {
         if (0 <= index && index < size) {
@@ -48,18 +48,18 @@ public:
     }
 
     // Override
-    bool indexRef(State* /* state */, Value index, Value& dest) const {
+    bool index_ref(State* /* R */, Value index, Value& dest) const {
         if (!index.is(Value::Type::Int)) { return false; }
         return elt_ref(index.get_int(), dest);
     }
 
     // Override
-    bool indexSet(State* /* state */, Value index, Value value) {
+    bool index_set(State* /* R */, Value index, Value value) {
         if (!index.is(Value::Type::Int)) { return false; }
         return elt_set(index.get_int(), value);
     }
 
-    bool toString(State* state, String*& dest);
+    bool to_string(State* R, String*& dest);
 };
 
 };

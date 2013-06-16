@@ -12,8 +12,8 @@ class BuiltinModule : public Module {
     //BasicModule() = default;
 
 public:
-    static BuiltinModule* create(State* state);
-    bool initialize(State* state);
+    static BuiltinModule* create(State* R);
+    bool initialize(State* R);
 };
 
 }

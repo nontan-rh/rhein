@@ -12,12 +12,12 @@
 
 using namespace rhein;
 
-RecordInfo::RecordInfo(State* state, RecordInfo* parent, unsigned slot_num_,
+RecordInfo::RecordInfo(State* R, RecordInfo* parent, unsigned slot_num_,
     String** slot_ids) : slot_num(slot_num_) {
 
     if (!(parent == nullptr || parent->id_index_table == nullptr)) {
-        id_index_table = HashTable::create(state);
-        id_index_table->import(state, parent->id_index_table);
+        id_index_table = HashTable::create(R);
+        id_index_table->import(R, parent->id_index_table);
     }
 
     if (slot_num == 0) {
@@ -25,22 +25,22 @@ RecordInfo::RecordInfo(State* state, RecordInfo* parent, unsigned slot_num_,
     }
 
     if (id_index_table == nullptr) {
-        id_index_table = HashTable::create(state);
+        id_index_table = HashTable::create(R);
     }
 
-    unsigned base = id_index_table->getItemNumber();
+    unsigned base = id_index_table->get_num_entries();
     for (unsigned i = 0; i < slot_num; i++) {
-        id_index_table->insert(state, Value::by_object(slot_ids[i]),
+        id_index_table->insert_if_absent(R, Value::by_object(slot_ids[i]),
         		Value::by_int(base + i));
     }
 }
 
 RecordInfo*
-RecordInfo::create(State* state, RecordInfo* parent, unsigned slot_num,
+RecordInfo::create(State* R, RecordInfo* parent, unsigned slot_num,
     String** slot_ids) {
 
-    void* p = state->ator->allocateStruct<RecordInfo>();
-    return new (p) RecordInfo(state, parent, slot_num, slot_ids);
+    void* p = R->ator->allocateStruct<RecordInfo>();
+    return new (p) RecordInfo(R, parent, slot_num, slot_ids);
 }
 
 bool
@@ -50,27 +50,27 @@ RecordInfo::getSlotIndex(String* slot_id, unsigned& index) const {
         return false;
     }
 
-    assert(0 <= vindex.get_int() && vindex.get_int() < slot_num);
+    assert(0 <= vindex.get_int() && (size_t)vindex.get_int() < slot_num);
     index = vindex.get_int();
     return true;
 }
 
-Record::Record(State* state, Klass* klass)
+Record::Record(State* R, Klass* klass)
     : Object(klass),
-      member_slots(state->ator->allocateRawArray(klass->getRecordInfo()->getSlotNum())) { }
+      member_slots(R->ator->allocateRawArray(klass->get_record_info()->getSlotNum())) { }
 
 Record*
-Record::create(State* state, Klass* klass) {
-    assert(klass->hasRecordInfo());
-    void* p = state->ator->allocateObject<Record>();
+Record::create(State* R, Klass* klass) {
+    assert(klass->has_record_info());
+    void* p = R->ator->allocateObject<Record>();
 
-    return new(p) Record(state, klass);
+    return new(p) Record(R, klass);
 }
 
 bool
-Record::slotRef(State* /* state */, String* slot_id, Value& value) const {
+Record::slot_ref(State* /* R */, String* slot_id, Value& value) const {
     unsigned index;
-    if (!klass->getRecordInfo()->getSlotIndex(slot_id, index)) {
+    if (!klass->get_record_info()->getSlotIndex(slot_id, index)) {
         return false;
     }
 
@@ -79,9 +79,9 @@ Record::slotRef(State* /* state */, String* slot_id, Value& value) const {
 }
 
 bool
-Record::slotSet(State* /* state */, String* slot_id, Value value) {
+Record::slot_set(State* /* R */, String* slot_id, Value value) {
     unsigned index;
-    if (!klass->getRecordInfo()->getSlotIndex(slot_id, index)) {
+    if (!klass->get_record_info()->getSlotIndex(slot_id, index)) {
         return false;
     }
 
