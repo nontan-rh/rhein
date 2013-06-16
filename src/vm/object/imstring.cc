@@ -164,7 +164,8 @@ StringProvider::create(State* state) {
 }
 
 String::String(State* state, const char* body_, size_t length_)
-    : Object(state->string_klass), body(body_), length(length_) { }
+    : Object(state->string_klass), body(body_), length(length_),
+      hash_value(0) { }
 
 String*
 String::create(State* state, const char* body, size_t length) {
@@ -199,16 +200,16 @@ String::getCStr(const char*& b, size_t& l) const {
 
 bool
 String::indexRef(State* /* state */, Value vindex, Value& dest) const {
-    if (!is_int(vindex)) {
+    if (!vindex.is(Value::Type::Int)) {
         return false;
     }
 
-    Int index = get_int(vindex);
+    Int index = vindex.get_int();
     if (index < 0 || (Int)length <= index) {
         return false;
     }
 
-    dest = char2value(body[index]);
+    dest = Value::by_char(body[index]);
     return true;
 }
 
@@ -257,7 +258,7 @@ String::toArray(State* state, Array*& array) {
     array = Array::create(state, length);
 
     for (unsigned i = 0; i < length; i++) {
-        array->eltSet(i, char2value(body[i]));
+        array->elt_set(i, Value::by_char(body[i]));
     }
     return true;
 }

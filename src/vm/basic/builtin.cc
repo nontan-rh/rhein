@@ -20,16 +20,16 @@ register_function(State* state, unsigned argc, Value* args) {
     Value fn = args[0];
     Value name = args[1];
 
-    if (!((get_klass(state, fn) == state->bytecode_function_klass
-           || get_klass(state, fn) == state->native_function_klass)
-          && get_klass(state, name) == state->string_klass)) {
+    if (!((fn.get_klass(state) == state->bytecode_function_klass
+           || fn.get_klass(state) == state->native_function_klass)
+          && name.get_klass(state) == state->string_klass)) {
         fatal("Invalid arguments");
     }
 
-    get_obj<Function>(fn)->resolve(state);
+    fn.get_obj<Function>()->resolve(state);
 
-    state->addFunction((Function*)fn, (String*)name);
-    return Cnull;
+    state->addFunction(fn.get_obj<Function>(), name.get_obj<String>());
+    return Value::k_nil();
 }
 
 static Value
@@ -38,26 +38,26 @@ register_class(State* state, unsigned argc, Value* args) {
         fatal("Invalid arguments");
     }
 
-    Klass* klass = get_klass(state, args[0]);
+    Klass* klass = args[0].get_klass(state);
     Value name = args[1];
 
-    if (get_klass(state, name) != state->string_klass) {
+    if (name.get_klass(state) != state->string_klass) {
         fatal("Invalid arguments");
     }
 
-    state->addKlass(klass, (String*)name);
-    return Cnull;
+    state->addKlass(klass, name.get_obj<String>());
+    return Value::k_nil();
 }
 
 static Value
 register_variable(State* state, unsigned argc, Value* args) {
     if (!((argc == 2)
-          && get_klass(state, args[0]) == state->string_klass)) {
+          && args[0].get_klass(state) == state->string_klass)) {
         fatal("Invalid arguments");
     }
 
-    state->addVariable((String*)args[0], args[1]);
-    return Cnull;
+    state->addVariable(args[0].get_obj<String>(), args[1]);
+    return Value::k_nil();
 }
 
 BuiltinModule*

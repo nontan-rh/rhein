@@ -52,8 +52,8 @@ HashTable::literal(State* state, Array* keys, Array* values) {
 
     for (Int i = 0; i < keys->getLength(); i++) {
         Value key, value;
-        keys->eltRef(i, key);
-        values->eltRef(i, value);
+        keys->elt_ref(i, key);
+        values->elt_ref(i, value);
         ht->insert(state, key, value);
     }
     return ht;
@@ -69,7 +69,7 @@ HashTable::rehash(State* state) {
         
         for (; node != nullptr; ) {
             HashTableNode* oldnext = node->next;
-            unsigned newtable_index = get_hash(node->key) % newtable_size;
+            unsigned newtable_index = node->key.get_hash() % newtable_size;
             HashTableNode* newnext = newtable[newtable_index].next;
             newtable[newtable_index].next = node;
             node->next = newnext;
@@ -84,10 +84,10 @@ HashTable::rehash(State* state) {
 
 bool
 HashTable::find(Value key, Value& result) const {
-    HashTableNode* node = table[get_hash(key) % table_size].next;
+    HashTableNode* node = table[key.get_hash() % table_size].next;
 
     for (; node != nullptr; node = node->next) {
-        if (equal(key, node->key)) {
+        if (key.eq(node->key)) {
             result = node->value;
             return true;
         }
@@ -103,7 +103,7 @@ HashTable::insert(State* state, Value key, Value value) {
         return false;
     }
 
-    unsigned table_index = get_hash(key) % table_size;
+    unsigned table_index = key.get_hash() % table_size;
     HashTableNode* node = table[table_index].next;
     table[table_index].next = HashTableNode::create(state, node, key, value);
 
@@ -117,12 +117,12 @@ HashTable::insert(State* state, Value key, Value value) {
 
 bool
 HashTable::insertAnyway(State* state, Value key, Value value) {
-    unsigned table_index = get_hash(key) % table_size;
+    unsigned table_index = key.get_hash() % table_size;
     HashTableNode* head = table[table_index].next;
     HashTableNode* node = head;
     
     for (; node != nullptr; node = node->next) {
-        if (equal(key, node->key)) {
+        if (key.eq(node->key)) {
             node->value = value;
             return false;
         }
@@ -140,11 +140,11 @@ HashTable::insertAnyway(State* state, Value key, Value value) {
 
 bool
 HashTable::assign(Value key, Value value) {
-    unsigned table_index = get_hash(key) % table_size;
+    unsigned table_index = key.get_hash() % table_size;
     HashTableNode* node = table[table_index].next;
 
     for (; node != nullptr; node = node->next) {
-        if (equal(key, node->key)) {
+        if (key.eq(node->key)) {
             node->value = value;
             return true;
         }
@@ -154,12 +154,12 @@ HashTable::assign(Value key, Value value) {
 
 bool
 HashTable::remove(State* state, Value key) {
-    unsigned table_index = get_hash(key) % table_size;
+    unsigned table_index = key.get_hash() % table_size;
     HashTableNode* prev = &table[table_index];
     HashTableNode* node = table[table_index].next;
 
     for (; node != nullptr; ) {
-        if (equal(key, node->key)) {
+        if (key.eq(node->key)) {
             prev->next = node->next;
             state->ator->releaseBlock(node);
             return true;
@@ -203,7 +203,7 @@ HashTable::dump() {
     for (unsigned i = 0; i < table_size; i++) {
         HashTableNode* node = table[i].next;
         for (; node != nullptr; node = node->next) {
-            fprintf(stderr, "%p -> %p\n", (void*)node->key, (void*)node->value);
+            //fprintf(stderr, "%p -> %p\n", (void*)node->key, (void*)node->value);
         }
     }
 }

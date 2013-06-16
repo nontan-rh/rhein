@@ -19,10 +19,6 @@ class String : public Object {
     friend class StringProvider;
     friend class StringHashTable;
 
-    //String() = delete;
-    //String(const String& /* rht */) = delete;
-    //String& operator=(const String& /* rht */) = delete;
-
     String(State* state, const char* body_, size_t length_);
     
     const char* body;
@@ -55,10 +51,6 @@ public:
 class StringHashTable;
 
 class StringProvider {
-    //StringProvider() = delete;
-    //StringProvider(const StringProvider& /* rht */) = delete;
-    //StringProvider& operator=(const StringProvider& /* rht */) = delete;
-
     static void* operator new (size_t /* size */, void* p) { return p; }
 
     State* owner;

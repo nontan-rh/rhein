@@ -30,7 +30,8 @@ RecordInfo::RecordInfo(State* state, RecordInfo* parent, unsigned slot_num_,
 
     unsigned base = id_index_table->getItemNumber();
     for (unsigned i = 0; i < slot_num; i++) {
-        id_index_table->insert(state, obj2value(slot_ids[i]), int2value(base + i));
+        id_index_table->insert(state, Value::by_object(slot_ids[i]),
+        		Value::by_int(base + i));
     }
 }
 
@@ -43,14 +44,14 @@ RecordInfo::create(State* state, RecordInfo* parent, unsigned slot_num,
 }
 
 bool
-RecordInfo::getSlotIndex(const String* slot_id, unsigned& index) const {
+RecordInfo::getSlotIndex(String* slot_id, unsigned& index) const {
     Value vindex;
-    if (!id_index_table->find(obj2value(slot_id), vindex)) {
+    if (!id_index_table->find(Value::by_object(slot_id), vindex)) {
         return false;
     }
 
-    assert(0 <= get_int(vindex) && get_int(vindex) < slot_num);
-    index = get_int(vindex);
+    assert(0 <= vindex.get_int() && vindex.get_int() < slot_num);
+    index = vindex.get_int();
     return true;
 }
 
@@ -67,7 +68,7 @@ Record::create(State* state, Klass* klass) {
 }
 
 bool
-Record::slotRef(State* /* state */, const String* slot_id, Value& value) const {
+Record::slotRef(State* /* state */, String* slot_id, Value& value) const {
     unsigned index;
     if (!klass->getRecordInfo()->getSlotIndex(slot_id, index)) {
         return false;
@@ -78,7 +79,7 @@ Record::slotRef(State* /* state */, const String* slot_id, Value& value) const {
 }
 
 bool
-Record::slotSet(State* /* state */, const String* slot_id, Value value) {
+Record::slotSet(State* /* state */, String* slot_id, Value value) {
     unsigned index;
     if (!klass->getRecordInfo()->getSlotIndex(slot_id, index)) {
         return false;

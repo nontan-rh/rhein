@@ -5,7 +5,7 @@
 #include <iostream>
 using namespace std;
 
-#include <cstdint>
+#include <tr1/cstdint>
 #include <cstring>
 
 #include "object/object.h"
@@ -235,7 +235,7 @@ State::initializeKlass2() {
 void
 State::initializeKlass3() {
 #define HASH_SET(name) klass_slots->insert(this, \
-    obj2value(s_prv->getString(#name)), obj2value(name ## _klass))
+    Value::by_object(s_prv->getString(#name)), Value::by_object(name ## _klass))
     HASH_SET(any);
     HASH_SET(null);
     HASH_SET(bool);
@@ -263,8 +263,8 @@ State::addFunction(Function* func) {
 bool
 State::addFunction(Function* func, const String* name) {
     Value old;
-    if (func_slots->find(obj2value(name), old)) {
-        Object* fold = get_obj<Object>(old);
+    if (func_slots->find(Value::by_object(name), old)) {
+        Object* fold = old.get_obj<Object>();
         if (fold->getKlass() == native_function_klass
             || fold->getKlass() == bytecode_function_klass) {
 
@@ -272,14 +272,14 @@ State::addFunction(Function* func, const String* name) {
             method->addFunction(this, (Function*)fold);
             method->addFunction(this, func);
 
-            return func_slots->assign(obj2value(name), obj2value(method));
+            return func_slots->assign(Value::by_object(name), Value::by_object(method));
         } else if (fold->getKlass() == method_klass) {
             return static_cast<Method*>(fold)->addFunction(this, func);
         } else {
             exit(1);
         }
     }
-    return func_slots->insert(this, obj2value(name), obj2value(func));
+    return func_slots->insert(this, Value::by_object(name), Value::by_object(func));
 }
 
 bool
@@ -289,12 +289,12 @@ State::addKlass(Klass* klass) {
 
 bool
 State::addKlass(Klass* klass, const String* name) {
-    return klass_slots->insert(this, obj2value(name), obj2value(klass));
+    return klass_slots->insert(this, Value::by_object(name), Value::by_object(klass));
 }
 
 bool
 State::addVariable(String* id, Value val) {
-    return var_slots->insert(this, obj2value(id), val);
+    return var_slots->insert(this, Value::by_object(id), val);
 }
 
 bool
@@ -324,19 +324,19 @@ rhein::execute(State* state, String* entry_point, unsigned argc, Value* argv) {
         fatal("No such function");
     }
 
-    if (!is_obj(fn)) {
+    if (!fn.is(Value::Type::Object)) {
         fatal("Not excutable object");
     }
 
-    if (get_obj<Object>(fn)->getKlass() == state->method_klass) {
-        get_obj<Method>(fn)->dispatch(state, argc, argv, fn);
+    if (fn.get_obj<Object>()->getKlass() == state->method_klass) {
+        fn.get_obj<Method>()->dispatch(state, argc, argv, fn);
     }
 
-    if (!is_obj(fn)) {
+    if (!fn.is(Value::Type::Object)) {
         fatal("Not excutable object");
     }
 
-    Object* ofn = get_obj<Object>(fn);
+    Object* ofn = fn.get_obj<Object>();
     if (ofn->getKlass() == state->bytecode_function_klass) {
         return execute(state, (BytecodeFunction*)ofn, argc, argv);
     } else if (ofn->getKlass() == state->native_function_klass) {
@@ -345,7 +345,7 @@ rhein::execute(State* state, String* entry_point, unsigned argc, Value* argv) {
         fatal("Not excutable object");
     }
     // NOTREACHED
-    return Cnull;
+    return Value::k_nil();
 }
 
 inline uint32_t
@@ -403,10 +403,11 @@ getInsnArgUU2(uint32_t insn) {
 
 #define GLOBAL_REFER_OP(op) { \
     Value id = fn->getConstantTable()[getInsnArgU(insn)]; \
-    if (!is_obj(id) || get_obj<Object>(id)->getKlass() != state->string_klass) { \
+    if (!id.is(Value::Type::Object) \
+			|| id.get_obj<Object>()->getKlass() != state->string_klass) { \
         fatal("Error on global refer"); \
     } \
-    if (!state->op(get_obj<String>(id), *(--sp))) { \
+    if (!state->op(id.get_obj<String>(), *(--sp))) { \
         fatal("Error on global refer"); \
     } \
     pc++; \
@@ -415,10 +416,11 @@ getInsnArgUU2(uint32_t insn) {
 
 #define GLOBAL_SET_OP(op) { \
     Value id = fn->getConstantTable()[getInsnArgU(insn)]; \
-    if (!is_obj(id) || get_obj<Object>(id)->getKlass() != state->string_klass) { \
+    if (!id.is(Value::Type::Object) \
+    		|| id.get_obj<Object>()->getKlass() != state->string_klass) { \
         fatal("Error on global set"); \
     } \
-    if (!state->op(get_obj<String>(id), *(sp))) { \
+    if (!state->op(id.get_obj<String>(), *(sp))) { \
         fatal("Error on global set"); \
     } \
     pc++; \
@@ -468,7 +470,7 @@ rhein::execute(State* state, BytecodeFunction* bfn, unsigned argc_, Value* args_
                 break;
             case Insn::IfJump: {
                 uint32_t dest = getInsnArgU(insn);
-                if (like_true(*sp++)) {
+                if ((*sp++).like_true()) {
                     pc = fn->getBytecode() + dest;
                 } else {
                     pc++;
@@ -477,7 +479,7 @@ rhein::execute(State* state, BytecodeFunction* bfn, unsigned argc_, Value* args_
                 break;
             case Insn::UnlessJump: {
                 uint32_t dest = getInsnArgU(insn);
-                if (like_false(*sp++)) {
+                if ((*sp++).like_false()) {
                     pc = fn->getBytecode() + dest;
                 } else {
                     pc++;
@@ -489,19 +491,19 @@ rhein::execute(State* state, BytecodeFunction* bfn, unsigned argc_, Value* args_
                 Value func = *sp++;
                 Value* stack_args = sp;
 
-                if (!is_obj(func)) {
+                if (!func.is(Value::Type::Object)) {
                     fatal("Not callable object");
                 }
 
                 Frame* closure = nullptr;
-                if (get_obj<Object>(func)->getKlass() == state->method_klass) {
-                    if (!((Method*)func)->dispatch(state, argc, sp, func)) {
+                if (func.get_obj<Object>()->getKlass() == state->method_klass) {
+                    if (!func.get_obj<Method>()->dispatch(state, argc, sp, func)) {
                         fatal("Could not dispatch");
                     }
-                    closure = ((Method*)func)->getClosure();
+                    closure = func.get_obj<Method>()->getClosure();
                 }
 
-                Function* ofunc = get_obj<Function>(func);
+                Function* ofunc = func.get_obj<Function>();
 
                 if (ofunc->getKlass() == state->bytecode_function_klass) {
                     fn = (BytecodeFunction*)ofunc;
@@ -513,9 +515,9 @@ rhein::execute(State* state, BytecodeFunction* bfn, unsigned argc_, Value* args_
                         unsigned vargs_count = argc - fn->getArgumentCount();
                         Array* vargs = Array::create(state, vargs_count);
                         for (unsigned i = 0; i < vargs_count; i++) {
-                            vargs->eltSet(i, sp[i + fn->getArgumentCount()]);
+                            vargs->elt_set(i, sp[i + fn->getArgumentCount()]);
                         }
-                        args[fn->getArgumentCount()] = obj2value(vargs);
+                        args[fn->getArgumentCount()] = Value::by_object(vargs);
                     }
 
                     if (closure == nullptr) {
@@ -528,7 +530,7 @@ rhein::execute(State* state, BytecodeFunction* bfn, unsigned argc_, Value* args_
                     pc = fn->getBytecode();
                     sp = fr->stack + fn->getStackSize();
                 } else if (ofunc->getKlass() == state->native_function_klass) {
-                    Value ret = (*get_obj<NativeFunction>(func)->getBody())(state, argc, sp);
+                    Value ret = (*func.get_obj<NativeFunction>()->getBody())(state, argc, sp);
                     sp += argc;
                     *(--sp) = ret;
                     pc++;
@@ -549,11 +551,11 @@ rhein::execute(State* state, BytecodeFunction* bfn, unsigned argc_, Value* args_
                 break;
             case Insn::Ranew: {
                 Value size = *sp++;
-                if (!is_int(size) || get_int(size) < 0) {
+                if (!size.is(Value::Type::Int) || size.get_int() < 0) {
                     fatal("Invalid size");
                 }
 
-                *(--sp) = obj2value(Array::create(state, get_int(size)));
+                *(--sp) = Value::by_object(Array::create(state, size.get_int()));
                 pc++;
             }
                 break;
@@ -561,11 +563,11 @@ rhein::execute(State* state, BytecodeFunction* bfn, unsigned argc_, Value* args_
            Value index = *sp++;
                 Value array = *sp;
 
-                if (!is_obj(array) || get_obj<Object>(array)->getKlass() != state->array_klass) {
+                if (!array.is(Value::Type::Object) || array.get_obj<Object>()->getKlass() != state->array_klass) {
                     fatal("Invalid type");
                 }
 
-                if (!get_obj<Array>(array)->indexRef(state, index, *(--sp))) {
+                if (!array.get_obj<Array>()->indexRef(state, index, *(--sp))) {
                     fatal("Cannot refer");
                 }
                 pc++;
@@ -576,11 +578,11 @@ rhein::execute(State* state, BytecodeFunction* bfn, unsigned argc_, Value* args_
                 Value index = sp[0];
                 Value array = sp[1];
 
-                if (!is_obj(array) || get_obj<Object>(array)->getKlass() != state->array_klass) {
+                if (!array.is(Value::Type::Object) || array.get_obj<Object>()->getKlass() != state->array_klass) {
                     fatal("Invalid type");
                 }
 
-                if (!get_obj<Array>(array)->indexSet(state, index, value)) {
+                if (!array.get_obj<Array>()->indexSet(state, index, value)) {
                     fatal("Cannot set");
                 }
                 pc++;
@@ -588,11 +590,11 @@ rhein::execute(State* state, BytecodeFunction* bfn, unsigned argc_, Value* args_
                 break;
             case Insn::Iref: {
                 Value index = *sp++;
-                if (!is_obj(sp[0])) {
+                if (!sp[0].is(Value::Type::Object)) {
                     fatal("Cannot refer");
                 }
 
-                if (!get_obj<Object>(sp[0])->indexRef(state, index, sp[0])) {
+                if (!sp[0].get_obj<Object>()->indexRef(state, index, sp[0])) {
                     fatal("Cannot refer");
                 }
                 pc++;
@@ -603,11 +605,11 @@ rhein::execute(State* state, BytecodeFunction* bfn, unsigned argc_, Value* args_
                 Value obj = *sp++;
                 Value value = sp[0];
 
-                if (!is_obj(obj)) {
+                if (!obj.is(Value::Type::Object)) {
                     fatal("Cannot set");
                 }
 
-                if (!get_obj<Object>(obj)->indexSet(state, index, value)) {
+                if (!obj.get_obj<Object>()->indexSet(state, index, value)) {
                     fatal("Cannot set");
                 }
                 pc++;
@@ -617,15 +619,15 @@ rhein::execute(State* state, BytecodeFunction* bfn, unsigned argc_, Value* args_
                 Value obj = sp[0];
                 Value id = fn->getConstantTable()[getInsnArgU(insn)];
 
-                if (!is_obj(obj) || !is_obj(id)
-                    || get_obj<Object>(id)->getKlass() != state->string_klass) {
+                if (!obj.is(Value::Type::Object) || !id.is(Value::Type::Object)
+                    || id.get_obj<Object>()->getKlass() != state->string_klass) {
 
-                    get_klass(state, obj)->getName()->dump();
+                    obj.get_klass(state)->getName()->dump();
                     fatal("Cannot refer");
                 }
 
-                if (!get_obj<Object>(obj)->slotRef(state, get_obj<String>(id), sp[0])) {
-                    get_obj<String>(id)->dump();
+                if (!obj.get_obj<Object>()->slotRef(state, id.get_obj<String>(), sp[0])) {
+                    id.get_obj<String>()->dump();
                     fatal("Cannot refer");
                 }
                 pc++;
@@ -635,13 +637,13 @@ rhein::execute(State* state, BytecodeFunction* bfn, unsigned argc_, Value* args_
                 Value obj = *sp++;
                 Value id = fn->getConstantTable()[getInsnArgU(insn)];
 
-                if (!is_obj(obj) || !is_obj(id)
-                    || get_obj<Object>(id)->getKlass() != state->string_klass) {
+                if (!obj.is(Value::Type::Object) || !id.is(Value::Type::Object)
+                    || id.get_obj<Object>()->getKlass() != state->string_klass) {
                     
                     fatal("Cannot set");
                 }
 
-                if (!get_obj<Object>(obj)->slotSet(state, get_obj<String>(id), sp[0])) {
+                if (!obj.get_obj<Object>()->slotSet(state, id.get_obj<String>(), sp[0])) {
                     fatal("Cannot set");
                 }
                 pc++;
@@ -663,54 +665,54 @@ rhein::execute(State* state, BytecodeFunction* bfn, unsigned argc_, Value* args_
             case Insn::LoadKlass: {
                 Value id = fn->getConstantTable()[getInsnArgU(insn)];
 
-                if (!(is_obj(id) && get_obj<Object>(id)->getKlass() == state->string_klass)) {
+                if (!(id.is(Value::Type::Object) && id.get_obj<Object>()->getKlass() == state->string_klass)) {
                     fatal("Name must be string");
                 }
 
-                if (!state->getKlass(get_obj<String>(id), *(--sp))) {
+                if (!state->getKlass(id.get_obj<String>(), *(--sp))) {
                     fatal("Cannot find klass");
                 }
                 pc++;
             }
                 break;
             case Insn::LoadUndef:
-                *(--sp) = Cundef;
+                *(--sp) = Value::k_undef();
                 pc++;
                 break;
             case Insn::LoadNull:
-                *(--sp) = Cnull;
+                *(--sp) = Value::k_nil();
                 pc++;
                 break;
             case Insn::LoadTrue:
-                *(--sp) = Ctrue;
+                *(--sp) = Value::k_true();
                 pc++;
                 break;
             case Insn::LoadFalse:
-                *(--sp) = Cfalse;
+                *(--sp) = Value::k_false();
                 pc++;
                 break;
             case Insn::Enclose: {
                 Value id = fn->getConstantTable()[getInsnArgU(insn)];
 
-                if (!is_obj(id) || get_obj<Object>(id)->getKlass() != state->string_klass) {
+                if (!id.is(Value::Type::Object) || id.get_obj<Object>()->getKlass() != state->string_klass) {
                     fatal("Cannot enclose");
                 }
 
                 Value func;
-                if (!state->gfref((String*)id, func)) {
+                if (!state->gfref(id.get_obj<String>(), func)) {
                     fatal("Cannot enclose");
                 }
 
-                if (!is_obj(func)) {
+                if (!func.is(Value::Type::Object)) {
                     fatal("Cannot enclose");
                 }
 
-                if (get_obj<Object>(func)->getKlass() == state->native_function_klass) {
-                    *(--sp) = obj2value(get_obj<NativeFunction>(func)->enclose(state, fr));
-                } else if (get_obj<Object>(func)->getKlass() == state->bytecode_function_klass) {
-                    *(--sp) = obj2value(get_obj<BytecodeFunction>(func)->enclose(state, fr));
-                } else if (get_obj<Object>(func)->getKlass() == state->method_klass) {
-                    *(--sp) = obj2value(get_obj<Method>(func)->enclose(state, fr));
+                if (func.get_obj<Object>()->getKlass() == state->native_function_klass) {
+                    *(--sp) = Value::by_object(func.get_obj<NativeFunction>()->enclose(state, fr));
+                } else if (func.get_obj<Object>()->getKlass() == state->bytecode_function_klass) {
+                    *(--sp) = Value::by_object(func.get_obj<BytecodeFunction>()->enclose(state, fr));
+                } else if (func.get_obj<Object>()->getKlass() == state->method_klass) {
+                    *(--sp) = Value::by_object(func.get_obj<Method>()->enclose(state, fr));
                 } else {
                     fatal("Cannot enclose");
                 }

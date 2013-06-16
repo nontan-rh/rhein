@@ -5,7 +5,7 @@
 #ifndef ARRAY_H
 #define ARRAY_H
 
-#include <cstdint>
+#include <tr1/cstdint>
 
 #include "object/object.h"
 
@@ -18,16 +18,11 @@ class State;
 class String;
 
 class Array : public Object {
-    //Array() = delete;
-    //Array(const Array& /* rht */) = delete;
-    //Array& operator=(const Array& /* rht */) = delete;
-
     Value* body;
     Int size;
     Int allocated_size;
 
     Array(State* state, Int size_);
-    
 public:
     unsigned long hash() { return reinterpret_cast<unsigned long>(this); }
 
@@ -36,7 +31,7 @@ public:
     
     Int getLength() const { return size; }
 
-    bool eltRef(Int index, Value& dest) const {
+    bool elt_ref(Int index, Value& dest) const {
         if (0 <= index && index < size) {
             dest = body[index];
             return true;
@@ -44,7 +39,7 @@ public:
         return false;
     }
 
-    bool eltSet(Int index, Value value) {
+    bool elt_set(Int index, Value value) {
         if (0 <= index && index < size) {
             body[index] = value;
             return true;
@@ -54,18 +49,14 @@ public:
 
     // Override
     bool indexRef(State* /* state */, Value index, Value& dest) const {
-        if (!is_int(index)) {
-            return false;
-        }
-        return eltRef(get_int(index), dest);
+        if (!index.is(Value::Type::Int)) { return false; }
+        return elt_ref(index.get_int(), dest);
     }
 
     // Override
     bool indexSet(State* /* state */, Value index, Value value) {
-        if (!is_int(index)) {
-            return false;
-        }
-        return eltSet(get_int(index), value);
+        if (!index.is(Value::Type::Int)) { return false; }
+        return elt_set(index.get_int(), value);
     }
 
     bool toString(State* state, String*& dest);

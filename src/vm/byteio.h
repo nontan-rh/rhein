@@ -6,7 +6,7 @@
 #define BCDECODE_H
 
 #include <cstdio>
-#include <cstdint>
+#include <tr1/cstdint>
 
 #include "vm.h"
 #include "object/imstring.h"

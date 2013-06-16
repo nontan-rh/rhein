@@ -5,7 +5,7 @@
 #ifndef FUNCTION_H
 #define FUNCTION_H
 
-#include <cstdint>
+#include <tr1/cstdint>
 
 #include "object/object.h"
 #include "object/imstring.h"
@@ -18,12 +18,7 @@ struct Frame;
 typedef Value (*NativeFunctionBody)(State*, unsigned, Value*);
 
 class Function : public Object {
-    //Function() = delete;
-    //Function& operator=(const Function& /* rht */) = delete;
-
 protected:
-    //Function(const Function& /* rht */) = default;
-
     String* name;
     bool variable_arg;
     unsigned arg_count;
@@ -48,11 +43,6 @@ public:
 };
 
 class NativeFunction : public Function {
-    //NativeFunction() = delete;
-    //NativeFunction& operator=(const NativeFunction& /* rht */) = delete;
-
-    //NativeFunction(const NativeFunction& /* rht */) = default;
-
     NativeFunctionBody body;
     bool copied;
 
@@ -79,11 +69,6 @@ public:
 };
 
 class BytecodeFunction : public Function {
-    //BytecodeFunction() = delete;
-    //BytecodeFunction& operator=(const BytecodeFunction& /* rht */) = delete;
-
-    //BytecodeFunction(const BytecodeFunction& /* rht */) = default;
-
     bool copied;
     unsigned stack_size;
     unsigned func_slot_size;
@@ -121,11 +106,6 @@ public:
 class DispatcherNode;
 
 class Method : public Object {
-    //Method() = delete;
-    //Method& operator=(const Method& /* rht */) = delete;
-
-    //Method(const Method& /* rht */) = default;
-
     bool copied;
     DispatcherNode* node;
     Frame* closure;

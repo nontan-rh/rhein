@@ -39,9 +39,6 @@ class State {
     HashTable* var_slots;
     HashTable* klass_slots;
 
-    //State(const State& /* rht */) = delete;
-    //State& operator=(const State& /* rht */) = delete;
-
     bool readObject(FILE* fp);
     bool readFunction(FILE* fp);
     bool readKlass(FILE* fp);
@@ -82,19 +79,24 @@ public:
     void setStringProvider(StringProvider* s) { s_prv = s; } 
     bool hasStringProvider() const { return (s_prv != nullptr); }
 
-    bool getKlass(String* id, Value& klass) { return klass_slots->find(obj2value(id), klass); }
+    bool getKlass(String* id, Value& klass) { return klass_slots->find(Value::by_object(id), klass); }
 
     // Bytecode level interface
     bool gfref(String* id, Value& func) {
-        if (!func_slots->find(obj2value(id), func)) {
+        if (!func_slots->find(Value::by_object(id), func)) {
             id->dump();
             return false;
         }
         return true;
     }
 
-    bool gvref(String* id, Value& value) { return var_slots->find(obj2value(id), value); }
-    bool gvset(String* id, Value value) { return var_slots->assign(obj2value(id), value); }
+    bool gvref(String* id, Value& value) {
+    	return var_slots->find(Value::by_object(id), value);
+    }
+
+    bool gvset(String* id, Value value) {
+    	return var_slots->assign(Value::by_object(id), value);
+    }
 
     // File loading interface
     bool loadFile(FILE* fp);
@@ -110,17 +112,14 @@ public:
 
 class Module {
 protected:
-    //Module() = default;
+    virtual ~Module() = default;
+
 public:
     virtual bool initialize(State* state) = 0;
 };
 
 struct Frame {
 private:
-    //Frame() = delete;
-    //Frame(const Frame& /* rht */) = delete;
-    //Frame& operator=(const Frame& /* rht */) = delete;
-
     Frame(State* state, BytecodeFunction* fn_, Frame* parent_, Frame* closure_,
         unsigned argc_, Value* args_);
 

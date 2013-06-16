@@ -13,10 +13,6 @@ namespace rhein {
 class State;
 
 class RecordInfo {
-    //RecordInfo() = delete;
-    //RecordInfo(const RecordInfo& /* rht */) = delete;
-    //RecordInfo& operator=(const RecordInfo& /* rht */) = delete;
-
     unsigned slot_num;
     HashTable* id_index_table;
 
@@ -30,14 +26,10 @@ public:
         String** slot_ids);
 
     unsigned getSlotNum() const { return slot_num; }
-    bool getSlotIndex(const String* slot_id, unsigned& index) const;
+    bool getSlotIndex(String* slot_id, unsigned& index) const;
 };
 
 class Record : public Object {
-    //Record() = delete;
-    //Record(const Record& /* rht */) = delete;
-    //Record& operator=(const Record& /* rht */) = delete;
-
     Value* member_slots;
 
     Record(State* state, Klass* klass);
@@ -46,9 +38,9 @@ public:
     static Record* create(State* state, Klass* klass);
 
     // Override
-    bool slotRef(State* /* state */, const String* slot_id, Value& value) const;
+    bool slotRef(State* /* state */, String* slot_id, Value& value) const;
     // Override
-    bool slotSet(State* /* state */, const String* slot_id, Value value);
+    bool slotSet(State* /* state */, String* slot_id, Value value);
 };
 
 };

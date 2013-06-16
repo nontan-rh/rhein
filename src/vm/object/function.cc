@@ -20,7 +20,7 @@ Function::resolve(State* state) {
             return false;
         }
 
-        arg_klass[i] = (Klass*)klass;
+        arg_klass[i] = klass.get_obj<Klass>();
     }
 
     return true;
@@ -30,7 +30,7 @@ NativeFunction::NativeFunction(State* state, String* name, bool variable_arg,
     unsigned arg_count, String** arg_klass_id, NativeFunctionBody body_)
     : Function(state->native_function_klass, name, variable_arg, arg_count,
         arg_klass_id),
-      body(body_) { }
+        body(body_), copied(false) { }
 
 NativeFunction*
 NativeFunction::create(State* state, String* name, bool variable_arg,
@@ -107,7 +107,8 @@ class rhein::DispatcherNode {
     static void* operator new (size_t /* size */, void* p) { return p; }
 
     DispatcherNode(State* state)
-        : entry(Cnull), variable_entry(Cnull), child_table(HashTable::create(state)) { }
+        : entry(Value::k_nil()), variable_entry(Value::k_nil()),
+          child_table(HashTable::create(state)) { }
 
 public:
     static DispatcherNode* create(State* state) {
@@ -115,24 +116,27 @@ public:
         return new (p) DispatcherNode(state);
     }
 
-    bool dispatch(State* state, unsigned argc, Value* args, unsigned index, Value& func) {
+    bool dispatch(State* state, unsigned argc, Value* args, unsigned index,
+    		Value& func) {
         if (argc == index) {
-            if (!is_null(entry)) {
+            if (!entry.is(Value::Type::Nil)) {
                 func = entry;
                 return true;
-            } else if (!is_null(variable_entry)) {
+            } else if (!variable_entry.is(Value::Type::Nil)) {
                 func = variable_entry;
                 return true;
             } else {
                 return false;
             }
         }
-        Klass* klass = get_klass(state, args[index]);
+
+        Klass* klass = args[index].get_klass(state);
         while (true) {
             Value child;
-            if (child_table->find(obj2value(klass), child)) {
+            if (child_table->find(Value::by_object(klass), child)) {
                 // Unsafe cast!
-                if (get_obj<DispatcherNode>(child)->dispatch(state, argc, args, index + 1, func)) {
+                if (child.get_obj<DispatcherNode>()->dispatch(state,
+                		argc, args, index + 1, func)) {
                     return true;
                 }
             }
@@ -141,23 +145,24 @@ public:
                 break;
             }
         }
-        if (!is_null(variable_entry)) {
+        if (!variable_entry.is(Value::Type::Nil)) {
             func = variable_entry;
             return true;
         }
         return false;
     }
 
-    bool addFunction(State* state, Value func, Function* func_body, unsigned index) {
+    bool addFunction(State* state, Value func, Function* func_body,
+    		unsigned index) {
         if (func_body->getArgumentCount() == index) {
             if (func_body->isVariableArgument()) {
-                if (!is_null(variable_entry)) {
+                if (!variable_entry.is(Value::Type::Nil)) {
                     return false;
                 }
                 variable_entry = func;
                 return true;
             } else {
-                if (!is_null(entry)) {
+                if (!entry.is(Value::Type::Nil)) {
                     return false;
                 }
                 entry = func;
@@ -166,18 +171,20 @@ public:
         }
         Klass* klass = func_body->getArgumentKlass()[index];
         Value child;
-        if (!child_table->find(obj2value(klass), child)) {
+        if (!child_table->find(Value::by_object(klass), child)) {
             // Unsafe cast
-            child = obj2value((Object*)create(state));
-            child_table->insert(state, obj2value(klass), child);
+            child = Value::by_object((Object*)create(state));
+            child_table->insert(state, Value::by_object(klass), child);
         }
         // Unsafe cast
-        return get_obj<DispatcherNode>(child)->addFunction(state, func, func_body, index + 1);
+        return child.get_obj<DispatcherNode>()->addFunction(state, func,
+        		func_body, index + 1);
     }
 };
 
 Method::Method(State* state)
-    : Object(state->method_klass), copied(false), node(DispatcherNode::create(state)),
+    : Object(state->method_klass), copied(false),
+      node(DispatcherNode::create(state)),
       closure(nullptr) { }
 
 Method*
@@ -196,7 +203,7 @@ Method::dispatch(State* state, unsigned argc, Value* args, Value& result) {
 
 bool
 Method::addFunction(State* state, Function* func) {
-    return node->addFunction(state, obj2value(func), func, 0);
+    return node->addFunction(state, Value::by_object(func), func, 0);
 }
 
 Method*
