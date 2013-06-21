@@ -2,9 +2,7 @@
 // object.cc
 //
 
-#include "object/object.h"
-#include "object/imstring.h"
-#include "object/record.h"
+#include "object.h"
 #include "vm.h"
 
 using namespace rhein;

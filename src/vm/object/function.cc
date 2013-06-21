@@ -2,9 +2,7 @@
 // function.cc
 //
 
-#include "object/object.h"
-#include "object/hashtable.h"
-#include "object/function.h"
+#include "object.h"
 #include "allocator.h"
 #include "vm.h"
 

@@ -6,9 +6,7 @@
 #include <cstring>
 #include <cassert>
 
-#include "object/object.h"
-#include "object/imstring.h"
-#include "object/array.h"
+#include "object.h"
 #include "allocator.h"
 #include "vm.h"
 

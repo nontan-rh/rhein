@@ -8,11 +8,7 @@ using namespace std;
 #include <tr1/cstdint>
 #include <cstring>
 
-#include "object/object.h"
-#include "object/imstring.h"
-#include "object/function.h"
-#include "object/record.h"
-#include "object/array.h"
+#include "object.h"
 #include "error.h"
 #include "operate.h"
 #include "vm.h"
@@ -382,7 +378,7 @@ getInsnArgUU2(uint32_t insn) {
 #define LOCAL_REFER_OP(op) { \
     uint32_t depth = getInsnArgUU1(insn); \
     uint32_t offset = getInsnArgUU2(insn); \
-    if (!fr->op(depth, offset, *(--sp))) { \
+    if (!op(depth, offset, *(--sp))) { \
         fprintf(stderr, #op ":%u:%u\n", depth, offset); \
         fatal("Error on local refer"); \
     } \
@@ -393,7 +389,7 @@ getInsnArgUU2(uint32_t insn) {
 #define LOCAL_SET_OP(op) { \
     uint32_t depth = getInsnArgUU1(insn); \
     uint32_t offset = getInsnArgUU2(insn); \
-    if (!fr->op(depth, offset, *(sp))) { \
+    if (!op(depth, offset, *(sp))) { \
         fprintf(stderr, #op ":%u:%u\n", depth, offset); \
         fatal("Error on local set"); \
     } \
@@ -649,12 +645,12 @@ rhein::execute(State* R, BytecodeFunction* bfn, unsigned argc_, Value* args_) {
                 pc++;
             }
                 break;
-            case Insn::Lfref: LOCAL_REFER_OP(lfref)
-            case Insn::Lfset: LOCAL_SET_OP(lfset)
-            case Insn::Lvref: LOCAL_REFER_OP(lvref)
-            case Insn::Lvset: LOCAL_SET_OP(lvset)
-            case Insn::Laref: LOCAL_REFER_OP(laref)
-            case Insn::Laset: LOCAL_SET_OP(laset)
+            case Insn::Lfref: LOCAL_REFER_OP(fr->lfref)
+            case Insn::Lfset: LOCAL_SET_OP(fr->lfset)
+            case Insn::Lvref: LOCAL_REFER_OP(fr->lvref)
+            case Insn::Lvset: LOCAL_SET_OP(fr->lvset)
+            case Insn::Laref: LOCAL_REFER_OP(fr->laref)
+            case Insn::Laset: LOCAL_SET_OP(fr->laset)
             case Insn::Gfref: GLOBAL_REFER_OP(gfref)
             case Insn::Gvref: GLOBAL_REFER_OP(gvref)
             case Insn::Gvset: GLOBAL_SET_OP(gvset)

@@ -4,7 +4,7 @@
 
 #include "vm.h"
 #include "error.h"
-#include "object/object.h"
+#include "object.h"
 
 #include "basic/builtin.h"
 

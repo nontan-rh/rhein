@@ -2,8 +2,7 @@
 // array.cc
 //
 
-#include "object/object.h"
-#include "object/array.h"
+#include "object.h"
 #include "allocator.h"
 #include "vm.h"
 

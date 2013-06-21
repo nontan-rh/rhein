@@ -4,9 +4,7 @@
 
 #include <cstdio>
 
-#include "object/object.h"
-#include "object/hashtable.h"
-#include "object/array.h"
+#include "object.h"
 #include "allocator.h"
 #include "error.h"
 #include "vm.h"

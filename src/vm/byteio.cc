@@ -2,9 +2,7 @@
 // byteio.cc
 //
 
-#include "object/object.h"
-#include "object/imstring.h"
-#include "object/function.h"
+#include "object.h"
 #include "byteio.h"
 
 namespace rhein {

@@ -8,10 +8,7 @@
 #include <cstdio>
 
 #include "allocator.h"
-#include "object/function.h"
-#include "object/imstring.h"
-#include "object/object.h"
-#include "object/hashtable.h"
+#include "object.h"
 
 namespace rhein {
 

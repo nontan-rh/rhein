@@ -9,7 +9,7 @@
 #include <tr1/cstdint>
 
 #include "vm.h"
-#include "object/imstring.h"
+#include "object.h"
 
 namespace rhein {
 

@@ -7,7 +7,7 @@
 
 #include <gc.h>
 
-#include "object/object.h"
+#include "object.h"
 
 namespace rhein {
 

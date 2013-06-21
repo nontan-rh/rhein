@@ -5,12 +5,7 @@
 #include <cstdio>
 #include <cstring>
 
-#include "object/object.h"
-#include "object/imstring.h"
-#include "object/function.h"
-#include "object/record.h"
-#include "object/array.h"
-#include "object/hashtable.h"
+#include "object.h"
 #include "vm.h"
 #include "loader.h"
 #include "basic/basic.h"
