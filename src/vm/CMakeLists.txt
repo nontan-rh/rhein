@@ -12,13 +12,12 @@ include_directories(./)
 add_executable(
     rhein
     main.cc vm.cc operate.cc byteio.cc loader.cc basic/basic.cc
-    object/object.cc object/array.cc object/function.cc object/imstring.cc
-    object/record.cc object/hashtable.cc basic/builtin.cc)
+    object.cc array.cc function.cc imstring.cc
+    record.cc hashtable.cc basic/builtin.cc)
 
 target_link_libraries(
     rhein
-    gc
-    ${ITK_LIBRARIES})
+    gc)
 
 install(TARGETS rhein RUNTIME DESTINATION bin)
 
