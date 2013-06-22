@@ -27,7 +27,7 @@ Array::Array(State* R, Int size_) : Object(R->array_klass), size(size_) {
 }
 
 bool
-Array::to_string(State* R, String*& dest) {
+Array::to_string(State* R, Symbol*& dest) {
     char* buf = R->ator->allocateBlock<char>(size);
     
     for (Int i = 0; i < size; i++) {

@@ -26,58 +26,58 @@ unsigned long calcHash(const char* cstr, size_t length) {
     return hash_value;
 }
 
-struct StringHashTableNode {
-    StringHashTableNode *next;
+struct SymbolHashTableNode {
+    SymbolHashTableNode *next;
     unsigned long key_hash;
     size_t length;
     const char* key;
-    String* value;
+    Symbol* value;
 
     static void* operator new (size_t /* size */, void* p) { return p; }
 
-    StringHashTableNode()
+    SymbolHashTableNode()
         : next(nullptr), key_hash(0), length(0), key(nullptr), value(nullptr) { }
 
-    StringHashTableNode(StringHashTableNode *next_, unsigned long key_hash_,
-        size_t length_, const char* key_, String* value_)
+    SymbolHashTableNode(SymbolHashTableNode *next_, unsigned long key_hash_,
+        size_t length_, const char* key_, Symbol* value_)
         : next(next_), key_hash(key_hash_), length(length_), key(key_), value(value_) { }
     
-    static StringHashTableNode* create(
-        State* R, StringHashTableNode* next, unsigned long key_hash,
-        size_t length, const char* key, String* value) {
+    static SymbolHashTableNode* create(
+        State* R, SymbolHashTableNode* next, unsigned long key_hash,
+        size_t length, const char* key, Symbol* value) {
 
-        void *p = R->ator->allocateStruct<StringHashTableNode>();
-        return new (p) StringHashTableNode(next, key_hash, length, key, value);
+        void *p = R->ator->allocateStruct<SymbolHashTableNode>();
+        return new (p) SymbolHashTableNode(next, key_hash, length, key, value);
     }
 };
 
-class rhein::StringHashTable {
-    //StringHashTable() = delete;
-    //StringHashTable(const StringHashTable& /* rht */) = delete;
-    //StringHashTable& operator=(const StringHashTable& /* rht */) = delete;
+class rhein::SymbolHashTable {
+    //SymbolHashTable() = delete;
+    //SymbolHashTable(const SymbolHashTable& /* rht */) = delete;
+    //SymbolHashTable& operator=(const SymbolHashTable& /* rht */) = delete;
 
     static void* operator new (size_t /* size */, void* p) { return p; }
 
     const double rehash_ratio = 0.75;
     const unsigned default_table_size = 16;
-    StringHashTableNode* table;
+    SymbolHashTableNode* table;
     unsigned table_size;
     unsigned item_num;
 
-    StringHashTable(State* R) : table_size(default_table_size), item_num(0) {
-        table = R->ator->allocateBlock<StringHashTableNode>(default_table_size);
+    SymbolHashTable(State* R) : table_size(default_table_size), item_num(0) {
+        table = R->ator->allocateBlock<SymbolHashTableNode>(default_table_size);
         for (unsigned i = 0; i < default_table_size ; i++) {
             table[i].next = nullptr;
         }
     }
 
 public:
-    static StringHashTable* create(State* R) {
-        void* p = R->ator->allocateStruct<StringHashTable>();
-        return new (p) StringHashTable(R);
+    static SymbolHashTable* create(State* R) {
+        void* p = R->ator->allocateStruct<SymbolHashTable>();
+        return new (p) SymbolHashTable(R);
     }
 
-    bool find(const char* key, size_t length, String*& result) {
+    bool find(const char* key, size_t length, Symbol*& result) {
         unsigned long hash_value = calcHash(key, length);
         auto node = table[hash_value % table_size].next;
 
@@ -93,13 +93,13 @@ public:
         return false;
     }
 
-    void insert(State* R, String* value) {
+    void insert(State* R, Symbol* value) {
         // Check if there is no collision
-        String* dummy; assert(!find(value->body, value->length, dummy));
+        Symbol* dummy; assert(!find(value->body, value->length, dummy));
         unsigned long hash_value = calcHash(value->body, value->length);
         value->hash_value = hash_value;
         auto n = table[hash_value % table_size].next;
-        table[hash_value % table_size].next = StringHashTableNode::create(
+        table[hash_value % table_size].next = SymbolHashTableNode::create(
             R, n, hash_value, value->length, value->body, value);
 
         item_num++;
@@ -108,9 +108,9 @@ public:
         }
     }
 
-    void remove(State* R, String* value) {
+    void remove(State* R, Symbol* value) {
         // Check if there is
-        String* dummy; assert(find(value->body, value->length, dummy));
+        Symbol* dummy; assert(find(value->body, value->length, dummy));
         auto prev = &table[value->hash_value % table_size];
         auto curr = prev->next;
         for(;/* curr != nullptr */; ) {
@@ -131,12 +131,12 @@ public:
 
     void rehash(State* R) {
         unsigned newtable_size = table_size * 2 + 1;
-        StringHashTableNode* newtable = R->ator->allocateBlock<StringHashTableNode>(newtable_size);
+        SymbolHashTableNode* newtable = R->ator->allocateBlock<SymbolHashTableNode>(newtable_size);
         for(unsigned i = 0; i < table_size; i++) {
-            StringHashTableNode* node = table[i].next;
+            SymbolHashTableNode* node = table[i].next;
             for(; node != nullptr; ) {
-                StringHashTableNode* oldnext = node->next;
-                StringHashTableNode* newnext = newtable[node->key_hash % newtable_size].next;
+                SymbolHashTableNode* oldnext = node->next;
+                SymbolHashTableNode* newnext = newtable[node->key_hash % newtable_size].next;
                 newtable[node->key_hash % newtable_size].next = node;
                 node->next = newnext;
                 node = oldnext;
@@ -148,56 +148,56 @@ public:
     }
 };
 
-StringProvider::StringProvider(State* R)
+SymbolProvider::SymbolProvider(State* R)
     : owner(R) {
-    assert(!owner->hasStringProvider());
-    string_hash_table = StringHashTable::create(R);
-    owner->setStringProvider(this);
+    assert(!owner->hasSymbolProvider());
+    string_hash_table = SymbolHashTable::create(R);
+    owner->setSymbolProvider(this);
 }
 
-StringProvider*
-StringProvider::create(State* R) {
-    void *p = R->ator->allocateStruct<StringProvider>();
-    return new (p) StringProvider(R);
+SymbolProvider*
+SymbolProvider::create(State* R) {
+    void *p = R->ator->allocateStruct<SymbolProvider>();
+    return new (p) SymbolProvider(R);
 }
 
-String::String(State* R, const char* body_, size_t length_)
+Symbol::Symbol(State* R, const char* body_, size_t length_)
     : Object(R->string_klass), body(body_), length(length_),
       hash_value(0) { }
 
-String*
-String::create(State* R, const char* body, size_t length) {
-    void* p = R->ator->allocateObject<String>();
-    return new (p) String(R, body, length);
+Symbol*
+Symbol::create(State* R, const char* body, size_t length) {
+    void* p = R->ator->allocateObject<Symbol>();
+    return new (p) Symbol(R, body, length);
 }
 
-String*
-StringProvider::get_string(const char* buffer, size_t length) {
-    String *registered;
+Symbol*
+SymbolProvider::get_string(const char* buffer, size_t length) {
+    Symbol *registered;
     if (string_hash_table->find(buffer, length, registered)) {
         return registered;
     }
 
     char* copybuffer = owner->ator->allocateBlock<char>(length);
     memcpy(copybuffer, buffer, length);
-    String* new_string = String::create(owner, copybuffer, length);
+    Symbol* new_string = Symbol::create(owner, copybuffer, length);
     string_hash_table->insert(owner, new_string);
     return new_string;
 }
 
-String*
-StringProvider::get_string(const char* cstr) {
+Symbol*
+SymbolProvider::get_string(const char* cstr) {
     return get_string(cstr, strlen(cstr));
 }
 
 void
-String::get_cstr(const char*& b, size_t& l) const {
+Symbol::get_cstr(const char*& b, size_t& l) const {
     b = body;
     l = length;
 }
 
 bool
-String::index_ref(State* /* R */, Value vindex, Value& dest) const {
+Symbol::index_ref(State* /* R */, Value vindex, Value& dest) const {
     if (!vindex.is(Value::Type::Int)) {
         return false;
     }
@@ -211,40 +211,40 @@ String::index_ref(State* /* R */, Value vindex, Value& dest) const {
     return true;
 }
 
-String*
-String::get_string_representation(State* /* R */) {
+Symbol*
+Symbol::get_string_representation(State* /* R */) {
     return this;
 }
 
-String*
-String::append(State* R, String* rht) {
+Symbol*
+Symbol::append(State* R, Symbol* rht) {
     size_t newlength = this->length + rht->length;
     char* buffer = R->ator->allocateBlock<char>(newlength);
     memcpy(buffer, this->body, this->length);
     memcpy(buffer + this->length, rht->body, rht->length);
-    String* ret = R->s_prv->get_string(buffer, newlength);
+    Symbol* ret = R->s_prv->get_string(buffer, newlength);
     R->ator->releaseBlock(buffer);
     return ret;
 }
 
-String*
-String::head(State* R, size_t end) {
+Symbol*
+Symbol::head(State* R, size_t end) {
     if (end > length) {
         throw;
     }
     return R->s_prv->get_string(body, end);
 }
 
-String*
-String::tail(State* R, size_t begin) {
+Symbol*
+Symbol::tail(State* R, size_t begin) {
     if (begin >= length) {
         throw;
     }
     return R->s_prv->get_string(body + begin, length - begin);
 }
 
-String*
-String::sub(State* R, size_t begin, size_t end) {
+Symbol*
+Symbol::sub(State* R, size_t begin, size_t end) {
     if (end > length || begin >= length || end < begin) {
         throw;
     }
@@ -252,7 +252,7 @@ String::sub(State* R, size_t begin, size_t end) {
 }
 
 bool
-String::to_array(State* R, Array*& array) {
+Symbol::to_array(State* R, Array*& array) {
     array = Array::create(R, length);
 
     for (unsigned i = 0; i < length; i++) {
@@ -262,7 +262,7 @@ String::to_array(State* R, Array*& array) {
 }
 
 void
-String::dump() const {
+Symbol::dump() const {
     for (unsigned i = 0; i < length; i++) {
         fprintf(stderr, "%c", body[i]);
     }

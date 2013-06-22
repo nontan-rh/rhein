@@ -11,7 +11,7 @@
 using namespace rhein;
 
 RecordInfo::RecordInfo(State* R, RecordInfo* parent, unsigned slot_num_,
-    String** slot_ids) : slot_num(slot_num_) {
+    Symbol** slot_ids) : slot_num(slot_num_) {
 
     if (!(parent == nullptr || parent->id_index_table == nullptr)) {
         id_index_table = HashTable::create(R);
@@ -35,14 +35,14 @@ RecordInfo::RecordInfo(State* R, RecordInfo* parent, unsigned slot_num_,
 
 RecordInfo*
 RecordInfo::create(State* R, RecordInfo* parent, unsigned slot_num,
-    String** slot_ids) {
+    Symbol** slot_ids) {
 
     void* p = R->ator->allocateStruct<RecordInfo>();
     return new (p) RecordInfo(R, parent, slot_num, slot_ids);
 }
 
 bool
-RecordInfo::getSlotIndex(String* slot_id, unsigned& index) const {
+RecordInfo::getSlotIndex(Symbol* slot_id, unsigned& index) const {
     Value vindex;
     if (!id_index_table->find(Value::by_object(slot_id), vindex)) {
         return false;
@@ -66,7 +66,7 @@ Record::create(State* R, Klass* klass) {
 }
 
 bool
-Record::slot_ref(State* /* R */, String* slot_id, Value& value) const {
+Record::slot_ref(State* /* R */, Symbol* slot_id, Value& value) const {
     unsigned index;
     if (!klass->get_record_info()->getSlotIndex(slot_id, index)) {
         return false;
@@ -77,7 +77,7 @@ Record::slot_ref(State* /* R */, String* slot_id, Value& value) const {
 }
 
 bool
-Record::slot_set(State* /* R */, String* slot_id, Value value) {
+Record::slot_set(State* /* R */, Symbol* slot_id, Value value) {
     unsigned index;
     if (!klass->get_record_info()->getSlotIndex(slot_id, index)) {
         return false;

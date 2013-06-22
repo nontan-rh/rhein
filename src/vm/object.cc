@@ -7,13 +7,13 @@
 
 using namespace rhein;
 
-String*
+Symbol*
 Object::get_string_representation(State* R) {
     return R->s_prv->get_string("#<obj>");
 }
 
 Klass*
-Klass::create(State* R, String* name, Klass* parent, unsigned slot_num, String** slot_ids) {
+Klass::create(State* R, Symbol* name, Klass* parent, unsigned slot_num, Symbol** slot_ids) {
     void* p = R->ator->allocateObject<Klass>();
     RecordInfo* record_info;
 

@@ -177,7 +177,7 @@ State::State() : s_prv(nullptr) {
     ator = new (GC_malloc(sizeof(Allocator))) Allocator();
 
     initializeKlass1();
-    initializeString();
+    initializeSymbol();
     initializeKlass2();
 
     func_slots = HashTable::create(this);
@@ -247,8 +247,8 @@ State::initializeKlass3() {
 }
 
 void
-State::initializeString() {
-    s_prv = StringProvider::create(this);
+State::initializeSymbol() {
+    s_prv = SymbolProvider::create(this);
 }
 
 bool
@@ -257,7 +257,7 @@ State::addFunction(Function* func) {
 }
 
 bool
-State::addFunction(Function* func, const String* name) {
+State::addFunction(Function* func, const Symbol* name) {
     Value old;
     if (func_slots->find(Value::by_object(name), old)) {
         Object* fold = old.get_obj<Object>();
@@ -284,12 +284,12 @@ State::addKlass(Klass* klass) {
 }
 
 bool
-State::addKlass(Klass* klass, const String* name) {
+State::addKlass(Klass* klass, const Symbol* name) {
     return klass_slots->insert_if_absent(this, Value::by_object(name), Value::by_object(klass));
 }
 
 bool
-State::addVariable(String* id, Value val) {
+State::addVariable(Symbol* id, Value val) {
     return var_slots->insert_if_absent(this, Value::by_object(id), val);
 }
 
@@ -314,7 +314,7 @@ State::dumpVariables() {
 }
 
 Value
-rhein::execute(State* R, String* entry_point, unsigned argc, Value* argv) {
+rhein::execute(State* R, Symbol* entry_point, unsigned argc, Value* argv) {
     Value fn;
     if (!R->gfref(entry_point, fn)) {
         fatal("No such function");
@@ -403,7 +403,7 @@ getInsnArgUU2(uint32_t insn) {
 			|| id.get_obj<Object>()->get_class() != R->string_klass) { \
         fatal("Error on global refer"); \
     } \
-    if (!R->op(id.get_obj<String>(), *(--sp))) { \
+    if (!R->op(id.get_obj<Symbol>(), *(--sp))) { \
         fatal("Error on global refer"); \
     } \
     pc++; \
@@ -416,7 +416,7 @@ getInsnArgUU2(uint32_t insn) {
     		|| id.get_obj<Object>()->get_class() != R->string_klass) { \
         fatal("Error on global set"); \
     } \
-    if (!R->op(id.get_obj<String>(), *(sp))) { \
+    if (!R->op(id.get_obj<Symbol>(), *(sp))) { \
         fatal("Error on global set"); \
     } \
     pc++; \
@@ -622,8 +622,8 @@ rhein::execute(State* R, BytecodeFunction* bfn, unsigned argc_, Value* args_) {
                     fatal("Cannot refer");
                 }
 
-                if (!obj.get_obj<Object>()->slot_ref(R, id.get_obj<String>(), sp[0])) {
-                    id.get_obj<String>()->dump();
+                if (!obj.get_obj<Object>()->slot_ref(R, id.get_obj<Symbol>(), sp[0])) {
+                    id.get_obj<Symbol>()->dump();
                     fatal("Cannot refer");
                 }
                 pc++;
@@ -639,7 +639,7 @@ rhein::execute(State* R, BytecodeFunction* bfn, unsigned argc_, Value* args_) {
                     fatal("Cannot set");
                 }
 
-                if (!obj.get_obj<Object>()->slot_set(R, id.get_obj<String>(), sp[0])) {
+                if (!obj.get_obj<Object>()->slot_set(R, id.get_obj<Symbol>(), sp[0])) {
                     fatal("Cannot set");
                 }
                 pc++;
@@ -665,7 +665,7 @@ rhein::execute(State* R, BytecodeFunction* bfn, unsigned argc_, Value* args_) {
                     fatal("Name must be string");
                 }
 
-                if (!R->getKlass(id.get_obj<String>(), *(--sp))) {
+                if (!R->getKlass(id.get_obj<Symbol>(), *(--sp))) {
                     fatal("Cannot find klass");
                 }
                 pc++;
@@ -695,7 +695,7 @@ rhein::execute(State* R, BytecodeFunction* bfn, unsigned argc_, Value* args_) {
                 }
 
                 Value func;
-                if (!R->gfref(id.get_obj<String>(), func)) {
+                if (!R->gfref(id.get_obj<Symbol>(), func)) {
                     fatal("Cannot enclose");
                 }
 

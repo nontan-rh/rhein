@@ -29,7 +29,7 @@ print_value(State* R, Value v) {
     } else if (v.is(Value::Type::Nil)) {
         printf("nil");
     } else if (v.is(Value::Type::Object)) {
-        String* str = v.get_obj<Object>()->get_string_representation(R);
+        Symbol* str = v.get_obj<Object>()->get_string_representation(R);
         const char* cstr;
         size_t len;
         str->get_cstr(cstr, len);
@@ -74,7 +74,7 @@ fn_write(State* R, unsigned argc, Value* args) {
     } else if (v.is(Value::Type::Nil)) {
         printf("nil");
     } else if (v.is(Value::Type::Object)) {
-        String* str = v.get_obj<Object>()->get_string_representation(R);
+        Symbol* str = v.get_obj<Object>()->get_string_representation(R);
         const char* cstr;
         size_t len;
         str->get_cstr(cstr, len);
@@ -150,7 +150,7 @@ fn_to_array(State* R, unsigned argc, Value* args) {
     }
 
     Array* array;
-    if (!args[0].get_obj<String>()->to_array(R, array)) {
+    if (!args[0].get_obj<Symbol>()->to_array(R, array)) {
         fatal("Error occurred");
     }
 
@@ -163,7 +163,7 @@ fn_to_string(State* R, unsigned argc, Value* args) {
         fatal("Invalid arguments");
     }
 
-    String* string;
+    Symbol* string;
     if (!args[0].get_obj<Array>()->to_string(R, string)) {
         fatal("Error occurred");
     }
@@ -181,13 +181,13 @@ fn_append(State* R, unsigned argc, Value* args) {
         fatal("Cannot append");
     }
 
-    String* result = args[0].get_obj<String>();
+    Symbol* result = args[0].get_obj<Symbol>();
     for (unsigned i = 1; i < argc; i++) {
         if (args[i].get_klass(R) != R->string_klass) {
             fatal("Cannot append");
         }
 
-        result = result->append(R, args[i].get_obj<String>());
+        result = result->append(R, args[i].get_obj<Symbol>());
     }
     return Value::by_object(result);
 }
@@ -201,7 +201,7 @@ fn_head(State* R, unsigned argc, Value* args) {
         fatal("Invalid arguments");
     }
 
-    return Value::by_object(args[0].get_obj<String>()->head(R, args[1].get_int()));
+    return Value::by_object(args[0].get_obj<Symbol>()->head(R, args[1].get_int()));
 }
 
 Value
@@ -213,7 +213,7 @@ fn_tail(State* R, unsigned argc, Value* args) {
         fatal("Invalid arguments");
     }
 
-    return Value::by_object(args[0].get_obj<String>()->tail(R, args[1].get_int()));
+    return Value::by_object(args[0].get_obj<Symbol>()->tail(R, args[1].get_int()));
 }
 
 Value
@@ -226,7 +226,7 @@ fn_sub(State* R, unsigned argc, Value* args) {
         fatal("Invalid arguments");
     }
 
-    return Value::by_object(args[0].get_obj<String>()->sub(R, args[1].get_int(), args[2].get_int()));
+    return Value::by_object(args[0].get_obj<Symbol>()->sub(R, args[1].get_int(), args[2].get_int()));
 }
 
 Value
@@ -236,7 +236,7 @@ fn_length(State* R, unsigned argc, Value* args) {
     }
 
     if (args[0].get_klass(R) == R->string_klass) {
-        return Value::by_int(args[0].get_obj<String>()->get_length());
+        return Value::by_int(args[0].get_obj<Symbol>()->get_length());
     } else if (args[0].get_klass(R) == R->array_klass) {
         return Value::by_int(args[0].get_obj<Array>()->get_length());
     } else {
@@ -280,7 +280,7 @@ fn_load(State* R, unsigned argc, Value* args) {
     char *fn;
     const char *buf;
     size_t len;
-    args[0].get_obj<String>()->get_cstr(buf, len);
+    args[0].get_obj<Symbol>()->get_cstr(buf, len);
     fn = (char*)malloc(sizeof(char) * (len + 1));
     memcpy(fn, buf, len);
     fn[len] = '\0';

@@ -13,7 +13,7 @@
 namespace rhein {
 
 class Object;
-class String;
+class Symbol;
 class Klass;
 struct Frame;
 class State;
@@ -119,7 +119,7 @@ public:
 
     virtual Klass* get_class() { return klass; }
 
-    virtual String* get_string_representation(State* R);
+    virtual Symbol* get_string_representation(State* R);
 
     // Bytecode level object interface
     // Always fails by default
@@ -131,11 +131,11 @@ public:
         return false;
     }
 
-    virtual bool slot_ref(State* /* R */, String* /* id */, Value& /* dest */) const {
+    virtual bool slot_ref(State* /* R */, Symbol* /* id */, Value& /* dest */) const {
         return false;
     }
 
-    virtual bool slot_set(State* /* R */, String* /* id */, Value /* value */) {
+    virtual bool slot_set(State* /* R */, Symbol* /* id */, Value /* value */) {
         return false;
     }
 };
@@ -147,26 +147,26 @@ class Klass : public Object {
 
     friend class State;
 
-    void set_name(String* name_) {
+    void set_name(Symbol* name_) {
         name = name_;
     }
 
 protected:
-    String* name;
+    Symbol* name;
     Klass* parent;
     RecordInfo* record_info;
 
-    Klass(String* name_, Klass* parent_, RecordInfo* record_info_)
+    Klass(Symbol* name_, Klass* parent_, RecordInfo* record_info_)
         : Object(nullptr), name(name_), parent(parent_), record_info(record_info_) { }
 
 public:
-    static Klass* create(State* R, String* name, Klass* parent) {
+    static Klass* create(State* R, Symbol* name, Klass* parent) {
         return create(R, name, parent, 0, nullptr);
     }
 
-    static Klass* create(State* R, String* name, Klass* parent, unsigned slot_num, String** slot_ids);
+    static Klass* create(State* R, Symbol* name, Klass* parent, unsigned slot_num, Symbol** slot_ids);
 
-    String* get_name() const { return name; }
+    Symbol* get_name() const { return name; }
     // Override
     Klass* get_class() { return this; }
     Klass* get_parent() const { return parent; }
@@ -193,21 +193,63 @@ Value::get_hash() const {
 	return 0;
 }
 
-class String : public Object {
-    friend class StringProvider;
-    friend class StringHashTable;
+class Symbol : public Object {
+    friend class SymbolProvider;
+    friend class SymbolHashTable;
 
-    String(State* R, const char* body_, size_t length_);
+    Symbol(State* R, const char* body_, size_t length_);
 
     const char* body;
     size_t length;
     unsigned long hash_value;
 
-    static String* create(State* R, const char* body, size_t length);
+    static Symbol* create(State* R, const char* body, size_t length);
 public:
-    unsigned long hash() { return hash_value; }
+    unsigned long get_hash() { return hash_value; }
 
-    String* get_string_representation(State* R);
+    Symbol* get_string_representation(State* R);
+    void get_cstr(const char*& body, size_t& length) const;
+
+    // Override
+    bool index_ref(State* R, Value index, Value& value) const;
+
+    Int get_length() const { return length; }
+
+    Symbol* append(State* R, Symbol* rht);
+    Symbol* head(State* R, size_t end);
+    Symbol* tail(State* R, size_t begin);
+    Symbol* sub(State* R, size_t begin, size_t end);
+
+    bool to_array(State* R, Array*& array);
+
+    // For debugging
+    void dump() const;
+};
+
+class SymbolHashTable;
+
+class SymbolProvider {
+    static void* operator new (size_t /* size */, void* p) { return p; }
+
+    State* owner;
+    SymbolHashTable* string_hash_table;
+
+    SymbolProvider(State* R);
+
+public:
+    static SymbolProvider* create(State* R);
+    Symbol* get_string(const char* buffer, size_t length);
+    Symbol* get_string(const char* cstr);
+};
+
+class String : public Object {
+public:
+	static String* create(State* R, const char* str);
+	static String* create(State* R, const char* cstr, size_t len);
+
+	unsigned long get_hash() { return hash_value; }
+	bool index_ref(State* R, Value index, Value& value) const;
+	String* get_string_representation(State* R);
     void get_cstr(const char*& body, size_t& length) const;
 
     // Override
@@ -220,26 +262,12 @@ public:
     String* tail(State* R, size_t begin);
     String* sub(State* R, size_t begin, size_t end);
 
-    bool to_array(State* R, Array*& array);
+private:
+	const char* body;
+	size_t length;
+	unsigned long hash_value;
 
-    // For debugging
-    void dump() const;
-};
-
-class StringHashTable;
-
-class StringProvider {
-    static void* operator new (size_t /* size */, void* p) { return p; }
-
-    State* owner;
-    StringHashTable* string_hash_table;
-
-    StringProvider(State* R);
-
-public:
-    static StringProvider* create(State* R);
-    String* get_string(const char* buffer, size_t length);
-    String* get_string(const char* cstr);
+	String(State* R,const char* str, size_t len);
 };
 
 class Array : public Object {
@@ -284,7 +312,7 @@ public:
         return elt_set(index.get_int(), value);
     }
 
-    bool to_string(State* R, String*& dest);
+    bool to_string(State* R, Symbol*& dest);
 };
 
 struct HashTableNode;
@@ -330,14 +358,14 @@ class RecordInfo {
     static void* operator new(size_t /* size */, void *p) { return p; }
 
     RecordInfo(State* R, RecordInfo* parent, unsigned slot_num_,
-        String** slot_ids);
+        Symbol** slot_ids);
 
 public:
     static RecordInfo* create(State* R, RecordInfo* parent, unsigned slot_num,
-        String** slot_ids);
+        Symbol** slot_ids);
 
     unsigned getSlotNum() const { return slot_num; }
-    bool getSlotIndex(String* slot_id, unsigned& index) const;
+    bool getSlotIndex(Symbol* slot_id, unsigned& index) const;
 };
 
 class Record : public Object {
@@ -349,23 +377,23 @@ public:
     static Record* create(State* R, Klass* klass);
 
     // Override
-    bool slot_ref(State* /* R */, String* slot_id, Value& value) const;
+    bool slot_ref(State* /* R */, Symbol* slot_id, Value& value) const;
     // Override
-    bool slot_set(State* /* R */, String* slot_id, Value value);
+    bool slot_set(State* /* R */, Symbol* slot_id, Value value);
 };
 typedef Value (*NativeFunctionBody)(State*, unsigned, Value*);
 
 class Function : public Object {
 protected:
-    String* name;
+    Symbol* name;
     bool variadic;
     unsigned arg_count;
-    String** arg_klass_id;
+    Symbol** arg_klass_id;
     Klass** arg_klass;
     Frame* closure;
 
-    Function(Klass* klass, String* name_, bool variadic_, unsigned arg_count_,
-        String** arg_klass_id_)
+    Function(Klass* klass, Symbol* name_, bool variadic_, unsigned arg_count_,
+        Symbol** arg_klass_id_)
         : Object(klass), name(name_), variadic(variadic_),
           arg_count(arg_count_), arg_klass_id(arg_klass_id_), arg_klass(nullptr),
           closure(nullptr) { }
@@ -374,7 +402,7 @@ public:
     Klass** get_arg_classes() const { return arg_klass; }
     unsigned get_num_args() const { return arg_count; }
     bool is_variadic() const { return variadic; }
-    const String* get_name() const { return name; }
+    const Symbol* get_name() const { return name; }
     Frame* get_closure() const { return closure; }
 
     bool resolve(State* R);
@@ -384,18 +412,18 @@ class NativeFunction : public Function {
     NativeFunctionBody body;
     bool copied;
 
-    NativeFunction(State* R, String* name, bool variable_arg,
-        unsigned arg_count, String** arg_klass_id, NativeFunctionBody body);
+    NativeFunction(State* R, Symbol* name, bool variable_arg,
+        unsigned arg_count, Symbol** arg_klass_id, NativeFunctionBody body);
 
 public:
-    static NativeFunction* create(State* R, String* name,
+    static NativeFunction* create(State* R, Symbol* name,
         NativeFunctionBody body) {
 
         return create(R, name, true, 0, nullptr, body);
     }
 
-    static NativeFunction* create(State* R, String* name,
-        bool variable_arg, unsigned arg_count, String** arg_klass_id,
+    static NativeFunction* create(State* R, Symbol* name,
+        bool variable_arg, unsigned arg_count, Symbol** arg_klass_id,
         NativeFunctionBody body);
 
     NativeFunctionBody get_body() const { return body; }
@@ -414,8 +442,8 @@ class BytecodeFunction : public Function {
     unsigned bytecode_size;
     uint32_t* bytecode;
 
-    BytecodeFunction(State* R, String* name_, bool variable_arg_,
-        unsigned argc_, String** arg_klass_id_, unsigned func_slot_size_,
+    BytecodeFunction(State* R, Symbol* name_, bool variable_arg_,
+        unsigned argc_, Symbol** arg_klass_id_, unsigned func_slot_size_,
         unsigned var_slot_size_, unsigned stack_size_,
         unsigned constant_table_size_, Value* constant_table_,
         unsigned bytecode_size_, uint32_t* bytecode_);
@@ -423,8 +451,8 @@ class BytecodeFunction : public Function {
 public:
     unsigned long hash() { return reinterpret_cast<unsigned long>(this); }
 
-    static BytecodeFunction* create(State* R, String* name,
-        bool variable_arg, unsigned argc, String** arg_klass_id,
+    static BytecodeFunction* create(State* R, Symbol* name,
+        bool variable_arg, unsigned argc, Symbol** arg_klass_id,
         unsigned func_slot_size, unsigned var_slot_size, unsigned stack_size,
         unsigned constant_table_size, Value* constant_table,
         unsigned bytecode_size, uint32_t* bytecode);

@@ -28,7 +28,7 @@ register_function(State* R, unsigned argc, Value* args) {
 
     fn.get_obj<Function>()->resolve(R);
 
-    R->addFunction(fn.get_obj<Function>(), name.get_obj<String>());
+    R->addFunction(fn.get_obj<Function>(), name.get_obj<Symbol>());
     return Value::k_nil();
 }
 
@@ -45,7 +45,7 @@ register_class(State* R, unsigned argc, Value* args) {
         fatal("Invalid arguments");
     }
 
-    R->addKlass(klass, name.get_obj<String>());
+    R->addKlass(klass, name.get_obj<Symbol>());
     return Value::k_nil();
 }
 
@@ -56,7 +56,7 @@ register_variable(State* R, unsigned argc, Value* args) {
         fatal("Invalid arguments");
     }
 
-    R->addVariable(args[0].get_obj<String>(), args[1]);
+    R->addVariable(args[0].get_obj<Symbol>(), args[1]);
     return Value::k_nil();
 }
 

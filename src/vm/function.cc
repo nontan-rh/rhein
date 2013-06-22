@@ -24,15 +24,15 @@ Function::resolve(State* R) {
     return true;
 }
 
-NativeFunction::NativeFunction(State* R, String* name, bool variable_arg,
-    unsigned arg_count, String** arg_klass_id, NativeFunctionBody body_)
+NativeFunction::NativeFunction(State* R, Symbol* name, bool variable_arg,
+    unsigned arg_count, Symbol** arg_klass_id, NativeFunctionBody body_)
     : Function(R->native_function_klass, name, variable_arg, arg_count,
         arg_klass_id),
         body(body_), copied(false) { }
 
 NativeFunction*
-NativeFunction::create(State* R, String* name, bool variable_arg,
-    unsigned arg_count, String** arg_klass_id, NativeFunctionBody body) {
+NativeFunction::create(State* R, Symbol* name, bool variable_arg,
+    unsigned arg_count, Symbol** arg_klass_id, NativeFunctionBody body) {
 
     void* p = R->ator->allocateObject<NativeFunction>();
     return new (p) NativeFunction(R, name, variable_arg, arg_count,
@@ -54,8 +54,8 @@ NativeFunction::enclose(State* R, Frame* closure) {
     return closure_func;
 }
 
-BytecodeFunction::BytecodeFunction(State* R, String* name_,
-    bool variable_arg_, unsigned argc_, String** arg_klass_id_,
+BytecodeFunction::BytecodeFunction(State* R, Symbol* name_,
+    bool variable_arg_, unsigned argc_, Symbol** arg_klass_id_,
     unsigned func_slot_size_, unsigned var_slot_size_,
     unsigned stack_size_, unsigned constant_table_size_,
     Value* constant_table_, unsigned bytecode_size_, uint32_t* bytecode_)
@@ -70,8 +70,8 @@ BytecodeFunction::BytecodeFunction(State* R, String* name_,
       bytecode(bytecode_) { }
 
 BytecodeFunction*
-BytecodeFunction::create(State* R, String* name,
-    bool variable_arg, unsigned argc, String** arg_klass_id,
+BytecodeFunction::create(State* R, Symbol* name,
+    bool variable_arg, unsigned argc, Symbol** arg_klass_id,
     unsigned func_slot_size, unsigned var_slot_size, unsigned stack_size,
     unsigned constant_table_size, Value* constant_table,
     unsigned bytecode_size, uint32_t* bytecode) {

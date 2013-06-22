@@ -25,7 +25,7 @@ public:
     enum {
         Int,
         Char,
-        String,
+        Symbol,
     };
 };
 
@@ -44,7 +44,7 @@ public:
     static void* operator new(size_t /* size */, void* p) { return p; }
 
     Allocator* ator;
-    StringProvider* s_prv;
+    SymbolProvider* s_prv;
 
     Klass* any_klass;
     Klass* int_klass;
@@ -64,22 +64,22 @@ public:
     void initializeKlass1();
     void initializeKlass2();
     void initializeKlass3();
-    void initializeString();
+    void initializeSymbol();
 
     // Installation
     bool addFunction(Function* func); 
-    bool addFunction(Function* func, const String* name); 
-    bool addVariable(String* id, Value val);
-    bool addKlass(Klass* klass, const String* name);
+    bool addFunction(Function* func, const Symbol* name); 
+    bool addVariable(Symbol* id, Value val);
+    bool addKlass(Klass* klass, const Symbol* name);
     bool addKlass(Klass* klass);
 
-    void setStringProvider(StringProvider* s) { s_prv = s; } 
-    bool hasStringProvider() const { return (s_prv != nullptr); }
+    void setSymbolProvider(SymbolProvider* s) { s_prv = s; } 
+    bool hasSymbolProvider() const { return (s_prv != nullptr); }
 
-    bool getKlass(String* id, Value& klass) { return klass_slots->find(Value::by_object(id), klass); }
+    bool getKlass(Symbol* id, Value& klass) { return klass_slots->find(Value::by_object(id), klass); }
 
     // Bytecode level interface
-    bool gfref(String* id, Value& func) {
+    bool gfref(Symbol* id, Value& func) {
         if (!func_slots->find(Value::by_object(id), func)) {
             id->dump();
             return false;
@@ -87,11 +87,11 @@ public:
         return true;
     }
 
-    bool gvref(String* id, Value& value) {
+    bool gvref(Symbol* id, Value& value) {
     	return var_slots->find(Value::by_object(id), value);
     }
 
-    bool gvset(String* id, Value value) {
+    bool gvset(Symbol* id, Value value) {
     	return var_slots->assign(Value::by_object(id), value);
     }
 
@@ -148,7 +148,7 @@ public:
     bool laset(unsigned depth, unsigned offset, Value value);
 };
 
-Value execute(State* R, String* entry_point, unsigned argc, Value* argv);
+Value execute(State* R, Symbol* entry_point, unsigned argc, Value* argv);
 Value execute(State* R, BytecodeFunction* bfn, unsigned argc, Value* args);
 
 }

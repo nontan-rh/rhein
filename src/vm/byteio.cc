@@ -30,7 +30,7 @@ BinaryReader::read32Bit(FILE* fp, uint32_t& word) {
 }
 
 bool
-BinaryReader::readString(FILE* fp, State* R, String*& result) {
+BinaryReader::readSymbol(FILE* fp, State* R, Symbol*& result) {
     unsigned long length;
     if(!BinaryReader::readBER(fp, length)) {
         result = nullptr;
@@ -87,17 +87,17 @@ BinaryReader::readInt(FILE* fp, long& result) {
 
 bool
 State::readKlass(FILE* fp) {
-    String* klass_name;
-    String* parent_name;
+    Symbol* klass_name;
+    Symbol* parent_name;
     unsigned long slot_num;
 
-    BinaryReader::readString(fp, this, klass_name);
-    BinaryReader::readString(fp, this, parent_name);
+    BinaryReader::readSymbol(fp, this, klass_name);
+    BinaryReader::readSymbol(fp, this, parent_name);
     BinaryReader::readBER(fp, slot_num);
 
-    auto slots = new String*[slot_num];
+    auto slots = new Symbol*[slot_num];
     for (unsigned long i = 0; i < slot_num; i++) {
-        BinaryReader::readString(fp, this, slots[i]);
+        BinaryReader::readSymbol(fp, this, slots[i]);
     }
 
     Value parent;
@@ -112,19 +112,19 @@ State::readKlass(FILE* fp) {
 
 bool
 State::readFunction(FILE* fp) {
-    String* function_name;
+    Symbol* function_name;
     unsigned char variable_arg;
     unsigned long argument_num;
-    String** argument_type_ids;
+    Symbol** argument_type_ids;
     unsigned long function_slot_num;
     unsigned long variable_slot_num;
     unsigned long stack_size;
-    BinaryReader::readString(fp, this, function_name);
+    BinaryReader::readSymbol(fp, this, function_name);
     BinaryReader::readByte(fp, variable_arg);
     BinaryReader::readBER(fp, argument_num);
-    argument_type_ids = new String*[argument_num];
+    argument_type_ids = new Symbol*[argument_num];
     for (unsigned long i = 0; i < argument_num; i++) {
-        BinaryReader::readString(fp, this, argument_type_ids[i]);
+        BinaryReader::readSymbol(fp, this, argument_type_ids[i]);
     }
     BinaryReader::readBER(fp, function_slot_num);
     BinaryReader::readBER(fp, variable_slot_num);
@@ -151,10 +151,10 @@ State::readFunction(FILE* fp) {
                     constant_table[i] = Value::by_char((char)char_value);
                 }
                 break;
-            case LiteralSigniture::String:
+            case LiteralSigniture::Symbol:
                 {
-                    String* string_value;
-                    BinaryReader::readString(fp, this, string_value);
+                    Symbol* string_value;
+                    BinaryReader::readSymbol(fp, this, string_value);
                     constant_table[i] = Value::by_object(string_value);
                 }
                 break;
@@ -204,8 +204,8 @@ State::readObject(FILE* fp) {
 
 bool
 State::loadFile(FILE* fp) {
-    String* init_name;
-    BinaryReader::readString(fp, this, init_name);
+    Symbol* init_name;
+    BinaryReader::readSymbol(fp, this, init_name);
     unsigned long item_num;
     if (!BinaryReader::readBER(fp, item_num)) { return false; }
     for (unsigned i = 0; i < item_num; i++) {
