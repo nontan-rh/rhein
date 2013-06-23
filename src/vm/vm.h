@@ -26,6 +26,7 @@ public:
         Int,
         Char,
         Symbol,
+        String,
     };
 };
 
@@ -56,7 +57,7 @@ public:
     Klass* bytecode_function_klass;
     Klass* native_function_klass;
     Klass* hashtable_klass;
-    Klass* string_klass;
+    Klass* symbol_klass;
 
     State();
     ~State();

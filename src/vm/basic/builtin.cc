@@ -22,7 +22,7 @@ register_function(State* R, unsigned argc, Value* args) {
 
     if (!((fn.get_klass(R) == R->bytecode_function_klass
            || fn.get_klass(R) == R->native_function_klass)
-          && name.get_klass(R) == R->string_klass)) {
+          && name.get_klass(R) == R->symbol_klass)) {
         fatal("Invalid arguments");
     }
 
@@ -41,7 +41,7 @@ register_class(State* R, unsigned argc, Value* args) {
     Klass* klass = args[0].get_klass(R);
     Value name = args[1];
 
-    if (name.get_klass(R) != R->string_klass) {
+    if (name.get_klass(R) != R->symbol_klass) {
         fatal("Invalid arguments");
     }
 
@@ -52,7 +52,7 @@ register_class(State* R, unsigned argc, Value* args) {
 static Value
 register_variable(State* R, unsigned argc, Value* args) {
     if (!((argc == 2)
-          && args[0].get_klass(R) == R->string_klass)) {
+          && args[0].get_klass(R) == R->symbol_klass)) {
         fatal("Invalid arguments");
     }
 

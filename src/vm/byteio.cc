@@ -30,6 +30,27 @@ BinaryReader::read32Bit(FILE* fp, uint32_t& word) {
 }
 
 bool
+BinaryReader::readString(FILE* fp, State* R, String*& result) {
+	unsigned long length;
+	if (!BinaryReader::readBER(fp, length)) {
+		result = nullptr;
+		return false;
+	}
+	auto buffer = new char[length];
+	for (unsigned long i = 0; i < length; i++) {
+		if (feof(fp)) {
+			delete[] buffer;
+			result = nullptr;
+			return false;
+		}
+		buffer[i] = (char)fgetc(fp);
+	}
+	result = String::create(R, buffer, length);
+	delete[] buffer;
+	return true;
+}
+
+bool
 BinaryReader::readSymbol(FILE* fp, State* R, Symbol*& result) {
     unsigned long length;
     if(!BinaryReader::readBER(fp, length)) {
@@ -158,6 +179,13 @@ State::readFunction(FILE* fp) {
                     constant_table[i] = Value::by_object(string_value);
                 }
                 break;
+            case LiteralSigniture::String:
+            	{
+            		String* string_value;
+            		BinaryReader::readString(fp, this, string_value);
+            		constant_table[i] = Value::by_object(string_value);
+            	}
+            	break;
             default:
                 return false;
         }

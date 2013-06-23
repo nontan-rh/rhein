@@ -5,15 +5,18 @@
 #include <cstring>
 
 #include "object.h"
+#include "vm.h"
 
 namespace rhein {
 
-static String*
+String::String(State* R, const char* str, size_t len)
+	: Object(R->symbol_klass), body(str), length(len), hash_value(0) {}
+String*
 String::create(State* R, const char *str) {
 	return String::create(R, str, strlen(str));
 }
 
-static String*
+String*
 String::create(State *R, const char *str, size_t len) {
 	void* p = R->ator->allocateObject<String>();
 	return new (p) String(R, str, len);
@@ -25,9 +28,9 @@ String::index_ref(State* R, Value index, Value& value) const {
 	return true;
 }
 
-String*
+Symbol*
 String::get_string_representation(State* R) {
-	return this;
+	return nullptr;
 }
 
 void

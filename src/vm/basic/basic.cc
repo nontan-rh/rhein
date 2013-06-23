@@ -145,7 +145,7 @@ fn_literal(State* R, unsigned argc, Value* args) {
 
 Value
 fn_to_array(State* R, unsigned argc, Value* args) {
-    if (!(argc == 1 && args[0].get_klass(R) == R->string_klass)) {
+    if (!(argc == 1 && args[0].get_klass(R) == R->symbol_klass)) {
         fatal("Invalid arguments");
     }
 
@@ -177,13 +177,13 @@ fn_append(State* R, unsigned argc, Value* args) {
         return Value::by_object(R->s_prv->get_string(""));
     }
 
-    if (args[0].get_klass(R) != R->string_klass) {
+    if (args[0].get_klass(R) != R->symbol_klass) {
         fatal("Cannot append");
     }
 
     Symbol* result = args[0].get_obj<Symbol>();
     for (unsigned i = 1; i < argc; i++) {
-        if (args[i].get_klass(R) != R->string_klass) {
+        if (args[i].get_klass(R) != R->symbol_klass) {
             fatal("Cannot append");
         }
 
@@ -195,7 +195,7 @@ fn_append(State* R, unsigned argc, Value* args) {
 Value
 fn_head(State* R, unsigned argc, Value* args) {
     if (!(argc == 2
-        && args[0].get_klass(R) == R->string_klass
+        && args[0].get_klass(R) == R->symbol_klass
         && args[1].get_klass(R) == R->int_klass)) {
 
         fatal("Invalid arguments");
@@ -207,7 +207,7 @@ fn_head(State* R, unsigned argc, Value* args) {
 Value
 fn_tail(State* R, unsigned argc, Value* args) {
     if (!(argc == 2
-        && args[0].get_klass(R) == R->string_klass
+        && args[0].get_klass(R) == R->symbol_klass
         && args[1].get_klass(R) == R->int_klass)) {
 
         fatal("Invalid arguments");
@@ -219,7 +219,7 @@ fn_tail(State* R, unsigned argc, Value* args) {
 Value
 fn_sub(State* R, unsigned argc, Value* args) {
     if (!(argc == 3
-        && args[0].get_klass(R) == R->string_klass
+        && args[0].get_klass(R) == R->symbol_klass
         && args[1].get_klass(R) == R->int_klass
         && args[2].get_klass(R) == R->int_klass)) {
 
@@ -235,7 +235,7 @@ fn_length(State* R, unsigned argc, Value* args) {
         fatal("Invalid arguments");
     }
 
-    if (args[0].get_klass(R) == R->string_klass) {
+    if (args[0].get_klass(R) == R->symbol_klass) {
         return Value::by_int(args[0].get_obj<Symbol>()->get_length());
     } else if (args[0].get_klass(R) == R->array_klass) {
         return Value::by_int(args[0].get_obj<Array>()->get_length());

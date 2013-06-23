@@ -202,7 +202,7 @@ State::initializeKlass1() {
     SET_KLASS(bool, any);
     SET_KLASS(int, any);
     SET_KLASS(char, any);
-    SET_KLASS(string, any);
+    SET_KLASS(symbol, any);
     SET_KLASS(array, any);
     SET_KLASS(hashtable, any);
     SET_KLASS(method, any);
@@ -219,7 +219,7 @@ State::initializeKlass2() {
     SET_NAME(bool);
     SET_NAME(int);
     SET_NAME(char);
-    SET_NAME(string);
+    SET_NAME(symbol);
     SET_NAME(array);
     SET_NAME(hashtable);
     SET_NAME(method);
@@ -237,7 +237,7 @@ State::initializeKlass3() {
     HASH_SET(bool);
     HASH_SET(int);
     HASH_SET(char);
-    HASH_SET(string);
+    HASH_SET(symbol);
     HASH_SET(array);
     HASH_SET(hashtable);
     HASH_SET(method);
@@ -400,7 +400,7 @@ getInsnArgUU2(uint32_t insn) {
 #define GLOBAL_REFER_OP(op) { \
     Value id = fn->get_constant_table()[getInsnArgU(insn)]; \
     if (!id.is(Value::Type::Object) \
-			|| id.get_obj<Object>()->get_class() != R->string_klass) { \
+			|| id.get_obj<Object>()->get_class() != R->symbol_klass) { \
         fatal("Error on global refer"); \
     } \
     if (!R->op(id.get_obj<Symbol>(), *(--sp))) { \
@@ -413,7 +413,7 @@ getInsnArgUU2(uint32_t insn) {
 #define GLOBAL_SET_OP(op) { \
     Value id = fn->get_constant_table()[getInsnArgU(insn)]; \
     if (!id.is(Value::Type::Object) \
-    		|| id.get_obj<Object>()->get_class() != R->string_klass) { \
+    		|| id.get_obj<Object>()->get_class() != R->symbol_klass) { \
         fatal("Error on global set"); \
     } \
     if (!R->op(id.get_obj<Symbol>(), *(sp))) { \
@@ -616,7 +616,7 @@ rhein::execute(State* R, BytecodeFunction* bfn, unsigned argc_, Value* args_) {
                 Value id = fn->get_constant_table()[getInsnArgU(insn)];
 
                 if (!obj.is(Value::Type::Object) || !id.is(Value::Type::Object)
-                    || id.get_obj<Object>()->get_class() != R->string_klass) {
+                    || id.get_obj<Object>()->get_class() != R->symbol_klass) {
 
                     obj.get_klass(R)->get_name()->dump();
                     fatal("Cannot refer");
@@ -634,7 +634,7 @@ rhein::execute(State* R, BytecodeFunction* bfn, unsigned argc_, Value* args_) {
                 Value id = fn->get_constant_table()[getInsnArgU(insn)];
 
                 if (!obj.is(Value::Type::Object) || !id.is(Value::Type::Object)
-                    || id.get_obj<Object>()->get_class() != R->string_klass) {
+                    || id.get_obj<Object>()->get_class() != R->symbol_klass) {
                     
                     fatal("Cannot set");
                 }
@@ -661,7 +661,7 @@ rhein::execute(State* R, BytecodeFunction* bfn, unsigned argc_, Value* args_) {
             case Insn::LoadKlass: {
                 Value id = fn->get_constant_table()[getInsnArgU(insn)];
 
-                if (!(id.is(Value::Type::Object) && id.get_obj<Object>()->get_class() == R->string_klass)) {
+                if (!(id.is(Value::Type::Object) && id.get_obj<Object>()->get_class() == R->symbol_klass)) {
                     fatal("Name must be string");
                 }
 
@@ -690,7 +690,7 @@ rhein::execute(State* R, BytecodeFunction* bfn, unsigned argc_, Value* args_) {
             case Insn::Enclose: {
                 Value id = fn->get_constant_table()[getInsnArgU(insn)];
 
-                if (!id.is(Value::Type::Object) || id.get_obj<Object>()->get_class() != R->string_klass) {
+                if (!id.is(Value::Type::Object) || id.get_obj<Object>()->get_class() != R->symbol_klass) {
                     fatal("Cannot enclose");
                 }
 

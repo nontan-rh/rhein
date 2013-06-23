@@ -248,8 +248,7 @@ public:
 	static String* create(State* R, const char* cstr, size_t len);
 
 	unsigned long get_hash() { return hash_value; }
-	bool index_ref(State* R, Value index, Value& value) const;
-	String* get_string_representation(State* R);
+	Symbol* get_string_representation(State* R);
     void get_cstr(const char*& body, size_t& length) const;
 
     // Override
