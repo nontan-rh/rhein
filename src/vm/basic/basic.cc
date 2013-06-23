@@ -298,27 +298,27 @@ BasicModule::create(State* R) {
     return new (p) BasicModule;
 }
 
+static inline void
+add_function(State* R, const char* name, NativeFunctionBody fn) {
+	R->addFunction(NativeFunction::create(R, R->s_prv->get_string(name), fn));
+}
 
 bool
 BasicModule::initialize(State* R) {
-#define ADD_FUNC(x) R->addFunction(NativeFunction::create(R, \
-    R->s_prv->get_string(#x), fn_ ## x));
-    ADD_FUNC(print);
-    ADD_FUNC(write);
-    ADD_FUNC(input);
-    ADD_FUNC(new);
-    ADD_FUNC(literal);
-    ADD_FUNC(to_array);
-    ADD_FUNC(to_string);
-    ADD_FUNC(append);
-    ADD_FUNC(head);
-    ADD_FUNC(tail);
-    ADD_FUNC(sub);
-    ADD_FUNC(length);
-    ADD_FUNC(die);
-    ADD_FUNC(is_a);
-    ADD_FUNC(load);
-#undef ADD_FUNC
+	add_function(R, "print", fn_print);
+	add_function(R, "input", fn_input);
+	add_function(R, "new", fn_new);
+	add_function(R, "literal", fn_literal);
+	add_function(R, "to_array", fn_to_array);
+	add_function(R, "to_string", fn_to_string);
+	add_function(R, "append", fn_append);
+	add_function(R, "head", fn_head);
+	add_function(R, "tail", fn_tail);
+	add_function(R, "sub", fn_sub);
+	add_function(R, "length", fn_length);
+	add_function(R, "die", fn_die);
+	add_function(R, "is_a", fn_is_a);
+	add_function(R, "print", fn_load);
     return false;
 }
 

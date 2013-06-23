@@ -57,6 +57,7 @@ public:
     Klass* bytecode_function_klass;
     Klass* native_function_klass;
     Klass* hashtable_klass;
+    Klass* string_klass;
     Klass* symbol_klass;
 
     State();
@@ -106,6 +107,8 @@ public:
     void dumpFunctions();
     void dumpClasses();
     void dumpVariables();
+private:
+    void set_class_hash(Klass* klass);
 };
 
 class Module {

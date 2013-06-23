@@ -66,15 +66,16 @@ BuiltinModule::create(State* R) {
     return new (p) BuiltinModule;
 }
 
+static inline void
+add_function(State* R, const char* name, NativeFunctionBody fn) {
+	R->addFunction(NativeFunction::create(R, R->s_prv->get_string(name), fn));
+}
 
 bool
 BuiltinModule::initialize(State* R) {
-#define ADD_FUNC(n, x) R->addFunction(NativeFunction::create(R, \
-    R->s_prv->get_string(n), x))
-    ADD_FUNC("!!register_function", register_function);
-    ADD_FUNC("!!register_class", register_class);
-    ADD_FUNC("!!register_variable", register_variable);
-#undef ADD_FUNC
+    add_function(R, "!!register_function", register_function);
+    add_function(R, "!!register_class", register_class);
+    add_function(R, "!!register_variable", register_variable);
     return false;
 }
 

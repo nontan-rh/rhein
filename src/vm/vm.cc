@@ -196,54 +196,57 @@ State::~State() {
 
 void
 State::initializeKlass1() {
-#define SET_KLASS(name, parent) name ## _klass = Klass::create(this, nullptr, parent ## _klass)
     any_klass = Klass::create(this, nullptr, nullptr);
-    SET_KLASS(null, any);
-    SET_KLASS(bool, any);
-    SET_KLASS(int, any);
-    SET_KLASS(char, any);
-    SET_KLASS(symbol, any);
-    SET_KLASS(array, any);
-    SET_KLASS(hashtable, any);
-    SET_KLASS(method, any);
-    SET_KLASS(bytecode_function, any);
-    SET_KLASS(native_function, any);
-#undef SET_KLASS
+    null_klass = Klass::create(this, nullptr, any_klass);
+    bool_klass = Klass::create(this, nullptr, any_klass);
+    int_klass = Klass::create(this, nullptr, any_klass);
+    char_klass = Klass::create(this, nullptr, any_klass);
+    symbol_klass = Klass::create(this, nullptr, any_klass);
+    string_klass = Klass::create(this, nullptr, any_klass);
+    array_klass = Klass::create(this, nullptr, any_klass);
+    hashtable_klass = Klass::create(this, nullptr, any_klass);
+    method_klass = Klass::create(this, nullptr, any_klass);
+    bytecode_function_klass = Klass::create(this, nullptr, any_klass);
+    native_function_klass = Klass::create(this, nullptr, any_klass);
 }
 
 void
 State::initializeKlass2() {
-#define SET_NAME(name) name ## _klass->set_name(s_prv->get_string(#name))
-    SET_NAME(any);
-    SET_NAME(null);
-    SET_NAME(bool);
-    SET_NAME(int);
-    SET_NAME(char);
-    SET_NAME(symbol);
-    SET_NAME(array);
-    SET_NAME(hashtable);
-    SET_NAME(method);
-    SET_NAME(bytecode_function);
-    SET_NAME(native_function);
-#undef SET_NAME
+	any_klass->set_name(s_prv->get_string("any"));
+	null_klass->set_name(s_prv->get_string("null"));
+	bool_klass->set_name(s_prv->get_string("bool"));
+	int_klass->set_name(s_prv->get_string("int"));
+	char_klass->set_name(s_prv->get_string("char"));
+	symbol_klass->set_name(s_prv->get_string("symbol"));
+	string_klass->set_name(s_prv->get_string("string"));
+	array_klass->set_name(s_prv->get_string("array"));
+	hashtable_klass->set_name(s_prv->get_string("hashtable"));
+	method_klass->set_name(s_prv->get_string("method"));
+	bytecode_function_klass->set_name(s_prv->get_string("bytecode_function"));
+	native_function_klass->set_name(s_prv->get_string("native_function"));
+}
+
+void
+State::set_class_hash(Klass* klass){
+	klass_slots->insert(this,
+			Value::by_object(klass->get_name()),
+			Value::by_object(klass));
 }
 
 void
 State::initializeKlass3() {
-#define HASH_SET(name) klass_slots->insert(this, \
-    Value::by_object(s_prv->get_string(#name)), Value::by_object(name ## _klass))
-    HASH_SET(any);
-    HASH_SET(null);
-    HASH_SET(bool);
-    HASH_SET(int);
-    HASH_SET(char);
-    HASH_SET(symbol);
-    HASH_SET(array);
-    HASH_SET(hashtable);
-    HASH_SET(method);
-    HASH_SET(bytecode_function);
-    HASH_SET(native_function);
-#undef HASH_SET
+	set_class_hash(any_klass);
+	set_class_hash(null_klass);
+	set_class_hash(bool_klass);
+	set_class_hash(int_klass);
+	set_class_hash(char_klass);
+	set_class_hash(symbol_klass);
+	set_class_hash(string_klass);
+	set_class_hash(array_klass);
+	set_class_hash(hashtable_klass);
+	set_class_hash(method_klass);
+	set_class_hash(bytecode_function_klass);
+	set_class_hash(native_function_klass);
 }
 
 void

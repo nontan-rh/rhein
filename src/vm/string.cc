@@ -10,7 +10,8 @@
 namespace rhein {
 
 String::String(State* R, const char* str, size_t len)
-	: Object(R->symbol_klass), body(str), length(len), hash_value(0) {}
+	: Object(R->string_klass), body(str), length(len), hash_value(0) {}
+
 String*
 String::create(State* R, const char *str) {
 	return String::create(R, str, strlen(str));
