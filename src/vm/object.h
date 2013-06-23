@@ -10,6 +10,8 @@
 #include <cassert>
 #include <cstddef>
 
+#include "internal.h"
+
 namespace rhein {
 
 class Object;
@@ -22,10 +24,6 @@ class Array;
 
 typedef int Int;
 
-class PlacementNewObj {
-protected:
-    static void* operator new (size_t /* size */, void* p) { return p; }
-};
 
 class Value {
 public:
