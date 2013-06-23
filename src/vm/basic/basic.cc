@@ -145,7 +145,7 @@ fn_literal(State* R, unsigned argc, Value* args) {
 
 Value
 fn_to_array(State* R, unsigned argc, Value* args) {
-    if (!(argc == 1 && args[0].get_klass(R) == R->symbol_klass)) {
+    if (!(argc == 1 && args[0].get_klass(R) == R->string_klass)) {
         fatal("Invalid arguments");
     }
 
@@ -302,7 +302,7 @@ BasicModule::create(State* R) {
 
 static inline void
 add_function(State* R, const char* name, NativeFunctionBody fn) {
-	R->addFunction(NativeFunction::create(R, R->s_prv->get_string(name), fn));
+	R->addFunction(NativeFunction::create(R, R->s_prv->get_symbol(name), fn));
 }
 
 bool

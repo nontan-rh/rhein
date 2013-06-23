@@ -212,18 +212,18 @@ State::initializeKlass1() {
 
 void
 State::initializeKlass2() {
-	any_klass->set_name(s_prv->get_string("any"));
-	null_klass->set_name(s_prv->get_string("null"));
-	bool_klass->set_name(s_prv->get_string("bool"));
-	int_klass->set_name(s_prv->get_string("int"));
-	char_klass->set_name(s_prv->get_string("char"));
-	symbol_klass->set_name(s_prv->get_string("symbol"));
-	string_klass->set_name(s_prv->get_string("string"));
-	array_klass->set_name(s_prv->get_string("array"));
-	hashtable_klass->set_name(s_prv->get_string("hashtable"));
-	method_klass->set_name(s_prv->get_string("method"));
-	bytecode_function_klass->set_name(s_prv->get_string("bytecode_function"));
-	native_function_klass->set_name(s_prv->get_string("native_function"));
+	any_klass->set_name(s_prv->get_symbol("any"));
+	null_klass->set_name(s_prv->get_symbol("null"));
+	bool_klass->set_name(s_prv->get_symbol("bool"));
+	int_klass->set_name(s_prv->get_symbol("int"));
+	char_klass->set_name(s_prv->get_symbol("char"));
+	symbol_klass->set_name(s_prv->get_symbol("symbol"));
+	string_klass->set_name(s_prv->get_symbol("string"));
+	array_klass->set_name(s_prv->get_symbol("array"));
+	hashtable_klass->set_name(s_prv->get_symbol("hashtable"));
+	method_klass->set_name(s_prv->get_symbol("method"));
+	bytecode_function_klass->set_name(s_prv->get_symbol("bytecode_function"));
+	native_function_klass->set_name(s_prv->get_symbol("native_function"));
 }
 
 void

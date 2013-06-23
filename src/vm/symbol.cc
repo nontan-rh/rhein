@@ -172,7 +172,7 @@ Symbol::create(State* R, const char* body, size_t length) {
 }
 
 Symbol*
-SymbolProvider::get_string(const char* buffer, size_t length) {
+SymbolProvider::get_symbol(const char* buffer, size_t length) {
     Symbol *registered;
     if (string_hash_table->find(buffer, length, registered)) {
         return registered;
@@ -186,8 +186,8 @@ SymbolProvider::get_string(const char* buffer, size_t length) {
 }
 
 Symbol*
-SymbolProvider::get_string(const char* cstr) {
-    return get_string(cstr, strlen(cstr));
+SymbolProvider::get_symbol(const char* cstr) {
+    return get_symbol(cstr, strlen(cstr));
 }
 
 void
@@ -214,51 +214,6 @@ Symbol::index_ref(State* /* R */, Value vindex, Value& dest) const {
 String*
 Symbol::get_string_representation(State* R) {
     return String::create(R, body, length);
-}
-
-Symbol*
-Symbol::append(State* R, Symbol* rht) {
-    size_t newlength = this->length + rht->length;
-    char* buffer = R->ator->allocateBlock<char>(newlength);
-    memcpy(buffer, this->body, this->length);
-    memcpy(buffer + this->length, rht->body, rht->length);
-    Symbol* ret = R->s_prv->get_string(buffer, newlength);
-    R->ator->releaseBlock(buffer);
-    return ret;
-}
-
-Symbol*
-Symbol::head(State* R, size_t end) {
-    if (end > length) {
-        throw;
-    }
-    return R->s_prv->get_string(body, end);
-}
-
-Symbol*
-Symbol::tail(State* R, size_t begin) {
-    if (begin >= length) {
-        throw;
-    }
-    return R->s_prv->get_string(body + begin, length - begin);
-}
-
-Symbol*
-Symbol::sub(State* R, size_t begin, size_t end) {
-    if (end > length || begin >= length || end < begin) {
-        throw;
-    }
-    return R->s_prv->get_string(body + begin, end - begin);
-}
-
-bool
-Symbol::to_array(State* R, Array*& array) {
-    array = Array::create(R, length);
-
-    for (unsigned i = 0; i < length; i++) {
-        array->elt_set(i, Value::by_char(body[i]));
-    }
-    return true;
 }
 
 void

@@ -28,7 +28,7 @@ int main(int argc, char** argv) {
 
     load_script(R, argv[1]);
 
-    execute(R, R->s_prv->get_string("main"), 0, nullptr);
+    execute(R, R->s_prv->get_symbol("main"), 0, nullptr);
     return 0;
 }
 

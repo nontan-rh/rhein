@@ -216,13 +216,6 @@ public:
 
     Int get_length() const { return length; }
 
-    Symbol* append(State* R, Symbol* rht);
-    Symbol* head(State* R, size_t end);
-    Symbol* tail(State* R, size_t begin);
-    Symbol* sub(State* R, size_t begin, size_t end);
-
-    bool to_array(State* R, Array*& array);
-
     // For debugging
     void dump() const;
 };
@@ -239,8 +232,8 @@ class SymbolProvider {
 
 public:
     static SymbolProvider* create(State* R);
-    Symbol* get_string(const char* buffer, size_t length);
-    Symbol* get_string(const char* cstr);
+    Symbol* get_symbol(const char* buffer, size_t length);
+    Symbol* get_symbol(const char* cstr);
 };
 
 class String : public Object {

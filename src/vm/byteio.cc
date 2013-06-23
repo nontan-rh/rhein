@@ -66,7 +66,7 @@ BinaryReader::readSymbol(FILE* fp, State* R, Symbol*& result) {
         }
         buffer[i] = (char)fgetc(fp);
     }
-    result = R->s_prv->get_string(buffer, length);
+    result = R->s_prv->get_symbol(buffer, length);
     delete[] buffer;
     return true;
 }
