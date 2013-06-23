@@ -10,7 +10,12 @@
 namespace rhein {
 
 String::String(State* R, const char* str, size_t len)
-	: Object(R->string_klass), body(str), length(len), hash_value(0) {}
+	: Object(R->string_klass), length(len), hash_value(0) {
+
+	char* body_ = R->ator->allocateBlock<char>(length + 1);
+	memcpy(body_, str, length + 1);
+	body = body_;
+}
 
 String*
 String::create(State* R, const char *str) {
@@ -24,14 +29,14 @@ String::create(State *R, const char *str, size_t len) {
 }
 
 bool
-String::index_ref(State* R, Value index, Value& value) const {
+String::index_ref(State* /* R */, Value index, Value& value) const {
 	value = Value::by_char(body[index.get_int()]);
 	return true;
 }
 
-Symbol*
-String::get_string_representation(State* R) {
-	return nullptr;
+String*
+String::get_string_representation(State* /* R */) {
+	return this;
 }
 
 void
@@ -73,6 +78,16 @@ String::sub(State* R, size_t begin, size_t end) {
         throw;
     }
     return String::create(R, body + begin, end - begin);
+}
+
+bool
+String::to_array(State* R, Array*& array) {
+    array = Array::create(R, length);
+
+    for (unsigned i = 0; i < length; i++) {
+        array->elt_set(i, Value::by_char(body[i]));
+    }
+    return true;
 }
 
 }

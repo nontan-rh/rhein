@@ -14,6 +14,7 @@ namespace rhein {
 
 class Object;
 class Symbol;
+class String;
 class Klass;
 struct Frame;
 class State;
@@ -119,7 +120,7 @@ public:
 
     virtual Klass* get_class() { return klass; }
 
-    virtual Symbol* get_string_representation(State* R);
+    virtual String* get_string_representation(State* R);
 
     // Bytecode level object interface
     // Always fails by default
@@ -207,7 +208,7 @@ class Symbol : public Object {
 public:
     unsigned long get_hash() { return hash_value; }
 
-    Symbol* get_string_representation(State* R);
+    String* get_string_representation(State* R);
     void get_cstr(const char*& body, size_t& length) const;
 
     // Override
@@ -248,7 +249,7 @@ public:
 	static String* create(State* R, const char* cstr, size_t len);
 
 	unsigned long get_hash() { return hash_value; }
-	Symbol* get_string_representation(State* R);
+	String* get_string_representation(State* R);
     void get_cstr(const char*& body, size_t& length) const;
 
     // Override
@@ -261,6 +262,7 @@ public:
     String* tail(State* R, size_t begin);
     String* sub(State* R, size_t begin, size_t end);
 
+    bool to_array(State* R, Array*& array);
 private:
 	const char* body;
 	size_t length;
@@ -311,7 +313,7 @@ public:
         return elt_set(index.get_int(), value);
     }
 
-    bool to_string(State* R, Symbol*& dest);
+    bool to_string(State* R, String*& dest);
 };
 
 struct HashTableNode;

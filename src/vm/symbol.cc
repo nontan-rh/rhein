@@ -178,8 +178,8 @@ SymbolProvider::get_string(const char* buffer, size_t length) {
         return registered;
     }
 
-    char* copybuffer = owner->ator->allocateBlock<char>(length);
-    memcpy(copybuffer, buffer, length);
+    char* copybuffer = owner->ator->allocateBlock<char>(length + 1);
+    memcpy(copybuffer, buffer, length + 1);
     Symbol* new_string = Symbol::create(owner, copybuffer, length);
     string_hash_table->insert(owner, new_string);
     return new_string;
@@ -211,9 +211,9 @@ Symbol::index_ref(State* /* R */, Value vindex, Value& dest) const {
     return true;
 }
 
-Symbol*
-Symbol::get_string_representation(State* /* R */) {
-    return this;
+String*
+Symbol::get_string_representation(State* R) {
+    return String::create(R, body, length);
 }
 
 Symbol*

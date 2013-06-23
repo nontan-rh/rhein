@@ -27,7 +27,7 @@ Array::Array(State* R, Int size_) : Object(R->array_klass), size(size_) {
 }
 
 bool
-Array::to_string(State* R, Symbol*& dest) {
+Array::to_string(State* R, String*& dest) {
     char* buf = R->ator->allocateBlock<char>(size);
     
     for (Int i = 0; i < size; i++) {
@@ -39,7 +39,7 @@ Array::to_string(State* R, Symbol*& dest) {
         buf[i] = body[i].get_char();
     }
 
-    dest = R->s_prv->get_string(buf, size);
+    dest = String::create(R, buf, size);
     R->ator->releaseBlock(buf);
     return true;
 }

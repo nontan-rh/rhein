@@ -7,9 +7,9 @@
 
 using namespace rhein;
 
-Symbol*
+String*
 Object::get_string_representation(State* R) {
-    return R->s_prv->get_string("#<obj>");
+    return String::create(R, "#<obj>");
 }
 
 Klass*

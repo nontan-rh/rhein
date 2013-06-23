@@ -385,7 +385,7 @@
                       :members (list->vector
                                  (map symbol->string (~ a 'members)))))
     (x->lseq
-      (list (vector "load" (constant "string" (symbol->string e)))
+      (list (vector "load" (constant "symbol" (symbol->string e)))
             (vector "loadklass" i)
             (vector "gfref" "!!register_class")
             (vector "call" 2)))))
@@ -423,7 +423,7 @@
                               :parameter-class classes))))
     (if (*is-global-context*)
       (x->lseq
-        (list (vector "load" (constant "string" (symbol->string e)))
+        (list (vector "load" (constant "symbol" (symbol->string e)))
               (vector "gfref" i)
               (vector "gfref" "!!register_function")
               (vector "call" 2)))
@@ -437,7 +437,7 @@
                (x->lseq (list (vector "loadundef")))
                (generate-code (~ x 'initial-value)))
              (x->lseq
-               (list (vector "load" (constant "string" (symbol->string (~ x 'id))))
+               (list (vector "load" (constant "symbol" (symbol->string (~ x 'id))))
                      (vector "gfref" "!!register_variable")
                      (vector "call" 2)))))
   (unless (*is-global-context*)
