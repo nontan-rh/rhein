@@ -27,7 +27,7 @@ struct rhein::HashTableNode : public PlacementNewObj {
 };
 
 HashTable::HashTable(State* R)
-    : Object(R->hashtable_klass), table_size(default_table_size), num_entries(0) {
+    : Object(R->hashtable_class), table_size(default_table_size), num_entries(0) {
     table = R->ator->allocateBlock<HashTableNode>(default_table_size);
     for (unsigned i = 0; i < num_entries; i++) {
         table[i].next = nullptr;

@@ -47,18 +47,18 @@ public:
     Allocator* ator;
     SymbolProvider* s_prv;
 
-    Klass* any_klass;
-    Klass* int_klass;
-    Klass* char_klass;
-    Klass* null_klass;
-    Klass* bool_klass;
-    Klass* array_klass;
-    Klass* method_klass;
-    Klass* bytecode_function_klass;
-    Klass* native_function_klass;
-    Klass* hashtable_klass;
-    Klass* string_klass;
-    Klass* symbol_klass;
+    Klass* any_class;
+    Klass* int_class;
+    Klass* char_class;
+    Klass* nil_class;
+    Klass* bool_class;
+    Klass* array_class;
+    Klass* method_class;
+    Klass* bytecode_function_class;
+    Klass* native_function_class;
+    Klass* hashtable_class;
+    Klass* string_class;
+    Klass* symbol_class;
 
     State();
     ~State();

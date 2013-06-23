@@ -162,7 +162,7 @@ SymbolProvider::create(State* R) {
 }
 
 Symbol::Symbol(State* R, const char* body_, size_t length_)
-    : Object(R->symbol_klass), body(body_), length(length_),
+    : Object(R->symbol_class), body(body_), length(length_),
       hash_value(0) { }
 
 Symbol*

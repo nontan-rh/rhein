@@ -37,7 +37,7 @@ FunctionInfo::resolve(State* R) {
 }
 
 NativeFunction::NativeFunction(State* R, FunctionInfo* info, NativeFunctionBody body_)
-    : Function(R->native_function_klass, info), body(body_), copied(false) { }
+    : Function(R->native_function_class, info), body(body_), copied(false) { }
 
 NativeFunction*
 NativeFunction::create(State* R, FunctionInfo* info, NativeFunctionBody body) {
@@ -64,7 +64,7 @@ BytecodeFunction::BytecodeFunction(State* R, FunctionInfo* info,
     unsigned func_slot_size_, unsigned var_slot_size_,
     unsigned stack_size_, unsigned constant_table_size_,
     Value* constant_table_, unsigned bytecode_size_, uint32_t* bytecode_)
-    : Function(R->bytecode_function_klass, info),
+    : Function(R->bytecode_function_class, info),
       copied(false),
       stack_size(stack_size_), func_slot_size(func_slot_size_),
       var_slot_size(var_slot_size_),
@@ -184,7 +184,7 @@ public:
 };
 
 Method::Method(State* R)
-    : Object(R->method_klass), copied(false),
+    : Object(R->method_class), copied(false),
       node(DispatcherNode::create(R)),
       closure(nullptr) { }
 

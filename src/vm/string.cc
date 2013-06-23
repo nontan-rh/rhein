@@ -10,7 +10,7 @@
 namespace rhein {
 
 String::String(State* R, const char* str, size_t len)
-	: Object(R->string_klass), length(len), hash_value(0) {
+	: Object(R->string_class), length(len), hash_value(0) {
 
 	char* body_ = R->ator->allocateBlock<char>(length + 1);
 	memcpy(body_, str, length + 1);

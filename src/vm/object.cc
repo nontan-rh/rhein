@@ -30,15 +30,15 @@ Klass*
 Value::get_klass(State *R) {
 	switch (type_id) {
 	case Type::Nil:
-		return R->null_klass;
+		return R->nil_class;
 	case Type::Bool:
-		return R->bool_klass;
+		return R->bool_class;
 	case Type::Int:
-		return R->int_klass;
+		return R->int_class;
 	case Type::Undef:
-		return R->null_klass;
+		return R->nil_class;
 	case Type::Char:
-		return R->char_klass;
+		return R->char_class;
 	case Type::Object:
 		return u.v_obj->get_class();
 	}

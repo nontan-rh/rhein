@@ -8,7 +8,11 @@
 #include <cstdio>
 #include <cstdlib>
 
-#define fatal(str) do { fprintf(stderr, "%s:%d\t%s\n", __FILE__, __LINE__, str); exit(1); } while(0)
+inline void
+fatal(const char *str) {
+	fprintf(stderr, "%s:%d\t%s\n", __FILE__, __LINE__, str);
+	exit(1);
+}
 
 #endif // ERROR_H
 

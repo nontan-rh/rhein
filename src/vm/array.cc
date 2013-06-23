@@ -17,7 +17,7 @@ Array::create(State* R, Int size) {
     return new (p) Array(R, size);
 }
 
-Array::Array(State* R, Int size_) : Object(R->array_klass), size(size_) {
+Array::Array(State* R, Int size_) : Object(R->array_class), size(size_) {
     allocated_size = 1;
     while (size > allocated_size) {
         allocated_size *= 2;
