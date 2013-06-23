@@ -14,16 +14,7 @@
 
 namespace rhein {
 
-class Object;
-class Symbol;
-class String;
-class Klass;
-struct Frame;
-class State;
-class Array;
-
 typedef int Int;
-
 
 class Value {
 public:
@@ -380,46 +371,28 @@ typedef Value (*NativeFunctionBody)(State*, unsigned, Value*);
 
 class Function : public Object {
 protected:
-    Symbol* name;
-    bool variadic;
-    unsigned arg_count;
-    Symbol** arg_klass_id;
-    Klass** arg_klass;
+	FunctionInfo *info_;
     Frame* closure;
 
-    Function(Klass* klass, Symbol* name_, bool variadic_, unsigned arg_count_,
-        Symbol** arg_klass_id_)
-        : Object(klass), name(name_), variadic(variadic_),
-          arg_count(arg_count_), arg_klass_id(arg_klass_id_), arg_klass(nullptr),
-          closure(nullptr) { }
+    Function(Klass* klass, FunctionInfo *info)
+        : Object(klass), info_(info), closure(nullptr) { }
 
 public:
-    Klass** get_arg_classes() const { return arg_klass; }
-    unsigned get_num_args() const { return arg_count; }
-    bool is_variadic() const { return variadic; }
-    const Symbol* get_name() const { return name; }
+    FunctionInfo* info() const { return info_; }
     Frame* get_closure() const { return closure; }
 
-    bool resolve(State* R);
+    bool resolve(State* R) { return info_->resolve(R); }
 };
 
 class NativeFunction : public Function {
     NativeFunctionBody body;
     bool copied;
 
-    NativeFunction(State* R, Symbol* name, bool variable_arg,
-        unsigned arg_count, Symbol** arg_klass_id, NativeFunctionBody body);
+    NativeFunction(State* R, FunctionInfo* info, NativeFunctionBody body);
 
 public:
-    static NativeFunction* create(State* R, Symbol* name,
-        NativeFunctionBody body) {
-
-        return create(R, name, true, 0, nullptr, body);
-    }
-
-    static NativeFunction* create(State* R, Symbol* name,
-        bool variable_arg, unsigned arg_count, Symbol** arg_klass_id,
-        NativeFunctionBody body);
+    static NativeFunction* create(State* R, FunctionInfo* name,
+    		NativeFunctionBody body);
 
     NativeFunctionBody get_body() const { return body; }
 
@@ -437,17 +410,13 @@ class BytecodeFunction : public Function {
     unsigned bytecode_size;
     uint32_t* bytecode;
 
-    BytecodeFunction(State* R, Symbol* name_, bool variable_arg_,
-        unsigned argc_, Symbol** arg_klass_id_, unsigned func_slot_size_,
-        unsigned var_slot_size_, unsigned stack_size_,
+    BytecodeFunction(State* R, FunctionInfo* info,
+        unsigned func_slot_size, unsigned var_slot_size_, unsigned stack_size_,
         unsigned constant_table_size_, Value* constant_table_,
         unsigned bytecode_size_, uint32_t* bytecode_);
 
 public:
-    unsigned long hash() { return reinterpret_cast<unsigned long>(this); }
-
-    static BytecodeFunction* create(State* R, Symbol* name,
-        bool variable_arg, unsigned argc, Symbol** arg_klass_id,
+    static BytecodeFunction* create(State* R, FunctionInfo *info,
         unsigned func_slot_size, unsigned var_slot_size, unsigned stack_size,
         unsigned constant_table_size, Value* constant_table,
         unsigned bytecode_size, uint32_t* bytecode);

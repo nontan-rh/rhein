@@ -5,9 +5,15 @@
 #ifndef INTERNAL_H
 #define INTERNAL_H
 
-class State;
+namespace rhein {
+
+class Object;
 class Symbol;
+class String;
 class Klass;
+struct Frame;
+class Array;
+class State;
 
 class PlacementNewObj {
 protected:
@@ -16,7 +22,9 @@ protected:
 
 class FunctionInfo : public PlacementNewObj {
 public:
-	static FunctionInfo* create(State* R, Symbol* name);
+	static FunctionInfo* create(State* R, Symbol* id);
+	static FunctionInfo* create(State* R, Symbol* id, bool variadic,
+			unsigned num_args, Symbol** arg_class_ids);
 
 	Symbol* name() const { return name_; }
 	bool variadic() const { return variadic_; }
@@ -29,7 +37,7 @@ private:
 	Symbol* name_;
 	bool variadic_;
 	unsigned num_args_;
-	Symbol* arg_class_ids_;
+	Symbol** arg_class_ids_;
 	Klass** arg_classes_;
 
 	FunctionInfo(Symbol* name, bool variadic, unsigned num_args,
@@ -37,5 +45,7 @@ private:
 			num_args_(num_args), arg_class_ids_(arg_class_ids),
 			arg_classes_(nullptr) { }
 };
+
+}
 
 #endif /* INTERNAL_H_ */

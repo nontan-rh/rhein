@@ -8,35 +8,41 @@
 
 using namespace rhein;
 
-bool
-Function::resolve(State* R) {
-    arg_klass = R->ator->allocateBlock<Klass*>(arg_count);
+FunctionInfo*
+FunctionInfo::create(State* R, Symbol* id) {
+	return create(R, id, true, 0, nullptr);
+}
 
-    for (unsigned i = 0; i < arg_count; i++) {
+FunctionInfo*
+FunctionInfo::create(State* R, Symbol* id, bool variadic, unsigned num_args,
+		Symbol** arg_class_ids) {
+	void* p = R->ator->allocateStruct<FunctionInfo>();
+	return new (p) FunctionInfo(id, variadic, num_args, arg_class_ids);
+}
+
+bool
+FunctionInfo::resolve(State* R) {
+    arg_classes_ = R->ator->allocateBlock<Klass*>(num_args_);
+
+    for (unsigned i = 0; i < num_args_; i++) {
         Value klass;
-        if (!R->getKlass(arg_klass_id[i], klass)) {
+        if (!R->getKlass(arg_class_ids_[i], klass)) {
             return false;
         }
 
-        arg_klass[i] = klass.get_obj<Klass>();
+        arg_classes_[i] = klass.get_obj<Klass>();
     }
 
     return true;
 }
 
-NativeFunction::NativeFunction(State* R, Symbol* name, bool variable_arg,
-    unsigned arg_count, Symbol** arg_klass_id, NativeFunctionBody body_)
-    : Function(R->native_function_klass, name, variable_arg, arg_count,
-        arg_klass_id),
-        body(body_), copied(false) { }
+NativeFunction::NativeFunction(State* R, FunctionInfo* info, NativeFunctionBody body_)
+    : Function(R->native_function_klass, info), body(body_), copied(false) { }
 
 NativeFunction*
-NativeFunction::create(State* R, Symbol* name, bool variable_arg,
-    unsigned arg_count, Symbol** arg_klass_id, NativeFunctionBody body) {
-
+NativeFunction::create(State* R, FunctionInfo* info, NativeFunctionBody body) {
     void* p = R->ator->allocateObject<NativeFunction>();
-    return new (p) NativeFunction(R, name, variable_arg, arg_count,
-        arg_klass_id, body);
+    return new (p) NativeFunction(R, info, body);
 }
 
 NativeFunction*
@@ -54,13 +60,11 @@ NativeFunction::enclose(State* R, Frame* closure) {
     return closure_func;
 }
 
-BytecodeFunction::BytecodeFunction(State* R, Symbol* name_,
-    bool variable_arg_, unsigned argc_, Symbol** arg_klass_id_,
+BytecodeFunction::BytecodeFunction(State* R, FunctionInfo* info,
     unsigned func_slot_size_, unsigned var_slot_size_,
     unsigned stack_size_, unsigned constant_table_size_,
     Value* constant_table_, unsigned bytecode_size_, uint32_t* bytecode_)
-    : Function(R->bytecode_function_klass, name_, variable_arg_, argc_,
-        arg_klass_id_),
+    : Function(R->bytecode_function_klass, info),
       copied(false),
       stack_size(stack_size_), func_slot_size(func_slot_size_),
       var_slot_size(var_slot_size_),
@@ -70,14 +74,13 @@ BytecodeFunction::BytecodeFunction(State* R, Symbol* name_,
       bytecode(bytecode_) { }
 
 BytecodeFunction*
-BytecodeFunction::create(State* R, Symbol* name,
-    bool variable_arg, unsigned argc, Symbol** arg_klass_id,
+BytecodeFunction::create(State* R, FunctionInfo* info,
     unsigned func_slot_size, unsigned var_slot_size, unsigned stack_size,
     unsigned constant_table_size, Value* constant_table,
     unsigned bytecode_size, uint32_t* bytecode) {
 
     void* p = R->ator->allocateObject<BytecodeFunction>();
-    return new (p) BytecodeFunction(R, name, variable_arg, argc, arg_klass_id,
+    return new (p) BytecodeFunction(R, info,
         func_slot_size, var_slot_size, stack_size, constant_table_size,
         constant_table, bytecode_size, bytecode);
 }
@@ -152,8 +155,8 @@ public:
 
     bool addFunction(State* R, Value func, Function* func_body,
     		unsigned index) {
-        if (func_body->get_num_args() == index) {
-            if (func_body->is_variadic()) {
+        if (func_body->info()->num_args() == index) {
+            if (func_body->info()->variadic()) {
                 if (!variable_entry.is(Value::Type::Nil)) {
                     return false;
                 }
@@ -167,7 +170,7 @@ public:
                 return true;
             }
         }
-        Klass* klass = func_body->get_arg_classes()[index];
+        Klass* klass = func_body->info()->arg_classes()[index];
         Value child;
         if (!child_table->find(Value::by_object(klass), child)) {
             // Unsafe cast

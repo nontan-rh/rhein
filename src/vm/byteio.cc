@@ -199,10 +199,7 @@ State::readFunction(FILE* fp) {
     }
     addFunction(BytecodeFunction::create(
         this,
-        function_name,
-        (bool)variable_arg,
-        argument_num,
-        argument_type_ids,
+        FunctionInfo::create(this, function_name, (bool)variable_arg, argument_num, argument_type_ids),
         function_slot_num,
         variable_slot_num,
         stack_size,

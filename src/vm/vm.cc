@@ -256,7 +256,7 @@ State::initializeSymbol() {
 
 bool
 State::addFunction(Function* func) {
-    return addFunction(func, func->get_name());
+    return addFunction(func, func->info()->name());
 }
 
 bool
@@ -506,17 +506,19 @@ rhein::execute(State* R, BytecodeFunction* bfn, unsigned argc_, Value* args_) {
 
                 if (ofunc->get_class() == R->bytecode_function_klass) {
                     fn = (BytecodeFunction*)ofunc;
-                    unsigned arg_count = fn->get_num_args() + (fn->is_variadic() ? 1 : 0);
+                    unsigned arg_count = fn->info()->num_args() + (fn->info()->variadic() ? 1 : 0);
                     Value* args = R->ator->allocateRawArray(arg_count);
-                    memcpy(args, stack_args, fn->get_num_args());
+                    for (unsigned i = 0; i < fn->info()->num_args(); i++) {
+                    	args[i] = stack_args[i];
+                    }
 
-                    if (fn->is_variadic()) {
-                        unsigned vargs_count = argc - fn->get_num_args();
+                    if (fn->info()->variadic()) {
+                        unsigned vargs_count = argc - fn->info()->num_args();
                         Array* vargs = Array::create(R, vargs_count);
                         for (unsigned i = 0; i < vargs_count; i++) {
-                            vargs->elt_set(i, sp[i + fn->get_num_args()]);
+                            vargs->elt_set(i, sp[i + fn->info()->num_args()]);
                         }
-                        args[fn->get_num_args()] = Value::by_object(vargs);
+                        args[fn->info()->num_args()] = Value::by_object(vargs);
                     }
 
                     if (closure == nullptr) {
@@ -741,6 +743,7 @@ rhein::execute(State* R, BytecodeFunction* bfn, unsigned argc_, Value* args_) {
             default:
                 fprintf(stderr, "%u\n", insn);
                 fatal("Invalid insn");
+                break;
         }
     }
 VMExit:
