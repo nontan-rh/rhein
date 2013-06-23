@@ -90,6 +90,11 @@ String::to_array(State* R, Array*& array) {
     return true;
 }
 
+Symbol*
+String::to_symbol(State* R) {
+	 return R->s_prv->get_symbol(body, length);
+}
+
 }
 
 

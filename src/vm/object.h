@@ -216,6 +216,8 @@ public:
 
     Int get_length() const { return length; }
 
+    String* to_string(State* R);
+
     // For debugging
     void dump() const;
 };
@@ -256,6 +258,7 @@ public:
     String* sub(State* R, size_t begin, size_t end);
 
     bool to_array(State* R, Array*& array);
+    Symbol* to_symbol(State* R);
 private:
 	const char* body;
 	size_t length;

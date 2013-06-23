@@ -216,6 +216,11 @@ Symbol::get_string_representation(State* R) {
     return String::create(R, body, length);
 }
 
+String*
+Symbol::to_string(State* R) {
+	return String::create(R, body, length);
+}
+
 void
 Symbol::dump() const {
     for (unsigned i = 0; i < length; i++) {
