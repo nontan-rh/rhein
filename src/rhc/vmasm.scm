@@ -12,7 +12,8 @@
 
 (define *int-sign* 0)
 (define *char-sign* 1)
-(define *string-sign* 2)
+(define *symbol-sign* 2)
+(define *string-sign* 3)
 
 (define *insn-list*
   '(add sub mul div mod inc dec neg not eq ne gt lt ge le jump ifjump unlessjump call ret ranew raref 
@@ -112,7 +113,7 @@
       (dolist [i stripped]
         (case (string->symbol (vector-ref i 0))
           [(mref mset gfref gvref gvset enclose loadklass)
-           (let1 literal-obj (list (cons "type" "string") (cons "value" (vector-ref i 1)))
+           (let1 literal-obj (list (cons "type" "symbol") (cons "value" (vector-ref i 1)))
              (vector-set! i 1 literal-obj)
              (unless (hash-table-exists? ctable literal-obj)
                (hash-table-put! ctable literal-obj cindex)
@@ -126,6 +127,7 @@
         (case (string->symbol (cdr (assoc "type" c)))
           ['int (write-byte *int-sign*) (write-int (cdr (assoc "value" c)))]
           ['char (write-byte *char-sign*) (write-ch (cdr (assoc "value" c)))]
+          ['symbol (write-byte *symbol-sign*) (write-string (cdr (assoc "value" c)))]
           ['string (write-byte *string-sign*) (write-string (cdr (assoc "value" c)))]
           [else (error "Not constant")]))
       (write-ber (length stripped))
