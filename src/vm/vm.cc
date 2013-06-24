@@ -67,14 +67,24 @@ struct Insn {
     };
 };
 
-Frame::Frame(State* R, BytecodeFunction* fn_, Frame* parent_, Frame* closure_,
-    unsigned argc_, Value* args_)
+Frame::Frame(State* R, Value* stack_ptr, BytecodeFunction* fn_, Frame* parent_,
+		Frame* closure_, unsigned argc_, Value* args_, Value*& next_stack_ptr)
     : fn(fn_), closure(closure_), parent(parent_),
-      stack(R->allocate_raw_array(fn_->get_stack_size())),
       argc(argc_), args(args_),
-      func_slots(R->allocate_raw_array(fn_->get_function_slot_num())),
-      var_slots(R->allocate_raw_array(fn_->get_variable_slot_num())),
-      pc(nullptr), sp(nullptr) { }
+      pc(nullptr), restore_stack_ptr(stack_ptr), sp(nullptr) {
+	const size_t frame_size = sizeof(Frame) - sizeof(Value);
+	unsigned required_value_slots = fn->get_function_slot_num()
+			+ fn->get_variable_slot_num() + fn->get_stack_size();
+	uintptr_t istack_ptr = reinterpret_cast<uintptr_t>(stack_ptr);
+	Value* local_area_begin = reinterpret_cast<Value*>(istack_ptr + frame_size);
+	func_slots = local_area_begin;
+	var_slots = local_area_begin + fn->get_function_slot_num();
+	stack = local_area_begin + required_value_slots;
+	next_stack_ptr = stack;
+	if (next_stack_ptr > R->get_stack_end()) {
+		fatal("Stack overflow");
+	}
+}
 
 bool
 Frame::local_func_ref(unsigned depth, unsigned offset, Value& value) {
@@ -189,6 +199,9 @@ State::State() : symbol_provider_(nullptr) {
     //func_slots->dump();
     //var_slots->dump();
     //klass_slots->dump();
+
+    stack_begin_ = allocate_raw_array(kStackSize);
+    stack_end_ = stack_begin_ + kStackSize;
 }
 
 State::~State() {
@@ -431,25 +444,16 @@ getInsnArgUU2(uint32_t insn) {
     break;
 
 Value
-execute(State* R, BytecodeFunction* bfn, unsigned argc_, Value* args_) {
-    Frame* fr = Frame::create(R, bfn, nullptr, nullptr, argc_, args_);
-    BytecodeFunction* fn = bfn;
-    Value* sp = fr->stack + bfn->get_stack_size();
-    const uint32_t* pc = bfn->get_bytecode();
+execute(State* R, BytecodeFunction* entry_fn, unsigned argc_, Value* args_) {
+	Value* next_stack_ptr;
+    Frame* fr = Frame::create(R, R->get_stack_begin(), entry_fn, nullptr,
+    		nullptr, argc_, args_, next_stack_ptr);
+    BytecodeFunction* fn = entry_fn;
+    Value* sp = fr->stack;
+    const uint32_t* pc = fn->get_bytecode();
 
     for(; ; ){
         uint32_t insn = *pc;
-#if 0
-        cerr << "stack: ";
-        for (int i = 0; i < fn->get_stack_size() - 1; i++) {
-            cerr << fr->stack[i] << ":";
-        }
-        cerr << fr->stack[fn->get_stack_size() - 1] << endl;
-        cerr << "pc: " << pc - fn->get_bytecode() << endl;
-        cerr << "sp: " << fn->get_stack_size() - (sp - fr->stack) << endl;
-        cerr << "code: " << (insn & 0xff) << endl;
-        cerr.flush();
-#endif
         switch(insn & 0xff) {
             case Insn::Add: BINARY_OP(op_add)
             case Insn::Sub: BINARY_OP(op_sub)
@@ -510,19 +514,15 @@ execute(State* R, BytecodeFunction* bfn, unsigned argc_, Value* args_) {
 
                 if (ofunc->get_class() == R->get_bytecode_function_class()) {
                     fn = (BytecodeFunction*)ofunc;
-                    unsigned arg_count = fn->get_info()->num_args() + (fn->get_info()->variadic() ? 1 : 0);
-                    Value* args = R->allocate_raw_array(arg_count);
-                    for (unsigned i = 0; i < fn->get_info()->num_args(); i++) {
-                    	args[i] = stack_args[i];
-                    }
 
                     if (fn->get_info()->variadic()) {
+                    	fatal("Not implemented");
                         unsigned vargs_count = argc - fn->get_info()->num_args();
                         Array* vargs = Array::create(R, vargs_count);
                         for (unsigned i = 0; i < vargs_count; i++) {
                             vargs->elt_set(i, sp[i + fn->get_info()->num_args()]);
                         }
-                        args[fn->get_info()->num_args()] = Value::by_object(vargs);
+                        stack_args[fn->get_info()->num_args()] = Value::by_object(vargs);
                     }
 
                     if (closure == nullptr) {
@@ -531,9 +531,10 @@ execute(State* R, BytecodeFunction* bfn, unsigned argc_, Value* args_) {
 
                     fr->pc = pc + 1;
                     fr->sp = sp + argc;
-                    fr = Frame::create(R, fn, fr, closure, argc, args);
+                    fr = Frame::create(R, next_stack_ptr, fn, fr, closure, argc,
+                    		stack_args, next_stack_ptr);
                     pc = fn->get_bytecode();
-                    sp = fr->stack + fn->get_stack_size();
+                    sp = fr->stack;
                 } else if (ofunc->get_class() == R->get_native_function_class()) {
                     Value ret = (*func.get_obj<NativeFunction>()->get_body())(R, argc, sp);
                     sp += argc;
@@ -547,6 +548,7 @@ execute(State* R, BytecodeFunction* bfn, unsigned argc_, Value* args_) {
                 if (parent == nullptr) { // if top level
                     goto VMExit;
                 }
+                next_stack_ptr = fr->restore_stack_ptr;
                 *(--parent->sp) = *sp;
                 pc = parent->pc;
                 sp = parent->sp;

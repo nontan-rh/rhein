@@ -50,6 +50,8 @@ public:
 		return reinterpret_cast<T*>(u_.v_obj_);
 	}
 
+	Value::Type get_type() const { return type_id_; }
+
 	unsigned long get_hash() const;
 
 	Class *get_class(State *R) const;

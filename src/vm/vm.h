@@ -137,6 +137,10 @@ public:
     // Module loader API
     bool load_module(Module* module);
 
+    // Stack info
+    Value* get_stack_begin() const { return stack_begin_; }
+    Value* get_stack_end() const { return stack_end_; }
+
     // For debugging
     void dump_functions();
     void dump_classes();
@@ -165,6 +169,10 @@ private:
 
     Allocator* allocator_;
 
+    const unsigned kStackSize = 1 << 24;
+    Value* stack_begin_;
+    Value* stack_end_;
+
     bool read_object(FILE* fp);
     bool read_function(FILE* fp);
     bool read_class(FILE* fp);
@@ -180,9 +188,11 @@ public:
     virtual bool initialize(State* R) = 0;
 };
 
+// Frame must be a POD
 struct Frame : public PlacementNewObj {
-    Frame(State* R, BytecodeFunction* fn_, Frame* parent_, Frame* closure_,
-        unsigned argc_, Value* args_);
+    Frame(State* R, Value* stack_ptr, BytecodeFunction* fn_, Frame* parent_,
+    		Frame* closure_, unsigned argc_, Value* args_,
+    		Value*& next_stack_ptr);
 
     BytecodeFunction* fn;
     Frame* closure;
@@ -193,12 +203,15 @@ struct Frame : public PlacementNewObj {
     Value* func_slots;
     Value* var_slots;
     const uint32_t* pc;
+    Value* restore_stack_ptr;
     Value* sp;
+    Value slots[1];
 
-    static Frame* create(State* R, BytecodeFunction* fn, Frame* parent, Frame* closure,
-        unsigned argc, Value* args) {
-        void* p = R->allocate_struct<Frame>();
-        return new (p) Frame(R, fn, parent, closure, argc, args);
+    static Frame* create(State* R, Value* stack_ptr, BytecodeFunction* fn,
+    		Frame* parent, Frame* closure, unsigned argc, Value* args,
+    		Value*& next_stack_ptr) {
+        return new (stack_ptr) Frame(R, stack_ptr, fn, parent,
+        		closure, argc, args, next_stack_ptr);
     }
 
     // Variables
