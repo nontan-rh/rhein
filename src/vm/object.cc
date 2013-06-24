@@ -11,6 +11,8 @@ String*
 Object::get_string_representation(State* R) {
     return String::create(R, "#<obj>");
 }
+Klass::Klass(State* R, Symbol* name_, Klass* parent_, RecordInfo* record_info_)
+    : Object(R->class_class), name(name_), parent(parent_), record_info(record_info_) { }
 
 Klass*
 Klass::create(State* R, Symbol* name, Klass* parent, unsigned slot_num, Symbol** slot_ids) {
@@ -23,7 +25,7 @@ Klass::create(State* R, Symbol* name, Klass* parent, unsigned slot_num, Symbol**
         record_info = RecordInfo::create(R, nullptr, slot_num, slot_ids);
     }
 
-    return new (p) Klass(name, parent, record_info);
+    return new (p) Klass(R, name, parent, record_info);
 }
 
 Klass*

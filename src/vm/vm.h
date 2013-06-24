@@ -48,6 +48,7 @@ public:
     SymbolProvider* s_prv;
 
     Klass* any_class;
+    Klass* class_class;
     Klass* int_class;
     Klass* char_class;
     Klass* nil_class;

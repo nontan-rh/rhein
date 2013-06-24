@@ -197,6 +197,8 @@ State::~State() {
 void
 State::initializeKlass1() {
     any_class = Klass::create(this, nullptr, nullptr);
+    class_class = Klass::create(this, nullptr, any_class);
+    any_class->klass = class_class;
     nil_class = Klass::create(this, nullptr, any_class);
     bool_class = Klass::create(this, nullptr, any_class);
     int_class = Klass::create(this, nullptr, any_class);
@@ -213,6 +215,7 @@ State::initializeKlass1() {
 void
 State::initializeKlass2() {
 	any_class->set_name(s_prv->get_symbol("any"));
+	class_class->set_name(s_prv->get_symbol("class"));
 	nil_class->set_name(s_prv->get_symbol("nil"));
 	bool_class->set_name(s_prv->get_symbol("bool"));
 	int_class->set_name(s_prv->get_symbol("int"));
@@ -236,6 +239,7 @@ State::set_class_hash(Klass* klass){
 void
 State::initializeKlass3() {
 	set_class_hash(any_class);
+	set_class_hash(class_class);
 	set_class_hash(nil_class);
 	set_class_hash(bool_class);
 	set_class_hash(int_class);

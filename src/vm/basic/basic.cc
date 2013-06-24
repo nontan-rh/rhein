@@ -109,17 +109,19 @@ fn_new(State* R, unsigned argc, Value* args) {
         fatal("Too many arguments for new");
     }
 
-    Klass* k = args[0].get_klass(R);
-    return Value::by_object(Record::create(R, k));
+    if (args[0].get_klass(R) != R->class_class) {
+    	return Value::k_nil();
+    }
+    return Value::by_object(Record::create(R, args[0].get_obj<Klass>()));
 }
 
 Value
 fn_literal(State* R, unsigned argc, Value* args) {
-    if (argc == 0) {
+    if (argc == 0 || args[0].get_klass(R) != R->class_class) {
         fatal("Class required");
     }
 
-    Klass* k = args[0].get_klass(R);
+    Klass* k = args[0].get_obj<Klass>();
     if (k == R->array_class) {
         if (!(argc == 2 && args[1].get_klass(R) == R->array_class)) {
             fatal("Lack of argument");
@@ -259,12 +261,12 @@ fn_die(State* R, unsigned argc, Value* args) {
 
 Value
 fn_is_a(State* R, unsigned argc, Value* args) {
-    if (!(argc == 2)) {
+    if (!(argc == 2 && args[1].get_klass(R) == R->class_class)) {
         fatal("Invalid arguments");
     }
 
     Klass* objklass = args[0].get_klass(R);
-    Klass* cmpklass = args[1].get_klass(R);
+    Klass* cmpklass = args[1].get_obj<Klass>();
     for (; objklass != nullptr; objklass = objklass->get_parent()) {
         if (objklass == cmpklass) {
             return Value::k_true();

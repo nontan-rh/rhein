@@ -146,8 +146,7 @@ protected:
     Klass* parent;
     RecordInfo* record_info;
 
-    Klass(Symbol* name_, Klass* parent_, RecordInfo* record_info_)
-        : Object(nullptr), name(name_), parent(parent_), record_info(record_info_) { }
+    Klass(State* R, Symbol* name_, Klass* parent_, RecordInfo* record_info_);
 
 public:
     static Klass* create(State* R, Symbol* name, Klass* parent) {
@@ -157,8 +156,6 @@ public:
     static Klass* create(State* R, Symbol* name, Klass* parent, unsigned slot_num, Symbol** slot_ids);
 
     Symbol* get_name() const { return name; }
-    // Override
-    Klass* get_class() { return this; }
     Klass* get_parent() const { return parent; }
     bool has_record_info() const { return record_info != nullptr; }
     const RecordInfo* get_record_info() const { return record_info; }
