@@ -6,7 +6,7 @@
 #include "allocator.h"
 #include "vm.h"
 
-using namespace rhein;
+namespace rhein {
 
 Array*
 Array::create(State* R, Int size) {
@@ -44,3 +44,4 @@ Array::to_string(State* R, String*& dest) const {
     return true;
 }
 
+}

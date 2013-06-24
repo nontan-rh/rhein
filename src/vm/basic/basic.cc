@@ -304,7 +304,7 @@ BasicModule::create(State* R) {
 
 static inline void
 add_function(State* R, const char* name, NativeFunctionBody fn) {
-	R->addFunction(NativeFunction::create(R,
+	R->add_function(NativeFunction::create(R,
 			FunctionInfo::create(R, R->s_prv->get_symbol(name)), fn));
 }
 

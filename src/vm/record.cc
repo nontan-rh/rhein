@@ -8,7 +8,7 @@
 #include "object.h"
 #include "vm.h"
 
-using namespace rhein;
+namespace rhein {
 
 RecordInfo::RecordInfo(State* R, RecordInfo* parent, unsigned slot_num_,
     Symbol** slot_ids) : num_slots_(slot_num_) {
@@ -87,3 +87,4 @@ Record::slot_set(State* /* R */, Symbol* slot_id, Value value) {
     return true;
 }
 
+}

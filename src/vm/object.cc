@@ -5,7 +5,7 @@
 #include "object.h"
 #include "vm.h"
 
-using namespace rhein;
+namespace rhein {
 
 String*
 Object::get_string_representation(State* R) {
@@ -47,3 +47,4 @@ Value::get_class(State *R) const {
 	return nullptr;
 }
 
+}

@@ -23,8 +23,8 @@ int main(int argc, char** argv) {
     }
 
     State *R = new (GC_malloc(sizeof(State))) State();
-    R->loadModule(BasicModule::create(R));
-    R->loadModule(BuiltinModule::create(R));
+    R->load_module(BasicModule::create(R));
+    R->load_module(BuiltinModule::create(R));
 
     load_script(R, argv[1]);
 

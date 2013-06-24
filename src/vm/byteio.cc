@@ -107,7 +107,7 @@ BinaryReader::readInt(FILE* fp, long& result) {
 }
 
 bool
-State::readClass(FILE* fp) {
+State::read_class(FILE* fp) {
     Symbol* klass_name;
     Symbol* parent_name;
     unsigned long slot_num;
@@ -122,17 +122,17 @@ State::readClass(FILE* fp) {
     }
 
     Value parent;
-    if (!getClass(parent_name, parent)) {
+    if (!get_class(parent_name, parent)) {
         return false;
     }
 
-    addClass(Class::create(this, klass_name, parent.get_obj<Class>(),
+    add_class(Class::create(this, klass_name, parent.get_obj<Class>(),
     		slot_num, slots));
     return true;
 }
 
 bool
-State::readFunction(FILE* fp) {
+State::read_function(FILE* fp) {
     Symbol* function_name;
     unsigned char variable_arg;
     unsigned long argument_num;
@@ -197,7 +197,7 @@ State::readFunction(FILE* fp) {
     for (unsigned long i = 0; i < bytecode_length; i++) {
         BinaryReader::read32Bit(fp, bytecode[i]);
     }
-    addFunction(BytecodeFunction::create(
+    add_function(BytecodeFunction::create(
         this,
         FunctionInfo::create(this, function_name, (bool)variable_arg, argument_num, argument_type_ids),
         function_slot_num,
@@ -211,15 +211,15 @@ State::readFunction(FILE* fp) {
 }
 
 bool
-State::readObject(FILE* fp) {
+State::read_object(FILE* fp) {
     unsigned char byte;
     BinaryReader::readByte(fp, byte);
     switch (byte) {
         case ObjectSigniture::Class:
-            readClass(fp);
+            read_class(fp);
             break;
         case ObjectSigniture::Function:
-            readFunction(fp);
+            read_function(fp);
             break;
         default:
             return false;
@@ -228,13 +228,13 @@ State::readObject(FILE* fp) {
 }
 
 bool
-State::loadFile(FILE* fp) {
+State::load_file(FILE* fp) {
     Symbol* init_name;
     BinaryReader::readSymbol(fp, this, init_name);
     unsigned long item_num;
     if (!BinaryReader::readBER(fp, item_num)) { return false; }
     for (unsigned i = 0; i < item_num; i++) {
-        readObject(fp);
+        read_object(fp);
     }
     execute(this, init_name, 0, nullptr);
     return true;

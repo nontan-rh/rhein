@@ -13,7 +13,7 @@ using namespace std;
 #include "operate.h"
 #include "vm.h"
 
-using namespace rhein;
+namespace rhein {
 
 struct Insn {
     enum {
@@ -77,7 +77,7 @@ Frame::Frame(State* R, BytecodeFunction* fn_, Frame* parent_, Frame* closure_,
       pc(nullptr), sp(nullptr) { }
 
 bool
-Frame::lfref(unsigned depth, unsigned offset, Value& value) {
+Frame::local_func_ref(unsigned depth, unsigned offset, Value& value) {
     Frame* frame = this;
     for (; depth > 0; depth--, frame = frame->closure) {
         if (frame == nullptr) {
@@ -93,7 +93,7 @@ Frame::lfref(unsigned depth, unsigned offset, Value& value) {
 }
 
 bool
-Frame::lfset(unsigned depth, unsigned offset, Value value) {
+Frame::local_func_set(unsigned depth, unsigned offset, Value value) {
     Frame* frame = this;
     for (; depth > 0; depth--, frame = frame->closure) {
         if (frame == nullptr) {
@@ -109,7 +109,7 @@ Frame::lfset(unsigned depth, unsigned offset, Value value) {
 }
 
 bool
-Frame::lvref(unsigned depth, unsigned offset, Value& value) {
+Frame::local_var_ref(unsigned depth, unsigned offset, Value& value) {
     Frame* frame = this;
     for (; depth > 0; depth--, frame = frame->closure) {
         if (frame == nullptr) {
@@ -125,7 +125,7 @@ Frame::lvref(unsigned depth, unsigned offset, Value& value) {
 }
 
 bool
-Frame::lvset(unsigned depth, unsigned offset, Value value) {
+Frame::local_var_set(unsigned depth, unsigned offset, Value value) {
     Frame* frame = this;
     for (; depth > 0; depth--, frame = frame->closure) {
         if (frame == nullptr) {
@@ -141,7 +141,7 @@ Frame::lvset(unsigned depth, unsigned offset, Value value) {
 }
 
 bool
-Frame::laref(unsigned depth, unsigned offset, Value& value) {
+Frame::local_arg_ref(unsigned depth, unsigned offset, Value& value) {
     Frame* frame = this;
     for (; depth > 0; depth--, frame = frame->closure) {
         if (frame == nullptr) {
@@ -157,7 +157,7 @@ Frame::laref(unsigned depth, unsigned offset, Value& value) {
 }
 
 bool
-Frame::laset(unsigned depth, unsigned offset, Value value) {
+Frame::local_arg_set(unsigned depth, unsigned offset, Value value) {
     Frame* frame = this;
     for (; depth > 0; depth--, frame = frame->closure) {
         if (frame == nullptr) {
@@ -176,15 +176,15 @@ State::State() : s_prv(nullptr) {
     // Bootstrap type system
     ator = new (GC_malloc(sizeof(Allocator))) Allocator();
 
-    initializeClass1();
-    initializeSymbol();
-    initializeClass2();
+    initialize_class1();
+    initialize_symbol();
+    initialize_class2();
 
-    func_slots = HashTable::create(this);
-    var_slots = HashTable::create(this);
-    klass_slots = HashTable::create(this);
+    func_slots_ = HashTable::create(this);
+    var_slots_ = HashTable::create(this);
+    klass_slots_ = HashTable::create(this);
 
-    initializeClass3();
+    initialize_class3();
 
     //func_slots->dump();
     //var_slots->dump();
@@ -195,7 +195,7 @@ State::~State() {
 }
 
 void
-State::initializeClass1() {
+State::initialize_class1() {
     any_class = Class::create(this, nullptr, nullptr);
     class_class = Class::create(this, nullptr, any_class);
     any_class->klass_ = class_class;
@@ -213,7 +213,7 @@ State::initializeClass1() {
 }
 
 void
-State::initializeClass2() {
+State::initialize_class2() {
 	any_class->set_id(s_prv->get_symbol("any"));
 	class_class->set_id(s_prv->get_symbol("class"));
 	nil_class->set_id(s_prv->get_symbol("nil"));
@@ -231,13 +231,13 @@ State::initializeClass2() {
 
 void
 State::set_class_hash(Class* klass){
-	klass_slots->insert(this,
+	klass_slots_->insert(this,
 			Value::by_object(klass->get_id()),
 			Value::by_object(klass));
 }
 
 void
-State::initializeClass3() {
+State::initialize_class3() {
 	set_class_hash(any_class);
 	set_class_hash(class_class);
 	set_class_hash(nil_class);
@@ -254,19 +254,19 @@ State::initializeClass3() {
 }
 
 void
-State::initializeSymbol() {
+State::initialize_symbol() {
     s_prv = SymbolProvider::create(this);
 }
 
 bool
-State::addFunction(Function* func) {
-    return addFunction(func, func->get_info()->name());
+State::add_function(Function* func) {
+    return add_function(func, func->get_info()->name());
 }
 
 bool
-State::addFunction(Function* func, const Symbol* name) {
+State::add_function(Function* func, const Symbol* name) {
     Value old;
-    if (func_slots->find(Value::by_object(name), old)) {
+    if (func_slots_->find(Value::by_object(name), old)) {
         Object* fold = old.get_obj<Object>();
         if (fold->get_class() == native_function_class
             || fold->get_class() == bytecode_function_class) {
@@ -275,55 +275,55 @@ State::addFunction(Function* func, const Symbol* name) {
             method->add_function(this, (Function*)fold);
             method->add_function(this, func);
 
-            return func_slots->assign(Value::by_object(name), Value::by_object(method));
+            return func_slots_->assign(Value::by_object(name), Value::by_object(method));
         } else if (fold->get_class() == method_class) {
             return static_cast<Method*>(fold)->add_function(this, func);
         } else {
             exit(1);
         }
     }
-    return func_slots->insert_if_absent(this, Value::by_object(name), Value::by_object(func));
+    return func_slots_->insert_if_absent(this, Value::by_object(name), Value::by_object(func));
 }
 
 bool
-State::addClass(Class* klass) {
-    return addClass(klass, klass->get_id());
+State::add_class(Class* klass) {
+    return add_class(klass, klass->get_id());
 }
 
 bool
-State::addClass(Class* klass, const Symbol* name) {
-    return klass_slots->insert_if_absent(this, Value::by_object(name), Value::by_object(klass));
+State::add_class(Class* klass, const Symbol* name) {
+    return klass_slots_->insert_if_absent(this, Value::by_object(name), Value::by_object(klass));
 }
 
 bool
-State::addVariable(Symbol* id, Value val) {
-    return var_slots->insert_if_absent(this, Value::by_object(id), val);
+State::add_variable(Symbol* id, Value val) {
+    return var_slots_->insert_if_absent(this, Value::by_object(id), val);
 }
 
 bool
-State::loadModule(Module* module) {
+State::load_module(Module* module) {
     return module->initialize(this);
 }
 
 void
-State::dumpClasses() {
-    klass_slots->dump();
+State::dump_classes() {
+    klass_slots_->dump();
 }
 
 void
-State::dumpFunctions() {
-    func_slots->dump();
+State::dump_functions() {
+    func_slots_->dump();
 }
 
 void
-State::dumpVariables() {
-    var_slots->dump();
+State::dump_variables() {
+    var_slots_->dump();
 }
 
 Value
-rhein::execute(State* R, Symbol* entry_point, unsigned argc, Value* argv) {
+execute(State* R, Symbol* entry_point, unsigned argc, Value* argv) {
     Value fn;
-    if (!R->gfref(entry_point, fn)) {
+    if (!R->global_func_ref(entry_point, fn)) {
         fatal("No such function");
     }
 
@@ -431,7 +431,7 @@ getInsnArgUU2(uint32_t insn) {
     break;
 
 Value
-rhein::execute(State* R, BytecodeFunction* bfn, unsigned argc_, Value* args_) {
+execute(State* R, BytecodeFunction* bfn, unsigned argc_, Value* args_) {
     Frame* fr = Frame::create(R, bfn, nullptr, nullptr, argc_, args_);
     BytecodeFunction* fn = bfn;
     Value* sp = fr->stack + bfn->get_stack_size();
@@ -654,15 +654,15 @@ rhein::execute(State* R, BytecodeFunction* bfn, unsigned argc_, Value* args_) {
                 pc++;
             }
                 break;
-            case Insn::Lfref: LOCAL_REFER_OP(fr->lfref)
-            case Insn::Lfset: LOCAL_SET_OP(fr->lfset)
-            case Insn::Lvref: LOCAL_REFER_OP(fr->lvref)
-            case Insn::Lvset: LOCAL_SET_OP(fr->lvset)
-            case Insn::Laref: LOCAL_REFER_OP(fr->laref)
-            case Insn::Laset: LOCAL_SET_OP(fr->laset)
-            case Insn::Gfref: GLOBAL_REFER_OP(gfref)
-            case Insn::Gvref: GLOBAL_REFER_OP(gvref)
-            case Insn::Gvset: GLOBAL_SET_OP(gvset)
+            case Insn::Lfref: LOCAL_REFER_OP(fr->local_func_ref)
+            case Insn::Lfset: LOCAL_SET_OP(fr->local_func_set)
+            case Insn::Lvref: LOCAL_REFER_OP(fr->local_var_ref)
+            case Insn::Lvset: LOCAL_SET_OP(fr->local_var_set)
+            case Insn::Laref: LOCAL_REFER_OP(fr->local_arg_ref)
+            case Insn::Laset: LOCAL_SET_OP(fr->local_arg_set)
+            case Insn::Gfref: GLOBAL_REFER_OP(global_func_ref)
+            case Insn::Gvref: GLOBAL_REFER_OP(global_var_ref)
+            case Insn::Gvset: GLOBAL_SET_OP(global_var_set)
             case Insn::Load:
                 *(--sp) = fn->get_constant_table()[getInsnArgU(insn)];
                 pc++;
@@ -674,7 +674,7 @@ rhein::execute(State* R, BytecodeFunction* bfn, unsigned argc_, Value* args_) {
                     fatal("Name must be string");
                 }
 
-                if (!R->getClass(id.get_obj<Symbol>(), *(--sp))) {
+                if (!R->get_class(id.get_obj<Symbol>(), *(--sp))) {
                     fatal("Cannot find klass");
                 }
                 pc++;
@@ -704,7 +704,7 @@ rhein::execute(State* R, BytecodeFunction* bfn, unsigned argc_, Value* args_) {
                 }
 
                 Value func;
-                if (!R->gfref(id.get_obj<Symbol>(), func)) {
+                if (!R->global_func_ref(id.get_obj<Symbol>(), func)) {
                     fatal("Cannot enclose");
                 }
 
@@ -754,3 +754,4 @@ VMExit:
     return *sp;
 }
 
+}

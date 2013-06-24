@@ -9,10 +9,11 @@
 #include "error.h"
 #include "vm.h"
 
-using namespace std;
-using namespace rhein;
+namespace rhein {
 
-struct rhein::HashTableNode : public PlacementNewObj {
+using namespace std;
+
+struct HashTableNode : public PlacementNewObj {
     HashTableNode* next;
     Value key;
     Value value;
@@ -205,3 +206,4 @@ HashTable::dump() {
     }
 }
 
+}

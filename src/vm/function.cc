@@ -6,7 +6,7 @@
 #include "allocator.h"
 #include "vm.h"
 
-using namespace rhein;
+namespace rhein {
 
 FunctionInfo*
 FunctionInfo::create(State* R, Symbol* id) {
@@ -26,7 +26,7 @@ FunctionInfo::resolve(State* R) {
 
     for (unsigned i = 0; i < num_args_; i++) {
         Value klass;
-        if (!R->getClass(arg_class_ids_[i], klass)) {
+        if (!R->get_class(arg_class_ids_[i], klass)) {
             return false;
         }
 
@@ -100,7 +100,7 @@ BytecodeFunction::enclose(State* R, Frame* closure) {
     return closure_func;
 }
 
-class rhein::DispatcherNode {
+class DispatcherNode {
 public:
     static DispatcherNode* create(State* R) {
         void* p = R->ator->allocateStruct<DispatcherNode>();
@@ -224,3 +224,4 @@ Method::enclose(State* R, Frame* closure) {
     return closure_method;
 }
 
+}

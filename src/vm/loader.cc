@@ -40,7 +40,7 @@ bool load_script(State *R, const char* fn) {
     if (fp == nullptr) {
         fatal("Cannot fdopen pipe\n");
     }
-    R->loadFile(fp);
+    R->load_file(fp);
 
     fclose(fp);
     return false;

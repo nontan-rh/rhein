@@ -28,7 +28,7 @@ register_function(State* R, unsigned argc, Value* args) {
 
     fn.get_obj<Function>()->resolve(R);
 
-    R->addFunction(fn.get_obj<Function>(), name.get_obj<Symbol>());
+    R->add_function(fn.get_obj<Function>(), name.get_obj<Symbol>());
     return Value::k_nil();
 }
 
@@ -45,7 +45,7 @@ register_class(State* R, unsigned argc, Value* args) {
         fatal("Invalid arguments");
     }
 
-    R->addClass(klass, name.get_obj<Symbol>());
+    R->add_class(klass, name.get_obj<Symbol>());
     return Value::k_nil();
 }
 
@@ -56,7 +56,7 @@ register_variable(State* R, unsigned argc, Value* args) {
         fatal("Invalid arguments");
     }
 
-    R->addVariable(args[0].get_obj<Symbol>(), args[1]);
+    R->add_variable(args[0].get_obj<Symbol>(), args[1]);
     return Value::k_nil();
 }
 
@@ -68,7 +68,7 @@ BuiltinModule::create(State* R) {
 
 static inline void
 add_function(State* R, const char* name, NativeFunctionBody fn) {
-	R->addFunction(NativeFunction::create(R,
+	R->add_function(NativeFunction::create(R,
 			FunctionInfo::create(R, R->s_prv->get_symbol(name)), fn));
 }
 

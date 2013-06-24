@@ -33,14 +33,6 @@ public:
 class Module;
 
 class State {
-    HashTable* func_slots;
-    HashTable* var_slots;
-    HashTable* klass_slots;
-
-    bool readObject(FILE* fp);
-    bool readFunction(FILE* fp);
-    bool readClass(FILE* fp);
-
 public:
     static void* operator new(size_t /* size */, void* p) { return p; }
 
@@ -64,51 +56,62 @@ public:
     State();
     ~State();
 
-    void initializeClass1();
-    void initializeClass2();
-    void initializeClass3();
-    void initializeSymbol();
+    void initialize_class1();
+    void initialize_class2();
+    void initialize_class3();
+    void initialize_symbol();
 
     // Installation
-    bool addFunction(Function* func); 
-    bool addFunction(Function* func, const Symbol* name); 
-    bool addVariable(Symbol* id, Value val);
-    bool addClass(Class* klass, const Symbol* name);
-    bool addClass(Class* klass);
+    bool add_function(Function* func); 
+    bool add_function(Function* func, const Symbol* name); 
+    bool add_variable(Symbol* id, Value val);
+    bool add_class(Class* klass, const Symbol* name);
+    bool add_class(Class* klass);
 
-    void setSymbolProvider(SymbolProvider* s) { s_prv = s; } 
-    bool hasSymbolProvider() const { return (s_prv != nullptr); }
+    void set_symbol_provider(SymbolProvider* s) { s_prv = s; } 
+    bool has_symbol_provider() const { return (s_prv != nullptr); }
 
-    bool getClass(Symbol* id, Value& klass) { return klass_slots->find(Value::by_object(id), klass); }
+    bool get_class(Symbol* id, Value& klass) const {
+    	return klass_slots_->find(Value::by_object(id), klass);
+    }
 
     // Bytecode level interface
-    bool gfref(Symbol* id, Value& func) {
-        if (!func_slots->find(Value::by_object(id), func)) {
+    bool global_func_ref(Symbol* id, Value& func) const {
+        if (!func_slots_->find(Value::by_object(id), func)) {
             id->dump();
             return false;
         }
         return true;
     }
 
-    bool gvref(Symbol* id, Value& value) {
-    	return var_slots->find(Value::by_object(id), value);
+    bool global_var_ref(Symbol* id, Value& value) const {
+    	return var_slots_->find(Value::by_object(id), value);
     }
 
-    bool gvset(Symbol* id, Value value) {
-    	return var_slots->assign(Value::by_object(id), value);
+    bool global_var_set(Symbol* id, Value value) {
+    	return var_slots_->assign(Value::by_object(id), value);
     }
 
     // File loading interface
-    bool loadFile(FILE* fp);
+    bool load_file(FILE* fp);
     
     // Module loader API
-    bool loadModule(Module* module);
+    bool load_module(Module* module);
 
     // For debugging
-    void dumpFunctions();
-    void dumpClasses();
-    void dumpVariables();
+    void dump_functions();
+    void dump_classes();
+    void dump_variables();
+
 private:
+    HashTable* func_slots_;
+    HashTable* var_slots_;
+    HashTable* klass_slots_;
+
+    bool read_object(FILE* fp);
+    bool read_function(FILE* fp);
+    bool read_class(FILE* fp);
+
     void set_class_hash(Class* klass);
 };
 
@@ -120,13 +123,10 @@ public:
     virtual bool initialize(State* R) = 0;
 };
 
-struct Frame {
-private:
+struct Frame : public PlacementNewObj {
     Frame(State* R, BytecodeFunction* fn_, Frame* parent_, Frame* closure_,
         unsigned argc_, Value* args_);
 
-    static void* operator new (size_t /* size */, void* p) { return p; }
-public:
     BytecodeFunction* fn;
     Frame* closure;
     Frame* parent;
@@ -145,12 +145,12 @@ public:
     }
 
     // Variables
-    bool lfref(unsigned depth, unsigned offset, Value& value);
-    bool lfset(unsigned depth, unsigned offset, Value value);
-    bool lvref(unsigned depth, unsigned offset, Value& value);
-    bool lvset(unsigned depth, unsigned offset, Value value);
-    bool laref(unsigned depth, unsigned offset, Value& value);
-    bool laset(unsigned depth, unsigned offset, Value value);
+    bool local_func_ref(unsigned depth, unsigned offset, Value& value);
+    bool local_func_set(unsigned depth, unsigned offset, Value value);
+    bool local_var_ref(unsigned depth, unsigned offset, Value& value);
+    bool local_var_set(unsigned depth, unsigned offset, Value value);
+    bool local_arg_ref(unsigned depth, unsigned offset, Value& value);
+    bool local_arg_set(unsigned depth, unsigned offset, Value value);
 };
 
 Value execute(State* R, Symbol* entry_point, unsigned argc, Value* argv);

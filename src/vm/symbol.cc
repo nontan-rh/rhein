@@ -79,7 +79,7 @@ public:
         Symbol* dummy; assert(find(value->body_, value->length_, dummy));
         auto prev = &table_[value->hash_value_ % table_size_];
         auto curr = prev->next;
-        for(;/* curr != nullptr */; ) {
+        for(; /* curr != nullptr */; ) {
             if (value->hash_value_ == curr->key_hash && value->length_ == curr->length) {
                 if (value->body_ == curr->key
                     || memcmp(value->body_, curr->key, value->length_) == 0) {
@@ -130,9 +130,9 @@ private:
 
 SymbolProvider::SymbolProvider(State* R)
     : owner(R) {
-    assert(!owner->hasSymbolProvider());
+    assert(!owner->has_symbol_provider());
     string_hash_table = SymbolHashTable::create(R);
-    owner->setSymbolProvider(this);
+    owner->set_symbol_provider(this);
 }
 
 SymbolProvider*
