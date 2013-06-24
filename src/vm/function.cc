@@ -37,7 +37,7 @@ FunctionInfo::resolve(State* R) {
 }
 
 NativeFunction::NativeFunction(State* R, FunctionInfo* info, NativeFunctionBody body_)
-    : Function(R->native_function_class, info), body(body_), copied(false) { }
+    : Function(R->native_function_class, info), body_(body_), copied_(false) { }
 
 NativeFunction*
 NativeFunction::create(State* R, FunctionInfo* info, NativeFunctionBody body) {
@@ -49,29 +49,29 @@ NativeFunction*
 NativeFunction::copy(State* R) {
     void* p = R->ator->allocateObject<NativeFunction>();
     NativeFunction* copy_func = new (p) NativeFunction(*this);
-    copy_func->copied = true;
+    copy_func->copied_ = true;
     return copy_func;
 }
 
 NativeFunction*
 NativeFunction::enclose(State* R, Frame* closure) {
     NativeFunction* closure_func = copy(R);
-    closure_func->closure = closure;
+    closure_func->closure_ = closure;
     return closure_func;
 }
 
 BytecodeFunction::BytecodeFunction(State* R, FunctionInfo* info,
-    unsigned func_slot_size_, unsigned var_slot_size_,
-    unsigned stack_size_, unsigned constant_table_size_,
-    Value* constant_table_, unsigned bytecode_size_, uint32_t* bytecode_)
+    unsigned func_slot_size, unsigned var_slot_size,
+    unsigned stack_size, unsigned constant_table_size,
+    Value* constant_table, unsigned bytecode_size, uint32_t* bytecode)
     : Function(R->bytecode_function_class, info),
-      copied(false),
-      stack_size(stack_size_), func_slot_size(func_slot_size_),
-      var_slot_size(var_slot_size_),
-      constant_table_size(constant_table_size_),
-      constant_table(constant_table_),
-      bytecode_size(bytecode_size_),
-      bytecode(bytecode_) { }
+      copied_(false),
+      stack_size_(stack_size), func_slot_size_(func_slot_size),
+      var_slot_size_(var_slot_size),
+      constant_table_size_(constant_table_size),
+      constant_table_(constant_table),
+      bytecode_size_(bytecode_size),
+      bytecode_(bytecode) { }
 
 BytecodeFunction*
 BytecodeFunction::create(State* R, FunctionInfo* info,
@@ -89,28 +89,18 @@ BytecodeFunction*
 BytecodeFunction::copy(State* R) {
     void* p = R->ator->allocateObject<BytecodeFunction>();
     BytecodeFunction* copy_func = new (p) BytecodeFunction(*this);
-    copy_func->copied = true;
+    copy_func->copied_ = true;
     return copy_func;
 }
 
 BytecodeFunction*
 BytecodeFunction::enclose(State* R, Frame* closure) {
     BytecodeFunction* closure_func = copy(R);
-    closure_func->closure = closure;
+    closure_func->closure_ = closure;
     return closure_func;
 }
 
 class rhein::DispatcherNode {
-    Value entry;
-    Value variable_entry;
-    HashTable* child_table;
-
-    static void* operator new (size_t /* size */, void* p) { return p; }
-
-    DispatcherNode(State* R)
-        : entry(Value::k_nil()), variable_entry(Value::k_nil()),
-          child_table(HashTable::create(R)) { }
-
 public:
     static DispatcherNode* create(State* R) {
         void* p = R->ator->allocateStruct<DispatcherNode>();
@@ -120,11 +110,11 @@ public:
     bool dispatch(State* R, unsigned argc, Value* args, unsigned index,
     		Value& func) {
         if (argc == index) {
-            if (!entry.is(Value::Type::Nil)) {
-                func = entry;
+            if (!entry_.is(Value::Type::Nil)) {
+                func = entry_;
                 return true;
-            } else if (!variable_entry.is(Value::Type::Nil)) {
-                func = variable_entry;
+            } else if (!variable_entry_.is(Value::Type::Nil)) {
+                func = variable_entry_;
                 return true;
             } else {
                 return false;
@@ -134,7 +124,7 @@ public:
         Class* klass = args[index].get_class(R);
         while (true) {
             Value child;
-            if (child_table->find(Value::by_object(klass), child)) {
+            if (child_table_->find(Value::by_object(klass), child)) {
                 // Unsafe cast!
                 if (child.get_obj<DispatcherNode>()->dispatch(R,
                 		argc, args, index + 1, func)) {
@@ -146,8 +136,8 @@ public:
                 break;
             }
         }
-        if (!variable_entry.is(Value::Type::Nil)) {
-            func = variable_entry;
+        if (!variable_entry_.is(Value::Type::Nil)) {
+            func = variable_entry_;
             return true;
         }
         return false;
@@ -155,38 +145,49 @@ public:
 
     bool addFunction(State* R, Value func, Function* func_body,
     		unsigned index) {
-        if (func_body->info()->num_args() == index) {
-            if (func_body->info()->variadic()) {
-                if (!variable_entry.is(Value::Type::Nil)) {
+        if (func_body->get_info()->num_args() == index) {
+            if (func_body->get_info()->variadic()) {
+                if (!variable_entry_.is(Value::Type::Nil)) {
                     return false;
                 }
-                variable_entry = func;
+                variable_entry_ = func;
                 return true;
             } else {
-                if (!entry.is(Value::Type::Nil)) {
+                if (!entry_.is(Value::Type::Nil)) {
                     return false;
                 }
-                entry = func;
+                entry_ = func;
                 return true;
             }
         }
-        Class* klass = func_body->info()->arg_classes()[index];
+        Class* klass = func_body->get_info()->arg_classes()[index];
         Value child;
-        if (!child_table->find(Value::by_object(klass), child)) {
+        if (!child_table_->find(Value::by_object(klass), child)) {
             // Unsafe cast
             child = Value::by_object((Object*)create(R));
-            child_table->insert_if_absent(R, Value::by_object(klass), child);
+            child_table_->insert_if_absent(R, Value::by_object(klass), child);
         }
         // Unsafe cast
         return child.get_obj<DispatcherNode>()->addFunction(R, func,
         		func_body, index + 1);
     }
+
+private:
+    Value entry_;
+    Value variable_entry_;
+    HashTable* child_table_;
+
+    static void* operator new (size_t /* size */, void* p) { return p; }
+
+    DispatcherNode(State* R)
+        : entry_(Value::k_nil()), variable_entry_(Value::k_nil()),
+          child_table_(HashTable::create(R)) { }
 };
 
 Method::Method(State* R)
-    : Object(R->method_class), copied(false),
-      node(DispatcherNode::create(R)),
-      closure(nullptr) { }
+    : Object(R->method_class), copied_(false),
+      node_(DispatcherNode::create(R)),
+      closure_(nullptr) { }
 
 Method*
 Method::create(State* R) {
@@ -196,7 +197,7 @@ Method::create(State* R) {
 
 bool
 Method::dispatch(State* R, unsigned argc, Value* args, Value& result) {
-    if (!node->dispatch(R, argc, args, 0, result)) {
+    if (!node_->dispatch(R, argc, args, 0, result)) {
         return false;
     }
     return true;
@@ -204,7 +205,7 @@ Method::dispatch(State* R, unsigned argc, Value* args, Value& result) {
 
 bool
 Method::add_function(State* R, Function* func) {
-    return node->addFunction(R, Value::by_object(func), func, 0);
+    return node_->addFunction(R, Value::by_object(func), func, 0);
 }
 
 Method*
@@ -212,14 +213,14 @@ Method::copy(State* R) {
     void* p = R->ator->allocateObject<Method>();
     Method* copy_method = new (p) Method(*this);
 
-    copy_method->copied = true;
+    copy_method->copied_ = true;
     return copy_method;
 }
 
 Method*
 Method::enclose(State* R, Frame* closure) {
     Method* closure_method = copy(R);
-    closure_method->closure = closure;
+    closure_method->closure_ = closure;
     return closure_method;
 }
 

@@ -198,7 +198,7 @@ void
 State::initializeClass1() {
     any_class = Class::create(this, nullptr, nullptr);
     class_class = Class::create(this, nullptr, any_class);
-    any_class->klass = class_class;
+    any_class->klass_ = class_class;
     nil_class = Class::create(this, nullptr, any_class);
     bool_class = Class::create(this, nullptr, any_class);
     int_class = Class::create(this, nullptr, any_class);
@@ -214,25 +214,25 @@ State::initializeClass1() {
 
 void
 State::initializeClass2() {
-	any_class->set_name(s_prv->get_symbol("any"));
-	class_class->set_name(s_prv->get_symbol("class"));
-	nil_class->set_name(s_prv->get_symbol("nil"));
-	bool_class->set_name(s_prv->get_symbol("bool"));
-	int_class->set_name(s_prv->get_symbol("int"));
-	char_class->set_name(s_prv->get_symbol("char"));
-	symbol_class->set_name(s_prv->get_symbol("symbol"));
-	string_class->set_name(s_prv->get_symbol("string"));
-	array_class->set_name(s_prv->get_symbol("array"));
-	hashtable_class->set_name(s_prv->get_symbol("hashtable"));
-	method_class->set_name(s_prv->get_symbol("method"));
-	bytecode_function_class->set_name(s_prv->get_symbol("bytecode_function"));
-	native_function_class->set_name(s_prv->get_symbol("native_function"));
+	any_class->set_id(s_prv->get_symbol("any"));
+	class_class->set_id(s_prv->get_symbol("class"));
+	nil_class->set_id(s_prv->get_symbol("nil"));
+	bool_class->set_id(s_prv->get_symbol("bool"));
+	int_class->set_id(s_prv->get_symbol("int"));
+	char_class->set_id(s_prv->get_symbol("char"));
+	symbol_class->set_id(s_prv->get_symbol("symbol"));
+	string_class->set_id(s_prv->get_symbol("string"));
+	array_class->set_id(s_prv->get_symbol("array"));
+	hashtable_class->set_id(s_prv->get_symbol("hashtable"));
+	method_class->set_id(s_prv->get_symbol("method"));
+	bytecode_function_class->set_id(s_prv->get_symbol("bytecode_function"));
+	native_function_class->set_id(s_prv->get_symbol("native_function"));
 }
 
 void
 State::set_class_hash(Class* klass){
 	klass_slots->insert(this,
-			Value::by_object(klass->get_name()),
+			Value::by_object(klass->get_id()),
 			Value::by_object(klass));
 }
 
@@ -260,7 +260,7 @@ State::initializeSymbol() {
 
 bool
 State::addFunction(Function* func) {
-    return addFunction(func, func->info()->name());
+    return addFunction(func, func->get_info()->name());
 }
 
 bool
@@ -287,7 +287,7 @@ State::addFunction(Function* func, const Symbol* name) {
 
 bool
 State::addClass(Class* klass) {
-    return addClass(klass, klass->get_name());
+    return addClass(klass, klass->get_id());
 }
 
 bool
@@ -510,19 +510,19 @@ rhein::execute(State* R, BytecodeFunction* bfn, unsigned argc_, Value* args_) {
 
                 if (ofunc->get_class() == R->bytecode_function_class) {
                     fn = (BytecodeFunction*)ofunc;
-                    unsigned arg_count = fn->info()->num_args() + (fn->info()->variadic() ? 1 : 0);
+                    unsigned arg_count = fn->get_info()->num_args() + (fn->get_info()->variadic() ? 1 : 0);
                     Value* args = R->ator->allocateRawArray(arg_count);
-                    for (unsigned i = 0; i < fn->info()->num_args(); i++) {
+                    for (unsigned i = 0; i < fn->get_info()->num_args(); i++) {
                     	args[i] = stack_args[i];
                     }
 
-                    if (fn->info()->variadic()) {
-                        unsigned vargs_count = argc - fn->info()->num_args();
+                    if (fn->get_info()->variadic()) {
+                        unsigned vargs_count = argc - fn->get_info()->num_args();
                         Array* vargs = Array::create(R, vargs_count);
                         for (unsigned i = 0; i < vargs_count; i++) {
-                            vargs->elt_set(i, sp[i + fn->info()->num_args()]);
+                            vargs->elt_set(i, sp[i + fn->get_info()->num_args()]);
                         }
-                        args[fn->info()->num_args()] = Value::by_object(vargs);
+                        args[fn->get_info()->num_args()] = Value::by_object(vargs);
                     }
 
                     if (closure == nullptr) {
@@ -627,7 +627,7 @@ rhein::execute(State* R, BytecodeFunction* bfn, unsigned argc_, Value* args_) {
                 if (!obj.is(Value::Type::Object) || !id.is(Value::Type::Object)
                     || id.get_obj<Object>()->get_class() != R->symbol_class) {
 
-                    obj.get_class(R)->get_name()->dump();
+                    obj.get_class(R)->get_id()->dump();
                     fatal("Cannot refer");
                 }
 

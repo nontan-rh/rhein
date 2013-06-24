@@ -27,10 +27,10 @@ struct rhein::HashTableNode : public PlacementNewObj {
 };
 
 HashTable::HashTable(State* R)
-    : Object(R->hashtable_class), table_size(default_table_size), num_entries(0) {
-    table = R->ator->allocateBlock<HashTableNode>(default_table_size);
-    for (unsigned i = 0; i < num_entries; i++) {
-        table[i].next = nullptr;
+    : Object(R->hashtable_class), table_size_(kDefaultTableSize), num_entries_(0) {
+    table_ = R->ator->allocateBlock<HashTableNode>(kDefaultTableSize);
+    for (unsigned i = 0; i < num_entries_; i++) {
+        table_[i].next = nullptr;
     }
 }
 
@@ -58,11 +58,11 @@ HashTable::literal(State* R, Array* keys, Array* values) {
 
 void
 HashTable::rehash(State* R) {
-    unsigned newtable_size = table_size * 2 + 1;
+    unsigned newtable_size = table_size_ * 2 + 1;
     HashTableNode* newtable = R->ator->allocateBlock<HashTableNode>(newtable_size);
 
-    for (unsigned i = 0; i < table_size; i++) {
-        HashTableNode* node = table[i].next;
+    for (unsigned i = 0; i < table_size_; i++) {
+        HashTableNode* node = table_[i].next;
         
         for (; node != nullptr; ) {
             HashTableNode* oldnext = node->next;
@@ -74,14 +74,14 @@ HashTable::rehash(State* R) {
         }
     }
 
-    R->ator->releaseBlock(table);
-    table_size = newtable_size;
-    table = newtable;
+    R->ator->releaseBlock(table_);
+    table_size_ = newtable_size;
+    table_ = newtable;
 }
 
 bool
 HashTable::find(Value key, Value& result) const {
-    HashTableNode* node = table[key.get_hash() % table_size].next;
+    HashTableNode* node = table_[key.get_hash() % table_size_].next;
 
     for (; node != nullptr; node = node->next) {
         if (key.eq(node->key)) {
@@ -100,13 +100,13 @@ HashTable::insert_if_absent(State* R, Value key, Value value) {
         return false;
     }
 
-    unsigned table_index = key.get_hash() % table_size;
-    HashTableNode* node = table[table_index].next;
-    table[table_index].next = HashTableNode::create(R, node, key, value);
+    unsigned table_index = key.get_hash() % table_size_;
+    HashTableNode* node = table_[table_index].next;
+    table_[table_index].next = HashTableNode::create(R, node, key, value);
 
-    num_entries++;
+    num_entries_++;
 
-    if (num_entries > table_size * rehash_ratio) {
+    if (num_entries_ > table_size_ * kRehashRatio) {
         rehash(R);
     }
     return true;
@@ -114,8 +114,8 @@ HashTable::insert_if_absent(State* R, Value key, Value value) {
 
 bool
 HashTable::insert(State* R, Value key, Value value) {
-    unsigned table_index = key.get_hash() % table_size;
-    HashTableNode* head = &table[table_index];
+    unsigned table_index = key.get_hash() % table_size_;
+    HashTableNode* head = &table_[table_index];
     HashTableNode* node = head->next;
     
     for (; node != nullptr; node = node->next) {
@@ -127,9 +127,9 @@ HashTable::insert(State* R, Value key, Value value) {
 
     head->next = HashTableNode::create(R, head->next, key, value);
 
-    num_entries++;
+    num_entries_++;
 
-    if (num_entries > table_size * rehash_ratio) {
+    if (num_entries_ > table_size_ * kRehashRatio) {
         rehash(R);
     }
     return true;
@@ -137,8 +137,8 @@ HashTable::insert(State* R, Value key, Value value) {
 
 bool
 HashTable::assign(Value key, Value value) {
-    unsigned table_index = key.get_hash() % table_size;
-    HashTableNode* node = table[table_index].next;
+    unsigned table_index = key.get_hash() % table_size_;
+    HashTableNode* node = table_[table_index].next;
 
     for (; node != nullptr; node = node->next) {
         if (key.eq(node->key)) {
@@ -151,9 +151,9 @@ HashTable::assign(Value key, Value value) {
 
 bool
 HashTable::remove(State* R, Value key) {
-    unsigned table_index = key.get_hash() % table_size;
-    HashTableNode* prev = &table[table_index];
-    HashTableNode* node = table[table_index].next;
+    unsigned table_index = key.get_hash() % table_size_;
+    HashTableNode* prev = &table_[table_index];
+    HashTableNode* node = table_[table_index].next;
 
     for (; node != nullptr; ) {
         if (key.eq(node->key)) {
@@ -171,8 +171,8 @@ HashTable::remove(State* R, Value key) {
 
 bool
 HashTable::import(State* R, HashTable *rht) {
-    for (unsigned i = 0; i < rht->table_size; i++) {
-        HashTableNode* node = rht->table[i].next;
+    for (unsigned i = 0; i < rht->table_size_; i++) {
+        HashTableNode* node = rht->table_[i].next;
         
         for (; node != nullptr; node = node->next) {
             this->insert_if_absent(R, node->key, node->value);
@@ -196,9 +196,9 @@ HashTable::index_set(State* R, Value index, Value value) {
 void
 HashTable::dump() {
     fprintf(stderr, "Dumping hashtable: %p\n", this);
-    fprintf(stderr, "table_size: %u, item_num: %u\n", table_size, num_entries);
-    for (unsigned i = 0; i < table_size; i++) {
-        HashTableNode* node = table[i].next;
+    fprintf(stderr, "table_size: %u, item_num: %u\n", table_size_, num_entries_);
+    for (unsigned i = 0; i < table_size_; i++) {
+        HashTableNode* node = table_[i].next;
         for (; node != nullptr; node = node->next) {
             //fprintf(stderr, "%p -> %p\n", (void*)node->key, (void*)node->value);
         }

@@ -10,37 +10,22 @@
 #include "allocator.h"
 #include "vm.h"
 
-using namespace rhein;
+namespace rhein {
 
-// Dumb hashing function
-unsigned long calcHash(const char* cstr, size_t length) {
-    unsigned long hash_value = 0x1f2e3d4c;
-    for (size_t i=0; i<length; i++) {
-        // xor
-        hash_value ^= cstr[i];
-        // left rotate by 1
-        unsigned long top = (hash_value >> (sizeof(unsigned long) * 8 - 1)) & 1;
-        hash_value <<= 1;
-        hash_value |= top;
-    }
-    return hash_value;
-}
-
-struct SymbolHashTableNode {
+struct SymbolHashTableNode : public PlacementNewObj {
     SymbolHashTableNode *next;
     unsigned long key_hash;
     size_t length;
     const char* key;
     Symbol* value;
 
-    static void* operator new (size_t /* size */, void* p) { return p; }
-
     SymbolHashTableNode()
         : next(nullptr), key_hash(0), length(0), key(nullptr), value(nullptr) { }
 
     SymbolHashTableNode(SymbolHashTableNode *next_, unsigned long key_hash_,
         size_t length_, const char* key_, Symbol* value_)
-        : next(next_), key_hash(key_hash_), length(length_), key(key_), value(value_) { }
+        : next(next_), key_hash(key_hash_), length(length_), key(key_),
+          value(value_) { }
     
     static SymbolHashTableNode* create(
         State* R, SymbolHashTableNode* next, unsigned long key_hash,
@@ -51,26 +36,7 @@ struct SymbolHashTableNode {
     }
 };
 
-class rhein::SymbolHashTable {
-    //SymbolHashTable() = delete;
-    //SymbolHashTable(const SymbolHashTable& /* rht */) = delete;
-    //SymbolHashTable& operator=(const SymbolHashTable& /* rht */) = delete;
-
-    static void* operator new (size_t /* size */, void* p) { return p; }
-
-    const double rehash_ratio = 0.75;
-    const unsigned default_table_size = 16;
-    SymbolHashTableNode* table;
-    unsigned table_size;
-    unsigned item_num;
-
-    SymbolHashTable(State* R) : table_size(default_table_size), item_num(0) {
-        table = R->ator->allocateBlock<SymbolHashTableNode>(default_table_size);
-        for (unsigned i = 0; i < default_table_size ; i++) {
-            table[i].next = nullptr;
-        }
-    }
-
+class SymbolHashTable : public PlacementNewObj {
 public:
     static SymbolHashTable* create(State* R) {
         void* p = R->ator->allocateStruct<SymbolHashTable>();
@@ -78,8 +44,8 @@ public:
     }
 
     bool find(const char* key, size_t length, Symbol*& result) {
-        unsigned long hash_value = calcHash(key, length);
-        auto node = table[hash_value % table_size].next;
+        unsigned long hash_value = calc_string_hash(key, length);
+        auto node = table_[hash_value % table_size_].next;
 
         for(; node != nullptr; node = node->next) {
             if (hash_value == node->key_hash && length == node->length) {
@@ -95,28 +61,28 @@ public:
 
     void insert(State* R, Symbol* value) {
         // Check if there is no collision
-        Symbol* dummy; assert(!find(value->body, value->length, dummy));
-        unsigned long hash_value = calcHash(value->body, value->length);
-        value->hash_value = hash_value;
-        auto n = table[hash_value % table_size].next;
-        table[hash_value % table_size].next = SymbolHashTableNode::create(
-            R, n, hash_value, value->length, value->body, value);
+        Symbol* dummy; assert(!find(value->body_, value->length_, dummy));
+        unsigned long hash_value = calc_string_hash(value->body_, value->length_);
+        value->hash_value_ = hash_value;
+        auto n = table_[hash_value % table_size_].next;
+        table_[hash_value % table_size_].next = SymbolHashTableNode::create(
+            R, n, hash_value, value->length_, value->body_, value);
 
-        item_num++;
-        if (item_num > rehash_ratio * table_size) {
+        num_items_++;
+        if (num_items_ > kRehashRatio * table_size_) {
             rehash(R);
         }
     }
 
     void remove(State* R, Symbol* value) {
         // Check if there is
-        Symbol* dummy; assert(find(value->body, value->length, dummy));
-        auto prev = &table[value->hash_value % table_size];
+        Symbol* dummy; assert(find(value->body_, value->length_, dummy));
+        auto prev = &table_[value->hash_value_ % table_size_];
         auto curr = prev->next;
         for(;/* curr != nullptr */; ) {
-            if (value->hash_value == curr->key_hash && value->length == curr->length) {
-                if (value->body == curr->key
-                    || memcmp(value->body, curr->key, value->length) == 0) {
+            if (value->hash_value_ == curr->key_hash && value->length_ == curr->length) {
+                if (value->body_ == curr->key
+                    || memcmp(value->body_, curr->key, value->length_) == 0) {
 
                     prev->next = curr->next;
                     R->ator->releaseStruct(curr);
@@ -130,10 +96,10 @@ public:
     }
 
     void rehash(State* R) {
-        unsigned newtable_size = table_size * 2 + 1;
+        unsigned newtable_size = table_size_ * 2 + 1;
         SymbolHashTableNode* newtable = R->ator->allocateBlock<SymbolHashTableNode>(newtable_size);
-        for(unsigned i = 0; i < table_size; i++) {
-            SymbolHashTableNode* node = table[i].next;
+        for(unsigned i = 0; i < table_size_; i++) {
+            SymbolHashTableNode* node = table_[i].next;
             for(; node != nullptr; ) {
                 SymbolHashTableNode* oldnext = node->next;
                 SymbolHashTableNode* newnext = newtable[node->key_hash % newtable_size].next;
@@ -142,9 +108,23 @@ public:
                 node = oldnext;
             }
         }
-        R->ator->releaseBlock(table);
-        table_size = newtable_size;
-        table = newtable;
+        R->ator->releaseBlock(table_);
+        table_size_ = newtable_size;
+        table_ = newtable;
+    }
+
+private:
+    const double kRehashRatio = 0.75;
+    const unsigned kDefaultTableSize = 16;
+    SymbolHashTableNode* table_;
+    unsigned table_size_;
+    unsigned num_items_;
+
+    SymbolHashTable(State* R) : table_size_(kDefaultTableSize), num_items_(0) {
+        table_ = R->ator->allocateBlock<SymbolHashTableNode>(kDefaultTableSize);
+        for (unsigned i = 0; i < kDefaultTableSize ; i++) {
+            table_[i].next = nullptr;
+        }
     }
 };
 
@@ -162,8 +142,8 @@ SymbolProvider::create(State* R) {
 }
 
 Symbol::Symbol(State* R, const char* body_, size_t length_)
-    : Object(R->symbol_class), body(body_), length(length_),
-      hash_value(0) { }
+    : Object(R->symbol_class), body_(body_), length_(length_),
+      hash_value_(0) { }
 
 Symbol*
 Symbol::create(State* R, const char* body, size_t length) {
@@ -192,8 +172,8 @@ SymbolProvider::get_symbol(const char* cstr) {
 
 void
 Symbol::get_cstr(const char*& b, size_t& l) const {
-    b = body;
-    l = length;
+    b = body_;
+    l = length_;
 }
 
 bool
@@ -203,29 +183,30 @@ Symbol::index_ref(State* /* R */, Value vindex, Value& dest) const {
     }
 
     Int index = vindex.get_int();
-    if (index < 0 || (Int)length <= index) {
+    if (index < 0 || (Int)length_ <= index) {
         return false;
     }
 
-    dest = Value::by_char(body[index]);
+    dest = Value::by_char(body_[index]);
     return true;
 }
 
 String*
 Symbol::get_string_representation(State* R) {
-    return String::create(R, body, length);
+    return String::create(R, body_, length_);
 }
 
 String*
-Symbol::to_string(State* R) {
-	return String::create(R, body, length);
+Symbol::to_string(State* R) const {
+	return String::create(R, body_, length_);
 }
 
 void
 Symbol::dump() const {
-    for (unsigned i = 0; i < length; i++) {
-        fprintf(stderr, "%c", body[i]);
+    for (unsigned i = 0; i < length_; i++) {
+        fprintf(stderr, "%c", body_[i]);
     }
     fprintf(stderr, "\n");
 }
 
+}

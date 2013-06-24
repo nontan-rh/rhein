@@ -16,6 +16,7 @@ class Array;
 class State;
 class HashTable;
 class Record;
+class DispatcherNode;
 
 class PlacementNewObj {
 protected:
@@ -49,8 +50,8 @@ private:
 };
 
 class RecordInfo {
-    unsigned slot_num;
-    HashTable* id_index_table;
+    unsigned num_slots_;
+    HashTable* id_index_table_;
 
     static void* operator new(size_t /* size */, void *p) { return p; }
 
@@ -61,9 +62,23 @@ public:
     static RecordInfo* create(State* R, RecordInfo* parent, unsigned slot_num,
         Symbol** slot_ids);
 
-    unsigned num_slots() const { return slot_num; }
+    unsigned num_slots() const { return num_slots_; }
     bool get_slot_index(Symbol* slot_id, unsigned& index) const;
 };
+
+inline unsigned long
+calc_string_hash(const char* cstr, size_t length) {
+    unsigned long hash_value = 0x1f2e3d4c;
+    for (size_t i=0; i<length; i++) {
+        // xor
+        hash_value ^= cstr[i];
+        // left rotate by 1
+        unsigned long top = (hash_value >> (sizeof(unsigned long) * 8 - 1)) & 1;
+        hash_value <<= 1;
+        hash_value |= top;
+    }
+    return hash_value;
+}
 
 }
 

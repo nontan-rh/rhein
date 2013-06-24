@@ -12,7 +12,7 @@ Object::get_string_representation(State* R) {
     return String::create(R, "#<obj>");
 }
 Class::Class(State* R, Symbol* name_, Class* parent_, RecordInfo* record_info_)
-    : Object(R->class_class), name(name_), parent(parent_), record_info(record_info_) { }
+    : Object(R->class_class), id_(name_), parent_(parent_), record_info_(record_info_) { }
 
 Class*
 Class::create(State* R, Symbol* name, Class* parent, unsigned slot_num, Symbol** slot_ids) {
@@ -20,7 +20,7 @@ Class::create(State* R, Symbol* name, Class* parent, unsigned slot_num, Symbol**
     RecordInfo* record_info;
 
     if (parent != nullptr) {
-        record_info = RecordInfo::create(R, parent->record_info, slot_num, slot_ids);
+        record_info = RecordInfo::create(R, parent->record_info_, slot_num, slot_ids);
     } else {
         record_info = RecordInfo::create(R, nullptr, slot_num, slot_ids);
     }
@@ -29,8 +29,8 @@ Class::create(State* R, Symbol* name, Class* parent, unsigned slot_num, Symbol**
 }
 
 Class*
-Value::get_class(State *R) {
-	switch (type_id) {
+Value::get_class(State *R) const {
+	switch (type_id_) {
 	case Type::Nil:
 		return R->nil_class;
 	case Type::Bool:
@@ -42,7 +42,7 @@ Value::get_class(State *R) {
 	case Type::Char:
 		return R->char_class;
 	case Type::Object:
-		return u.v_obj->get_class();
+		return u_.v_obj_->get_class();
 	}
 	return nullptr;
 }

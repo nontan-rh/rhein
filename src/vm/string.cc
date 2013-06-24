@@ -10,11 +10,11 @@
 namespace rhein {
 
 String::String(State* R, const char* str, size_t len)
-	: Object(R->string_class), length(len), hash_value(0) {
+	: Object(R->string_class), length_(len), hash_value_(0) {
 
-	char* body_ = R->ator->allocateBlock<char>(length + 1);
-	memcpy(body_, str, length + 1);
-	body = body_;
+	char* buf = R->ator->allocateBlock<char>(length_ + 1);
+	memcpy(buf, str, length_ + 1);
+	body_ = buf;
 }
 
 String*
@@ -30,7 +30,7 @@ String::create(State *R, const char *str, size_t len) {
 
 bool
 String::index_ref(State* /* R */, Value index, Value& value) const {
-	value = Value::by_char(body[index.get_int()]);
+	value = Value::by_char(body_[index.get_int()]);
 	return true;
 }
 
@@ -40,59 +40,59 @@ String::get_string_representation(State* /* R */) {
 }
 
 void
-String::get_cstr(const char*& body_, size_t& length_) const {
-	body_ = body;
-	length_ = length;
+String::get_cstr(const char*& body, size_t& length) const {
+	body = body_;
+	length = length_;
 }
 
 String*
-String::append(State* R, String* rht) {
-    size_t newlength = this->length + rht->length;
+String::append(State* R, String* rht) const {
+    size_t newlength = this->length_ + rht->length_;
     char* buffer = R->ator->allocateBlock<char>(newlength);
-    memcpy(buffer, this->body, this->length);
-    memcpy(buffer + this->length, rht->body, rht->length);
+    memcpy(buffer, this->body_, this->length_);
+    memcpy(buffer + this->length_, rht->body_, rht->length_);
     String* ret = String::create(R, buffer, newlength);
     R->ator->releaseBlock(buffer);
     return ret;
 }
 
 String*
-String::head(State* R, size_t end) {
-    if (end > length) {
+String::head(State* R, size_t end) const {
+    if (end > length_) {
         throw;
     }
-    return String::create(R, body, end);
+    return String::create(R, body_, end);
 }
 
 String*
-String::tail(State* R, size_t begin) {
-    if (begin >= length) {
+String::tail(State* R, size_t begin) const {
+    if (begin >= length_) {
         throw;
     }
-    return String::create(R, body + begin, length - begin);
+    return String::create(R, body_ + begin, length_ - begin);
 }
 
 String*
-String::sub(State* R, size_t begin, size_t end) {
-    if (end > length || begin >= length || end < begin) {
+String::sub(State* R, size_t begin, size_t end) const {
+    if (end > length_ || begin >= length_ || end < begin) {
         throw;
     }
-    return String::create(R, body + begin, end - begin);
+    return String::create(R, body_ + begin, end - begin);
 }
 
 bool
-String::to_array(State* R, Array*& array) {
-    array = Array::create(R, length);
+String::to_array(State* R, Array*& array) const {
+    array = Array::create(R, length_);
 
-    for (unsigned i = 0; i < length; i++) {
-        array->elt_set(i, Value::by_char(body[i]));
+    for (unsigned i = 0; i < length_; i++) {
+        array->elt_set(i, Value::by_char(body_[i]));
     }
     return true;
 }
 
 Symbol*
-String::to_symbol(State* R) {
-	 return R->s_prv->get_symbol(body, length);
+String::to_symbol(State* R) const {
+	 return R->s_prv->get_symbol(body_, length_);
 }
 
 }
