@@ -198,7 +198,7 @@ Symbol::get_string_representation(State* R) {
 
 String*
 Symbol::to_string(State* R) const {
-	return String::create(R, body_, length_);
+    return String::create(R, body_, length_);
 }
 
 void

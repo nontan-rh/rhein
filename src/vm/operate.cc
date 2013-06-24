@@ -36,8 +36,8 @@ bool op_not(Value v, Value& dest) {
         dest = Value::k_true();
         return true;
     }
-	dest = Value::k_false();
-	return true;
+    dest = Value::k_false();
+    return true;
 }
 
 

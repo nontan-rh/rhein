@@ -30,21 +30,21 @@ Class::create(State* R, Symbol* name, Class* parent, unsigned slot_num, Symbol**
 
 Class*
 Value::get_class(State *R) const {
-	switch (type_id_) {
-	case Type::Nil:
-		return R->get_nil_class();
-	case Type::Bool:
-		return R->get_bool_class();
-	case Type::Int:
-		return R->get_int_class();
-	case Type::Undef:
-		return R->get_nil_class();
-	case Type::Char:
-		return R->get_char_class();
-	case Type::Object:
-		return u_.v_obj_->get_class();
-	}
-	return nullptr;
+    switch (type_id_) {
+    case Type::Nil:
+        return R->get_nil_class();
+    case Type::Bool:
+        return R->get_bool_class();
+    case Type::Int:
+        return R->get_int_class();
+    case Type::Undef:
+        return R->get_nil_class();
+    case Type::Char:
+        return R->get_char_class();
+    case Type::Object:
+        return u_.v_obj_->get_class();
+    }
+    return nullptr;
 }
 
 }

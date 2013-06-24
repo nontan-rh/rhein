@@ -29,7 +29,7 @@ RecordInfo::RecordInfo(State* R, RecordInfo* parent, unsigned slot_num_,
     unsigned base = id_index_table_->get_num_entries();
     for (unsigned i = 0; i < num_slots_; i++) {
         id_index_table_->insert_if_absent(R, Value::by_object(slot_ids[i]),
-        		Value::by_int(base + i));
+                Value::by_int(base + i));
     }
 }
 

@@ -10,39 +10,39 @@
 namespace rhein {
 
 String::String(State* R, const char* str, size_t len)
-	: Object(R->get_string_class()), length_(len), hash_value_(0) {
+    : Object(R->get_string_class()), length_(len), hash_value_(0) {
 
-	char* buf = R->allocate_block<char>(length_ + 1);
-	memcpy(buf, str, length_ + 1);
-	body_ = buf;
+    char* buf = R->allocate_block<char>(length_ + 1);
+    memcpy(buf, str, length_ + 1);
+    body_ = buf;
 }
 
 String*
 String::create(State* R, const char *str) {
-	return String::create(R, str, strlen(str));
+    return String::create(R, str, strlen(str));
 }
 
 String*
 String::create(State *R, const char *str, size_t len) {
-	void* p = R->allocate_object<String>();
-	return new (p) String(R, str, len);
+    void* p = R->allocate_object<String>();
+    return new (p) String(R, str, len);
 }
 
 bool
 String::index_ref(State* /* R */, Value index, Value& value) const {
-	value = Value::by_char(body_[index.get_int()]);
-	return true;
+    value = Value::by_char(body_[index.get_int()]);
+    return true;
 }
 
 String*
 String::get_string_representation(State* /* R */) {
-	return this;
+    return this;
 }
 
 void
 String::get_cstr(const char*& body, size_t& length) const {
-	body = body_;
-	length = length_;
+    body = body_;
+    length = length_;
 }
 
 String*
@@ -92,7 +92,7 @@ String::to_array(State* R, Array*& array) const {
 
 Symbol*
 String::to_symbol(State* R) const {
-	 return R->get_symbol(body_, length_);
+     return R->get_symbol(body_, length_);
 }
 
 }

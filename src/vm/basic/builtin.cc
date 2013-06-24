@@ -68,8 +68,8 @@ BuiltinModule::create(State* R) {
 
 static inline void
 add_function(State* R, const char* name, NativeFunctionBody fn) {
-	R->add_function(NativeFunction::create(R,
-			FunctionInfo::create(R, R->get_symbol(name)), fn));
+    R->add_function(NativeFunction::create(R,
+            FunctionInfo::create(R, R->get_symbol(name)), fn));
 }
 
 bool

@@ -69,28 +69,28 @@ struct Insn {
 };
 
 Frame::Frame(State* R, Value* stack_ptr, BytecodeFunction* fn_, Frame* parent_,
-		Frame* closure_, unsigned argc_, Value* args_, Value*& next_stack_ptr)
+        Frame* closure_, unsigned argc_, Value* args_, Value*& next_stack_ptr)
     : fn(fn_), closure(closure_), parent(parent_),
       argc(argc_), args(args_),
       pc(nullptr), restore_stack_ptr(stack_ptr), sp(nullptr) {
-	const size_t frame_size = sizeof(Frame) - sizeof(Value);
-	unsigned required_value_slots = fn->get_function_slot_num()
-			+ fn->get_variable_slot_num() + fn->get_stack_size();
-	uintptr_t istack_ptr = reinterpret_cast<uintptr_t>(stack_ptr);
-	Value* local_area_begin = reinterpret_cast<Value*>(istack_ptr + frame_size);
-	func_slots = local_area_begin;
-	var_slots = local_area_begin + fn->get_function_slot_num();
-	stack = local_area_begin + required_value_slots;
-	uintptr_t istack = reinterpret_cast<uintptr_t>(stack);
-	size_t align = alignment_of<Frame>::value;
-	if (istack % align) {
-		stack = reinterpret_cast<Value*>(
-					istack + align - (istack % align));
-	}
-	next_stack_ptr = stack;
-	if (next_stack_ptr > R->get_stack_end()) {
-		fatal("Stack overflow");
-	}
+    const size_t frame_size = sizeof(Frame) - sizeof(Value);
+    unsigned required_value_slots = fn->get_function_slot_num()
+            + fn->get_variable_slot_num() + fn->get_stack_size();
+    uintptr_t istack_ptr = reinterpret_cast<uintptr_t>(stack_ptr);
+    Value* local_area_begin = reinterpret_cast<Value*>(istack_ptr + frame_size);
+    func_slots = local_area_begin;
+    var_slots = local_area_begin + fn->get_function_slot_num();
+    stack = local_area_begin + required_value_slots;
+    uintptr_t istack = reinterpret_cast<uintptr_t>(stack);
+    size_t align = alignment_of<Frame>::value;
+    if (istack % align) {
+        stack = reinterpret_cast<Value*>(
+                    istack + align - (istack % align));
+    }
+    next_stack_ptr = stack;
+    if (next_stack_ptr > R->get_stack_end()) {
+        fatal("Stack overflow");
+    }
 }
 
 bool
@@ -234,43 +234,43 @@ State::initialize_class1() {
 
 void
 State::initialize_class2() {
-	any_class_->set_id(get_symbol("any"));
-	class_class_->set_id(get_symbol("class"));
-	nil_class_->set_id(get_symbol("nil"));
-	bool_class_->set_id(get_symbol("bool"));
-	int_class_->set_id(get_symbol("int"));
-	char_class_->set_id(get_symbol("char"));
-	symbol_class_->set_id(get_symbol("symbol"));
-	string_class_->set_id(get_symbol("string"));
-	array_class_->set_id(get_symbol("array"));
-	hashtable_class_->set_id(get_symbol("hashtable"));
-	method_class_->set_id(get_symbol("method"));
-	bytecode_function_class_->set_id(get_symbol("bytecode_function"));
-	native_function_class_->set_id(get_symbol("native_function"));
+    any_class_->set_id(get_symbol("any"));
+    class_class_->set_id(get_symbol("class"));
+    nil_class_->set_id(get_symbol("nil"));
+    bool_class_->set_id(get_symbol("bool"));
+    int_class_->set_id(get_symbol("int"));
+    char_class_->set_id(get_symbol("char"));
+    symbol_class_->set_id(get_symbol("symbol"));
+    string_class_->set_id(get_symbol("string"));
+    array_class_->set_id(get_symbol("array"));
+    hashtable_class_->set_id(get_symbol("hashtable"));
+    method_class_->set_id(get_symbol("method"));
+    bytecode_function_class_->set_id(get_symbol("bytecode_function"));
+    native_function_class_->set_id(get_symbol("native_function"));
 }
 
 void
 State::set_class_hash(Class* klass){
-	klass_slots_->insert(this,
-			Value::by_object(klass->get_id()),
-			Value::by_object(klass));
+    klass_slots_->insert(this,
+            Value::by_object(klass->get_id()),
+            Value::by_object(klass));
 }
 
 void
 State::initialize_class3() {
-	set_class_hash(any_class_);
-	set_class_hash(class_class_);
-	set_class_hash(nil_class_);
-	set_class_hash(bool_class_);
-	set_class_hash(int_class_);
-	set_class_hash(char_class_);
-	set_class_hash(symbol_class_);
-	set_class_hash(string_class_);
-	set_class_hash(array_class_);
-	set_class_hash(hashtable_class_);
-	set_class_hash(method_class_);
-	set_class_hash(bytecode_function_class_);
-	set_class_hash(native_function_class_);
+    set_class_hash(any_class_);
+    set_class_hash(class_class_);
+    set_class_hash(nil_class_);
+    set_class_hash(bool_class_);
+    set_class_hash(int_class_);
+    set_class_hash(char_class_);
+    set_class_hash(symbol_class_);
+    set_class_hash(string_class_);
+    set_class_hash(array_class_);
+    set_class_hash(hashtable_class_);
+    set_class_hash(method_class_);
+    set_class_hash(bytecode_function_class_);
+    set_class_hash(native_function_class_);
 }
 
 void
@@ -427,7 +427,7 @@ getInsnArgUU2(uint32_t insn) {
 #define GLOBAL_REFER_OP(op) { \
     Value id = fn->get_constant_table()[getInsnArgU(insn)]; \
     if (!id.is(Value::Type::Object) \
-			|| id.get_obj<Object>()->get_class() != R->get_symbol_class()) { \
+            || id.get_obj<Object>()->get_class() != R->get_symbol_class()) { \
         fatal("Error on global refer"); \
     } \
     if (!R->op(id.get_obj<Symbol>(), *(--sp))) { \
@@ -440,7 +440,7 @@ getInsnArgUU2(uint32_t insn) {
 #define GLOBAL_SET_OP(op) { \
     Value id = fn->get_constant_table()[getInsnArgU(insn)]; \
     if (!id.is(Value::Type::Object) \
-    		|| id.get_obj<Object>()->get_class() != R->get_symbol_class()) { \
+            || id.get_obj<Object>()->get_class() != R->get_symbol_class()) { \
         fatal("Error on global set"); \
     } \
     if (!R->op(id.get_obj<Symbol>(), *(sp))) { \
@@ -452,9 +452,9 @@ getInsnArgUU2(uint32_t insn) {
 
 Value
 execute(State* R, BytecodeFunction* entry_fn, unsigned argc_, Value* args_) {
-	Value* next_stack_ptr;
+    Value* next_stack_ptr;
     Frame* fr = Frame::create(R, R->get_stack_begin(), entry_fn, nullptr,
-    		nullptr, argc_, args_, next_stack_ptr);
+            nullptr, argc_, args_, next_stack_ptr);
     BytecodeFunction* fn = entry_fn;
     Value* sp = fr->stack;
     const uint32_t* pc = fn->get_bytecode();
@@ -523,7 +523,7 @@ execute(State* R, BytecodeFunction* entry_fn, unsigned argc_, Value* args_) {
                     fn = (BytecodeFunction*)ofunc;
 
                     if (fn->get_info()->variadic()) {
-                    	fatal("Not implemented");
+                        fatal("Not implemented");
                         unsigned vargs_count = argc - fn->get_info()->num_args();
                         Array* vargs = Array::create(R, vargs_count);
                         for (unsigned i = 0; i < vargs_count; i++) {
@@ -539,7 +539,7 @@ execute(State* R, BytecodeFunction* entry_fn, unsigned argc_, Value* args_) {
                     fr->pc = pc + 1;
                     fr->sp = sp + argc;
                     fr = Frame::create(R, next_stack_ptr, fn, fr, closure, argc,
-                    		stack_args, next_stack_ptr);
+                            stack_args, next_stack_ptr);
                     pc = fn->get_bytecode();
                     sp = fr->stack;
                 } else if (ofunc->get_class() == R->get_native_function_class()) {

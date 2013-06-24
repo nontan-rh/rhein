@@ -31,23 +31,23 @@ BinaryReader::read32Bit(FILE* fp, uint32_t& word) {
 
 bool
 BinaryReader::readString(FILE* fp, State* R, String*& result) {
-	unsigned long length;
-	if (!BinaryReader::readBER(fp, length)) {
-		result = nullptr;
-		return false;
-	}
-	auto buffer = new char[length];
-	for (unsigned long i = 0; i < length; i++) {
-		if (feof(fp)) {
-			delete[] buffer;
-			result = nullptr;
-			return false;
-		}
-		buffer[i] = (char)fgetc(fp);
-	}
-	result = String::create(R, buffer, length);
-	delete[] buffer;
-	return true;
+    unsigned long length;
+    if (!BinaryReader::readBER(fp, length)) {
+        result = nullptr;
+        return false;
+    }
+    auto buffer = new char[length];
+    for (unsigned long i = 0; i < length; i++) {
+        if (feof(fp)) {
+            delete[] buffer;
+            result = nullptr;
+            return false;
+        }
+        buffer[i] = (char)fgetc(fp);
+    }
+    result = String::create(R, buffer, length);
+    delete[] buffer;
+    return true;
 }
 
 bool
@@ -127,7 +127,7 @@ State::read_class(FILE* fp) {
     }
 
     add_class(Class::create(this, klass_name, parent.get_obj<Class>(),
-    		slot_num, slots));
+            slot_num, slots));
     return true;
 }
 
@@ -180,12 +180,12 @@ State::read_function(FILE* fp) {
                 }
                 break;
             case LiteralSigniture::String:
-            	{
-            		String* string_value;
-            		BinaryReader::readString(fp, this, string_value);
-            		constant_table[i] = Value::by_object(string_value);
-            	}
-            	break;
+                {
+                    String* string_value;
+                    BinaryReader::readString(fp, this, string_value);
+                    constant_table[i] = Value::by_object(string_value);
+                }
+                break;
             default:
                 return false;
         }

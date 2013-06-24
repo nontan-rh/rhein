@@ -21,11 +21,11 @@ print_value(State* R, Value v) {
     } else if (v.is(Value::Type::Char)) {
         printf("?%c", v.get_char());
     } else if (v.is(Value::Type::Bool)) {
-    	if (v.get_bool()) {
-    		printf("true");
-    	} else {
-    		printf("false");
-    	}
+        if (v.get_bool()) {
+            printf("true");
+        } else {
+            printf("false");
+        }
     } else if (v.is(Value::Type::Nil)) {
         printf("nil");
     } else if (v.is(Value::Type::Object)) {
@@ -66,11 +66,11 @@ fn_write(State* R, unsigned argc, Value* args) {
     } else if (v.is(Value::Type::Char)) {
         printf("%c", v.get_char());
     } else if (v.is(Value::Type::Bool)) {
-    	if (v.get_bool()) {
+        if (v.get_bool()) {
             printf("true");
-    	} else {
-    		printf("false");
-    	}
+        } else {
+            printf("false");
+        }
     } else if (v.is(Value::Type::Nil)) {
         printf("nil");
     } else if (v.is(Value::Type::Object)) {
@@ -110,7 +110,7 @@ fn_new(State* R, unsigned argc, Value* args) {
     }
 
     if (args[0].get_class(R) != R->get_class_class()) {
-    	return Value::k_nil();
+        return Value::k_nil();
     }
     return Value::by_object(Record::create(R, args[0].get_obj<Class>()));
 }
@@ -128,7 +128,7 @@ fn_literal(State* R, unsigned argc, Value* args) {
         }
 
         return Value::by_object(Array::literal(R,
-        		args[1].get_obj<Array>()));
+                args[1].get_obj<Array>()));
     } else if (k == R->get_hashtable_class()) {
         if (!(argc == 3
             && args[1].get_class(R) == R->get_array_class()
@@ -240,7 +240,7 @@ fn_length(State* R, unsigned argc, Value* args) {
     if (args[0].get_class(R) == R->get_symbol_class()) {
         return Value::by_int(args[0].get_obj<Symbol>()->get_length());
     } else if (args[0].get_class(R) == R->get_string_class()) {
-    	return Value::by_int(args[0].get_obj<String>()->get_length());
+        return Value::by_int(args[0].get_obj<String>()->get_length());
     } else if (args[0].get_class(R) == R->get_array_class()) {
         return Value::by_int(args[0].get_obj<Array>()->get_length());
     } else {
@@ -304,26 +304,26 @@ BasicModule::create(State* R) {
 
 static inline void
 add_function(State* R, const char* name, NativeFunctionBody fn) {
-	R->add_function(NativeFunction::create(R,
-			FunctionInfo::create(R, R->get_symbol(name)), fn));
+    R->add_function(NativeFunction::create(R,
+            FunctionInfo::create(R, R->get_symbol(name)), fn));
 }
 
 bool
 BasicModule::initialize(State* R) {
-	add_function(R, "print", fn_print);
-	add_function(R, "input", fn_input);
-	add_function(R, "new", fn_new);
-	add_function(R, "literal", fn_literal);
-	add_function(R, "to_array", fn_to_array);
-	add_function(R, "to_string", fn_to_string);
-	add_function(R, "append", fn_append);
-	add_function(R, "head", fn_head);
-	add_function(R, "tail", fn_tail);
-	add_function(R, "sub", fn_sub);
-	add_function(R, "length", fn_length);
-	add_function(R, "die", fn_die);
-	add_function(R, "is_a", fn_is_a);
-	add_function(R, "load", fn_load);
+    add_function(R, "print", fn_print);
+    add_function(R, "input", fn_input);
+    add_function(R, "new", fn_new);
+    add_function(R, "literal", fn_literal);
+    add_function(R, "to_array", fn_to_array);
+    add_function(R, "to_string", fn_to_string);
+    add_function(R, "append", fn_append);
+    add_function(R, "head", fn_head);
+    add_function(R, "tail", fn_tail);
+    add_function(R, "sub", fn_sub);
+    add_function(R, "length", fn_length);
+    add_function(R, "die", fn_die);
+    add_function(R, "is_a", fn_is_a);
+    add_function(R, "load", fn_load);
     return false;
 }
 

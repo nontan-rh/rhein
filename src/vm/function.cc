@@ -10,14 +10,14 @@ namespace rhein {
 
 FunctionInfo*
 FunctionInfo::create(State* R, Symbol* id) {
-	return create(R, id, true, 0, nullptr);
+    return create(R, id, true, 0, nullptr);
 }
 
 FunctionInfo*
 FunctionInfo::create(State* R, Symbol* id, bool variadic, unsigned num_args,
-		Symbol** arg_class_ids) {
-	void* p = R->allocate_struct<FunctionInfo>();
-	return new (p) FunctionInfo(id, variadic, num_args, arg_class_ids);
+        Symbol** arg_class_ids) {
+    void* p = R->allocate_struct<FunctionInfo>();
+    return new (p) FunctionInfo(id, variadic, num_args, arg_class_ids);
 }
 
 bool
@@ -108,7 +108,7 @@ public:
     }
 
     bool dispatch(State* R, unsigned argc, Value* args, unsigned index,
-    		Value& func) {
+            Value& func) {
         if (argc == index) {
             if (!entry_.is(Value::Type::Nil)) {
                 func = entry_;
@@ -127,7 +127,7 @@ public:
             if (child_table_->find(Value::by_object(klass), child)) {
                 // Unsafe cast!
                 if (child.get_obj<DispatcherNode>()->dispatch(R,
-                		argc, args, index + 1, func)) {
+                        argc, args, index + 1, func)) {
                     return true;
                 }
             }
@@ -144,7 +144,7 @@ public:
     }
 
     bool addFunction(State* R, Value func, Function* func_body,
-    		unsigned index) {
+            unsigned index) {
         if (func_body->get_info()->num_args() == index) {
             if (func_body->get_info()->variadic()) {
                 if (!variable_entry_.is(Value::Type::Nil)) {
@@ -169,7 +169,7 @@ public:
         }
         // Unsafe cast
         return child.get_obj<DispatcherNode>()->addFunction(R, func,
-        		func_body, index + 1);
+                func_body, index + 1);
     }
 
 private:

@@ -46,50 +46,50 @@ public:
     Class* get_array_class() const { return array_class_; }
     Class* get_method_class() const { return method_class_; }
     Class* get_bytecode_function_class() const {
-    	return bytecode_function_class_;
+        return bytecode_function_class_;
     }
     Class* get_native_function_class() const {
-    	return native_function_class_;
+        return native_function_class_;
     }
     Class* get_hashtable_class() const {
-    	return hashtable_class_;
+        return hashtable_class_;
     }
     Class* get_string_class() const { return string_class_; }
     Class* get_symbol_class() const { return symbol_class_; }
 
     Symbol* get_symbol(const char* cstr) const {
-    	return symbol_provider_->get_symbol(cstr);
+        return symbol_provider_->get_symbol(cstr);
     }
 
     Symbol* get_symbol(const char* cstr, size_t len) const {
-    	return symbol_provider_->get_symbol(cstr, len);
+        return symbol_provider_->get_symbol(cstr, len);
     }
 
     template <class T>
     void* allocate_object() {
-    	return allocator_->allocate_object<T>();
+        return allocator_->allocate_object<T>();
     }
 
     Value* allocate_raw_array(unsigned size) {
-    	return allocator_->allocate_raw_array(size);
+        return allocator_->allocate_raw_array(size);
     }
 
     template <class T>
     T* allocate_block(unsigned size) {
-    	return allocator_->allocate_block<T>(size);
+        return allocator_->allocate_block<T>(size);
     }
 
     void release_block(void* p) {
-    	allocator_->release_block(p);
+        allocator_->release_block(p);
     }
 
     template <class T>
     void* allocate_struct() {
-    	return allocator_->allocate_struct<T>();
+        return allocator_->allocate_struct<T>();
     }
 
     void release_struct(void* p) {
-    	return allocator_->release_struct(p);
+        return allocator_->release_struct(p);
     }
 
     State();
@@ -111,7 +111,7 @@ public:
     bool has_symbol_provider() const { return (symbol_provider_ != nullptr); }
 
     bool get_class(Symbol* id, Value& klass) const {
-    	return klass_slots_->find(Value::by_object(id), klass);
+        return klass_slots_->find(Value::by_object(id), klass);
     }
 
     // Bytecode level interface
@@ -124,11 +124,11 @@ public:
     }
 
     bool global_var_ref(Symbol* id, Value& value) const {
-    	return var_slots_->find(Value::by_object(id), value);
+        return var_slots_->find(Value::by_object(id), value);
     }
 
     bool global_var_set(Symbol* id, Value value) {
-    	return var_slots_->assign(Value::by_object(id), value);
+        return var_slots_->assign(Value::by_object(id), value);
     }
 
     // File loading interface
@@ -191,8 +191,8 @@ public:
 // Frame must be a POD
 struct Frame : public PlacementNewObj {
     Frame(State* R, Value* stack_ptr, BytecodeFunction* fn_, Frame* parent_,
-    		Frame* closure_, unsigned argc_, Value* args_,
-    		Value*& next_stack_ptr);
+            Frame* closure_, unsigned argc_, Value* args_,
+            Value*& next_stack_ptr);
 
     BytecodeFunction* fn;
     Frame* closure;
@@ -208,10 +208,10 @@ struct Frame : public PlacementNewObj {
     Value slots[1];
 
     static Frame* create(State* R, Value* stack_ptr, BytecodeFunction* fn,
-    		Frame* parent, Frame* closure, unsigned argc, Value* args,
-    		Value*& next_stack_ptr) {
+            Frame* parent, Frame* closure, unsigned argc, Value* args,
+            Value*& next_stack_ptr) {
         return new (stack_ptr) Frame(R, stack_ptr, fn, parent,
-        		closure, argc, args, next_stack_ptr);
+                closure, argc, args, next_stack_ptr);
     }
 
     // Variables

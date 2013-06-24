@@ -18,85 +18,85 @@ typedef int Int;
 
 class Value {
 public:
-	enum class Type {
-		Nil,
-		Bool,
-		Undef,
-		Int,
-		Char,
-		Object,
-	};
+    enum class Type {
+        Nil,
+        Bool,
+        Undef,
+        Int,
+        Char,
+        Object,
+    };
 
-	static Value k_nil() { return Value(Type::Nil); }
-	static Value k_true() { return Value(true); }
-	static Value k_false() { return Value(false); }
-	static Value k_undef() { return Value(Type::Undef); }
-	static Value by_bool(bool value) { return Value(value); }
-	static Value by_int(Int value) { return Value(value); }
-	static Value by_char(uint32_t ch) { return Value(ch); }
-	static Value by_object(const Object *obj) {
-		return Value(const_cast<Object *>(obj));
-	}
+    static Value k_nil() { return Value(Type::Nil); }
+    static Value k_true() { return Value(true); }
+    static Value k_false() { return Value(false); }
+    static Value k_undef() { return Value(Type::Undef); }
+    static Value by_bool(bool value) { return Value(value); }
+    static Value by_int(Int value) { return Value(value); }
+    static Value by_char(uint32_t ch) { return Value(ch); }
+    static Value by_object(const Object *obj) {
+        return Value(const_cast<Object *>(obj));
+    }
 
-	bool is(Type t) const { return type_id_ == t; }
-	bool like_true() const { return !like_false(); }
-	bool like_false() const { return (type_id_ == Type::Bool && !u_.v_bool_); }
-	Int get_int() const { assert(type_id_ == Type::Int); return u_.v_int_; }
-	uint32_t get_char() const { assert(type_id_ == Type::Char); return u_.v_char_; }
-	bool get_bool() const { assert(type_id_ == Type::Bool); return u_.v_bool_; }
-	template <class T>
-	T *get_obj() const {
-		assert(type_id_ == Type::Object);
-		return reinterpret_cast<T*>(u_.v_obj_);
-	}
+    bool is(Type t) const { return type_id_ == t; }
+    bool like_true() const { return !like_false(); }
+    bool like_false() const { return (type_id_ == Type::Bool && !u_.v_bool_); }
+    Int get_int() const { assert(type_id_ == Type::Int); return u_.v_int_; }
+    uint32_t get_char() const { assert(type_id_ == Type::Char); return u_.v_char_; }
+    bool get_bool() const { assert(type_id_ == Type::Bool); return u_.v_bool_; }
+    template <class T>
+    T *get_obj() const {
+        assert(type_id_ == Type::Object);
+        return reinterpret_cast<T*>(u_.v_obj_);
+    }
 
-	Value::Type get_type() const { return type_id_; }
+    Value::Type get_type() const { return type_id_; }
 
-	unsigned long get_hash() const;
+    unsigned long get_hash() const;
 
-	Class *get_class(State *R) const;
+    Class *get_class(State *R) const;
 
-	bool eq(const Value& rht) const {
-		if (type_id_ != rht.type_id_) {
-			return false;
-		}
-		switch (type_id_) {
-		case Type::Nil:
-		case Type::Undef: // FALLTHROUGH
-			return true;
-		case Type::Bool:
-			return u_.v_bool_ == rht.u_.v_bool_;
-		case Type::Int:
-			return u_.v_int_ == rht.u_.v_int_;
-		case Type::Char:
-			return u_.v_char_ == rht.u_.v_char_;
-		case Type::Object:
-			return u_.v_obj_ == rht.u_.v_obj_;
-		}
-		return false;
-	}
+    bool eq(const Value& rht) const {
+        if (type_id_ != rht.type_id_) {
+            return false;
+        }
+        switch (type_id_) {
+        case Type::Nil:
+        case Type::Undef: // FALLTHROUGH
+            return true;
+        case Type::Bool:
+            return u_.v_bool_ == rht.u_.v_bool_;
+        case Type::Int:
+            return u_.v_int_ == rht.u_.v_int_;
+        case Type::Char:
+            return u_.v_char_ == rht.u_.v_char_;
+        case Type::Object:
+            return u_.v_obj_ == rht.u_.v_obj_;
+        }
+        return false;
+    }
 
-	Value() : type_id_(Type::Undef) { }
+    Value() : type_id_(Type::Undef) { }
 private:
-	Type type_id_;
-	union Body {
-		Int v_int_;
-		Object *v_obj_;
-		uint32_t v_char_;
-		bool v_bool_;
+    Type type_id_;
+    union Body {
+        Int v_int_;
+        Object *v_obj_;
+        uint32_t v_char_;
+        bool v_bool_;
 
-		Body() : v_obj_(nullptr) { }
-		Body(bool value) : v_bool_(value) { }
-		Body(Int value) : v_int_(value) { }
-		Body(uint32_t ch) : v_char_(ch) { }
-		Body(Object *obj) : v_obj_(obj) { }
-	} u_;
+        Body() : v_obj_(nullptr) { }
+        Body(bool value) : v_bool_(value) { }
+        Body(Int value) : v_int_(value) { }
+        Body(uint32_t ch) : v_char_(ch) { }
+        Body(Object *obj) : v_obj_(obj) { }
+    } u_;
 
-	Value(Type type) : type_id_(type) { }
-	Value(bool value) : type_id_(Type::Bool), u_(value) { }
-	Value(Int value) : type_id_(Type::Int), u_(value) { }
-	Value(uint32_t ch) : type_id_(Type::Char), u_(ch) { }
-	Value(Object *obj) : type_id_(Type::Object), u_(obj) { }
+    Value(Type type) : type_id_(type) { }
+    Value(bool value) : type_id_(Type::Bool), u_(value) { }
+    Value(Int value) : type_id_(Type::Int), u_(value) { }
+    Value(uint32_t ch) : type_id_(Type::Char), u_(ch) { }
+    Value(Object *obj) : type_id_(Type::Object), u_(obj) { }
 };
 
 class Object : public PlacementNewObj {
@@ -108,7 +108,7 @@ protected:
 
 public:
     virtual unsigned long get_hash() {
-    	return reinterpret_cast<unsigned long>(this);
+        return reinterpret_cast<unsigned long>(this);
     }
 
     virtual Class* get_class() { return klass_; }
@@ -144,7 +144,7 @@ public:
     }
 
     static Class* create(State* R, Symbol* name, Class* parent,
-    		unsigned slot_num, Symbol** slot_ids);
+            unsigned slot_num, Symbol** slot_ids);
 
     Symbol* get_id() const { return id_; }
     Class* get_parent() const { return parent_; }
@@ -163,21 +163,21 @@ private:
 
 inline unsigned long
 Value::get_hash() const {
-	switch (type_id_){
-	case Type::Nil:
-		return 12345;
-	case Type::Bool:
-		return 34567;
-	case Type::Undef:
-		return 0;
-	case Type::Int:
-		return u_.v_int_;
-	case Type::Char:
-		return u_.v_char_;
-	case Type::Object:
-		return u_.v_obj_->get_hash();
-	}
-	return 0;
+    switch (type_id_){
+    case Type::Nil:
+        return 12345;
+    case Type::Bool:
+        return 34567;
+    case Type::Undef:
+        return 0;
+    case Type::Int:
+        return u_.v_int_;
+    case Type::Char:
+        return u_.v_char_;
+    case Type::Object:
+        return u_.v_obj_->get_hash();
+    }
+    return 0;
 }
 
 class Symbol : public Object {
@@ -226,11 +226,11 @@ public:
 
 class String : public Object {
 public:
-	static String* create(State* R, const char* str);
-	static String* create(State* R, const char* cstr, size_t len);
+    static String* create(State* R, const char* str);
+    static String* create(State* R, const char* cstr, size_t len);
 
-	unsigned long get_hash() { return hash_value_; }
-	String* get_string_representation(State* R);
+    unsigned long get_hash() { return hash_value_; }
+    String* get_string_representation(State* R);
     void get_cstr(const char*& body, size_t& length) const;
 
     // Override
@@ -246,11 +246,11 @@ public:
     bool to_array(State* R, Array*& array) const;
     Symbol* to_symbol(State* R) const;
 private:
-	const char* body_;
-	size_t length_;
-	unsigned long hash_value_;
+    const char* body_;
+    size_t length_;
+    unsigned long hash_value_;
 
-	String(State* R, const char* str, size_t length);
+    String(State* R, const char* str, size_t length);
 };
 
 class Array : public Object {
@@ -355,7 +355,7 @@ typedef Value (*NativeFunctionBody)(State*, unsigned, Value*);
 
 class Function : public Object {
 protected:
-	FunctionInfo *info_;
+    FunctionInfo *info_;
     Frame* closure_;
 
     Function(Class* klass, FunctionInfo *info)
@@ -371,7 +371,7 @@ public:
 class NativeFunction : public Function {
 public:
     static NativeFunction* create(State* R, FunctionInfo* name,
-    		NativeFunctionBody body);
+            NativeFunctionBody body);
 
     NativeFunctionBody get_body() const { return body_; }
 
