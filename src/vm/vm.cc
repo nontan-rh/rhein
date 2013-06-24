@@ -7,6 +7,7 @@ using namespace std;
 
 #include <tr1/cstdint>
 #include <cstring>
+#include <type_traits>
 
 #include "object.h"
 #include "error.h"
@@ -80,6 +81,12 @@ Frame::Frame(State* R, Value* stack_ptr, BytecodeFunction* fn_, Frame* parent_,
 	func_slots = local_area_begin;
 	var_slots = local_area_begin + fn->get_function_slot_num();
 	stack = local_area_begin + required_value_slots;
+	uintptr_t istack = reinterpret_cast<uintptr_t>(stack);
+	size_t align = alignment_of<Frame>::value;
+	if (istack % align) {
+		stack = reinterpret_cast<Value*>(
+					istack + align - (istack % align));
+	}
 	next_stack_ptr = stack;
 	if (next_stack_ptr > R->get_stack_end()) {
 		fatal("Stack overflow");
