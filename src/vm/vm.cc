@@ -84,10 +84,9 @@ Frame::Frame(State* R, Value* stack_ptr, BytecodeFunction* fn_, Frame* parent_,
     uintptr_t istack = reinterpret_cast<uintptr_t>(stack);
     size_t align = alignment_of<Frame>::value;
     if (istack % align) {
-        stack = reinterpret_cast<Value*>(
+        next_stack_ptr = reinterpret_cast<Value*>(
                     istack + align - (istack % align));
     }
-    next_stack_ptr = stack;
     if (next_stack_ptr > R->get_stack_end()) {
         fatal("Stack overflow");
     }
