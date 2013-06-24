@@ -20,9 +20,9 @@ register_function(State* R, unsigned argc, Value* args) {
     Value fn = args[0];
     Value name = args[1];
 
-    if (!((fn.get_klass(R) == R->bytecode_function_class
-           || fn.get_klass(R) == R->native_function_class)
-          && name.get_klass(R) == R->symbol_class)) {
+    if (!((fn.get_class(R) == R->bytecode_function_class
+           || fn.get_class(R) == R->native_function_class)
+          && name.get_class(R) == R->symbol_class)) {
         fatal("Invalid arguments");
     }
 
@@ -38,21 +38,21 @@ register_class(State* R, unsigned argc, Value* args) {
         fatal("Invalid arguments");
     }
 
-    Klass* klass = args[0].get_klass(R);
+    Class* klass = args[0].get_class(R);
     Value name = args[1];
 
-    if (name.get_klass(R) != R->symbol_class) {
+    if (name.get_class(R) != R->symbol_class) {
         fatal("Invalid arguments");
     }
 
-    R->addKlass(klass, name.get_obj<Symbol>());
+    R->addClass(klass, name.get_obj<Symbol>());
     return Value::k_nil();
 }
 
 static Value
 register_variable(State* R, unsigned argc, Value* args) {
     if (!((argc == 2)
-          && args[0].get_klass(R) == R->symbol_class)) {
+          && args[0].get_class(R) == R->symbol_class)) {
         fatal("Invalid arguments");
     }
 

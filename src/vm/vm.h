@@ -39,7 +39,7 @@ class State {
 
     bool readObject(FILE* fp);
     bool readFunction(FILE* fp);
-    bool readKlass(FILE* fp);
+    bool readClass(FILE* fp);
 
 public:
     static void* operator new(size_t /* size */, void* p) { return p; }
@@ -47,39 +47,39 @@ public:
     Allocator* ator;
     SymbolProvider* s_prv;
 
-    Klass* any_class;
-    Klass* class_class;
-    Klass* int_class;
-    Klass* char_class;
-    Klass* nil_class;
-    Klass* bool_class;
-    Klass* array_class;
-    Klass* method_class;
-    Klass* bytecode_function_class;
-    Klass* native_function_class;
-    Klass* hashtable_class;
-    Klass* string_class;
-    Klass* symbol_class;
+    Class* any_class;
+    Class* class_class;
+    Class* int_class;
+    Class* char_class;
+    Class* nil_class;
+    Class* bool_class;
+    Class* array_class;
+    Class* method_class;
+    Class* bytecode_function_class;
+    Class* native_function_class;
+    Class* hashtable_class;
+    Class* string_class;
+    Class* symbol_class;
 
     State();
     ~State();
 
-    void initializeKlass1();
-    void initializeKlass2();
-    void initializeKlass3();
+    void initializeClass1();
+    void initializeClass2();
+    void initializeClass3();
     void initializeSymbol();
 
     // Installation
     bool addFunction(Function* func); 
     bool addFunction(Function* func, const Symbol* name); 
     bool addVariable(Symbol* id, Value val);
-    bool addKlass(Klass* klass, const Symbol* name);
-    bool addKlass(Klass* klass);
+    bool addClass(Class* klass, const Symbol* name);
+    bool addClass(Class* klass);
 
     void setSymbolProvider(SymbolProvider* s) { s_prv = s; } 
     bool hasSymbolProvider() const { return (s_prv != nullptr); }
 
-    bool getKlass(Symbol* id, Value& klass) { return klass_slots->find(Value::by_object(id), klass); }
+    bool getClass(Symbol* id, Value& klass) { return klass_slots->find(Value::by_object(id), klass); }
 
     // Bytecode level interface
     bool gfref(Symbol* id, Value& func) {
@@ -109,7 +109,7 @@ public:
     void dumpClasses();
     void dumpVariables();
 private:
-    void set_class_hash(Klass* klass);
+    void set_class_hash(Class* klass);
 };
 
 class Module {

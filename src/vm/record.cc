@@ -42,7 +42,7 @@ RecordInfo::create(State* R, RecordInfo* parent, unsigned slot_num,
 }
 
 bool
-RecordInfo::getSlotIndex(Symbol* slot_id, unsigned& index) const {
+RecordInfo::get_slot_index(Symbol* slot_id, unsigned& index) const {
     Value vindex;
     if (!id_index_table->find(Value::by_object(slot_id), vindex)) {
         return false;
@@ -53,12 +53,12 @@ RecordInfo::getSlotIndex(Symbol* slot_id, unsigned& index) const {
     return true;
 }
 
-Record::Record(State* R, Klass* klass)
+Record::Record(State* R, Class* klass)
     : Object(klass),
-      member_slots(R->ator->allocateRawArray(klass->get_record_info()->getSlotNum())) { }
+      member_slots(R->ator->allocateRawArray(klass->get_record_info()->num_slots())) { }
 
 Record*
-Record::create(State* R, Klass* klass) {
+Record::create(State* R, Class* klass) {
     assert(klass->has_record_info());
     void* p = R->ator->allocateObject<Record>();
 
@@ -68,7 +68,7 @@ Record::create(State* R, Klass* klass) {
 bool
 Record::slot_ref(State* /* R */, Symbol* slot_id, Value& value) const {
     unsigned index;
-    if (!klass->get_record_info()->getSlotIndex(slot_id, index)) {
+    if (!klass->get_record_info()->get_slot_index(slot_id, index)) {
         return false;
     }
 
@@ -79,7 +79,7 @@ Record::slot_ref(State* /* R */, Symbol* slot_id, Value& value) const {
 bool
 Record::slot_set(State* /* R */, Symbol* slot_id, Value value) {
     unsigned index;
-    if (!klass->get_record_info()->getSlotIndex(slot_id, index)) {
+    if (!klass->get_record_info()->get_slot_index(slot_id, index)) {
         return false;
     }
 

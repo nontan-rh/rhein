@@ -54,7 +54,7 @@ struct Insn {
         Gvref,
         Gvset,
         Load,
-        LoadKlass,
+        LoadClass,
         LoadUndef,
         LoadNull,
         LoadTrue, // 40
@@ -176,15 +176,15 @@ State::State() : s_prv(nullptr) {
     // Bootstrap type system
     ator = new (GC_malloc(sizeof(Allocator))) Allocator();
 
-    initializeKlass1();
+    initializeClass1();
     initializeSymbol();
-    initializeKlass2();
+    initializeClass2();
 
     func_slots = HashTable::create(this);
     var_slots = HashTable::create(this);
     klass_slots = HashTable::create(this);
 
-    initializeKlass3();
+    initializeClass3();
 
     //func_slots->dump();
     //var_slots->dump();
@@ -195,25 +195,25 @@ State::~State() {
 }
 
 void
-State::initializeKlass1() {
-    any_class = Klass::create(this, nullptr, nullptr);
-    class_class = Klass::create(this, nullptr, any_class);
+State::initializeClass1() {
+    any_class = Class::create(this, nullptr, nullptr);
+    class_class = Class::create(this, nullptr, any_class);
     any_class->klass = class_class;
-    nil_class = Klass::create(this, nullptr, any_class);
-    bool_class = Klass::create(this, nullptr, any_class);
-    int_class = Klass::create(this, nullptr, any_class);
-    char_class = Klass::create(this, nullptr, any_class);
-    symbol_class = Klass::create(this, nullptr, any_class);
-    string_class = Klass::create(this, nullptr, any_class);
-    array_class = Klass::create(this, nullptr, any_class);
-    hashtable_class = Klass::create(this, nullptr, any_class);
-    method_class = Klass::create(this, nullptr, any_class);
-    bytecode_function_class = Klass::create(this, nullptr, any_class);
-    native_function_class = Klass::create(this, nullptr, any_class);
+    nil_class = Class::create(this, nullptr, any_class);
+    bool_class = Class::create(this, nullptr, any_class);
+    int_class = Class::create(this, nullptr, any_class);
+    char_class = Class::create(this, nullptr, any_class);
+    symbol_class = Class::create(this, nullptr, any_class);
+    string_class = Class::create(this, nullptr, any_class);
+    array_class = Class::create(this, nullptr, any_class);
+    hashtable_class = Class::create(this, nullptr, any_class);
+    method_class = Class::create(this, nullptr, any_class);
+    bytecode_function_class = Class::create(this, nullptr, any_class);
+    native_function_class = Class::create(this, nullptr, any_class);
 }
 
 void
-State::initializeKlass2() {
+State::initializeClass2() {
 	any_class->set_name(s_prv->get_symbol("any"));
 	class_class->set_name(s_prv->get_symbol("class"));
 	nil_class->set_name(s_prv->get_symbol("nil"));
@@ -230,14 +230,14 @@ State::initializeKlass2() {
 }
 
 void
-State::set_class_hash(Klass* klass){
+State::set_class_hash(Class* klass){
 	klass_slots->insert(this,
 			Value::by_object(klass->get_name()),
 			Value::by_object(klass));
 }
 
 void
-State::initializeKlass3() {
+State::initializeClass3() {
 	set_class_hash(any_class);
 	set_class_hash(class_class);
 	set_class_hash(nil_class);
@@ -286,12 +286,12 @@ State::addFunction(Function* func, const Symbol* name) {
 }
 
 bool
-State::addKlass(Klass* klass) {
-    return addKlass(klass, klass->get_name());
+State::addClass(Class* klass) {
+    return addClass(klass, klass->get_name());
 }
 
 bool
-State::addKlass(Klass* klass, const Symbol* name) {
+State::addClass(Class* klass, const Symbol* name) {
     return klass_slots->insert_if_absent(this, Value::by_object(name), Value::by_object(klass));
 }
 
@@ -627,7 +627,7 @@ rhein::execute(State* R, BytecodeFunction* bfn, unsigned argc_, Value* args_) {
                 if (!obj.is(Value::Type::Object) || !id.is(Value::Type::Object)
                     || id.get_obj<Object>()->get_class() != R->symbol_class) {
 
-                    obj.get_klass(R)->get_name()->dump();
+                    obj.get_class(R)->get_name()->dump();
                     fatal("Cannot refer");
                 }
 
@@ -667,14 +667,14 @@ rhein::execute(State* R, BytecodeFunction* bfn, unsigned argc_, Value* args_) {
                 *(--sp) = fn->get_constant_table()[getInsnArgU(insn)];
                 pc++;
                 break;
-            case Insn::LoadKlass: {
+            case Insn::LoadClass: {
                 Value id = fn->get_constant_table()[getInsnArgU(insn)];
 
                 if (!(id.is(Value::Type::Object) && id.get_obj<Object>()->get_class() == R->symbol_class)) {
                     fatal("Name must be string");
                 }
 
-                if (!R->getKlass(id.get_obj<Symbol>(), *(--sp))) {
+                if (!R->getClass(id.get_obj<Symbol>(), *(--sp))) {
                     fatal("Cannot find klass");
                 }
                 pc++;

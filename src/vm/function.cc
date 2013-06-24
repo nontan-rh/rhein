@@ -22,15 +22,15 @@ FunctionInfo::create(State* R, Symbol* id, bool variadic, unsigned num_args,
 
 bool
 FunctionInfo::resolve(State* R) {
-    arg_classes_ = R->ator->allocateBlock<Klass*>(num_args_);
+    arg_classes_ = R->ator->allocateBlock<Class*>(num_args_);
 
     for (unsigned i = 0; i < num_args_; i++) {
         Value klass;
-        if (!R->getKlass(arg_class_ids_[i], klass)) {
+        if (!R->getClass(arg_class_ids_[i], klass)) {
             return false;
         }
 
-        arg_classes_[i] = klass.get_obj<Klass>();
+        arg_classes_[i] = klass.get_obj<Class>();
     }
 
     return true;
@@ -131,7 +131,7 @@ public:
             }
         }
 
-        Klass* klass = args[index].get_klass(R);
+        Class* klass = args[index].get_class(R);
         while (true) {
             Value child;
             if (child_table->find(Value::by_object(klass), child)) {
@@ -170,7 +170,7 @@ public:
                 return true;
             }
         }
-        Klass* klass = func_body->info()->arg_classes()[index];
+        Class* klass = func_body->info()->arg_classes()[index];
         Value child;
         if (!child_table->find(Value::by_object(klass), child)) {
             // Unsafe cast

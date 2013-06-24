@@ -52,7 +52,7 @@ public:
 
 	unsigned long get_hash() const;
 
-	Klass *get_klass(State *R);
+	Class *get_class(State *R);
 
 	bool eq(const Value& rht) {
 		if (type_id != rht.type_id) {
@@ -99,15 +99,15 @@ private:
 
 class Object : public PlacementNewObj {
 protected:
-    Klass* klass;
-    Object(Klass* klass_) : klass(klass_) { }
+    Class* klass;
+    Object(Class* klass_) : klass(klass_) { }
 
     virtual ~Object() = default;
 
 public:
     virtual unsigned long get_hash() { return reinterpret_cast<unsigned long>(this); }
 
-    virtual Klass* get_class() { return klass; }
+    virtual Class* get_class() { return klass; }
 
     virtual String* get_string_representation(State* R);
 
@@ -130,10 +130,8 @@ public:
     }
 };
 
-class RecordInfo;
-
-class Klass : public Object {
-    Klass() = delete;
+class Class : public Object {
+    Class() = delete;
 
     friend class State;
 
@@ -143,20 +141,20 @@ class Klass : public Object {
 
 protected:
     Symbol* name;
-    Klass* parent;
+    Class* parent;
     RecordInfo* record_info;
 
-    Klass(State* R, Symbol* name_, Klass* parent_, RecordInfo* record_info_);
+    Class(State* R, Symbol* name_, Class* parent_, RecordInfo* record_info_);
 
 public:
-    static Klass* create(State* R, Symbol* name, Klass* parent) {
+    static Class* create(State* R, Symbol* name, Class* parent) {
         return create(R, name, parent, 0, nullptr);
     }
 
-    static Klass* create(State* R, Symbol* name, Klass* parent, unsigned slot_num, Symbol** slot_ids);
+    static Class* create(State* R, Symbol* name, Class* parent, unsigned slot_num, Symbol** slot_ids);
 
     Symbol* get_name() const { return name; }
-    Klass* get_parent() const { return parent; }
+    Class* get_parent() const { return parent; }
     bool has_record_info() const { return record_info != nullptr; }
     const RecordInfo* get_record_info() const { return record_info; }
 };
@@ -334,30 +332,13 @@ public:
     void dump();
 };
 
-class RecordInfo {
-    unsigned slot_num;
-    HashTable* id_index_table;
-
-    static void* operator new(size_t /* size */, void *p) { return p; }
-
-    RecordInfo(State* R, RecordInfo* parent, unsigned slot_num_,
-        Symbol** slot_ids);
-
-public:
-    static RecordInfo* create(State* R, RecordInfo* parent, unsigned slot_num,
-        Symbol** slot_ids);
-
-    unsigned getSlotNum() const { return slot_num; }
-    bool getSlotIndex(Symbol* slot_id, unsigned& index) const;
-};
-
 class Record : public Object {
     Value* member_slots;
 
-    Record(State* R, Klass* klass);
+    Record(State* R, Class* klass);
 
 public:
-    static Record* create(State* R, Klass* klass);
+    static Record* create(State* R, Class* klass);
 
     // Override
     bool slot_ref(State* /* R */, Symbol* slot_id, Value& value) const;
@@ -371,7 +352,7 @@ protected:
 	FunctionInfo *info_;
     Frame* closure;
 
-    Function(Klass* klass, FunctionInfo *info)
+    Function(Class* klass, FunctionInfo *info)
         : Object(klass), info_(info), closure(nullptr) { }
 
 public:

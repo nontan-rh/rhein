@@ -107,7 +107,7 @@ BinaryReader::readInt(FILE* fp, long& result) {
 }
 
 bool
-State::readKlass(FILE* fp) {
+State::readClass(FILE* fp) {
     Symbol* klass_name;
     Symbol* parent_name;
     unsigned long slot_num;
@@ -122,11 +122,11 @@ State::readKlass(FILE* fp) {
     }
 
     Value parent;
-    if (!getKlass(parent_name, parent)) {
+    if (!getClass(parent_name, parent)) {
         return false;
     }
 
-    addKlass(Klass::create(this, klass_name, parent.get_obj<Klass>(),
+    addClass(Class::create(this, klass_name, parent.get_obj<Class>(),
     		slot_num, slots));
     return true;
 }
@@ -216,7 +216,7 @@ State::readObject(FILE* fp) {
     BinaryReader::readByte(fp, byte);
     switch (byte) {
         case ObjectSigniture::Class:
-            readKlass(fp);
+            readClass(fp);
             break;
         case ObjectSigniture::Function:
             readFunction(fp);
