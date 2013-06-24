@@ -36,22 +36,61 @@ class State {
 public:
     static void* operator new(size_t /* size */, void* p) { return p; }
 
-    Allocator* ator;
-    SymbolProvider* s_prv;
+    // Accessor for builtin classes
+    Class* get_any_class() const { return any_class_; }
+    Class* get_class_class() const { return class_class_; }
+    Class* get_int_class() const { return int_class_; }
+    Class* get_char_class() const { return char_class_; }
+    Class* get_nil_class() const { return nil_class_; }
+    Class* get_bool_class() const { return bool_class_; }
+    Class* get_array_class() const { return array_class_; }
+    Class* get_method_class() const { return method_class_; }
+    Class* get_bytecode_function_class() const {
+    	return bytecode_function_class_;
+    }
+    Class* get_native_function_class() const {
+    	return native_function_class_;
+    }
+    Class* get_hashtable_class() const {
+    	return hashtable_class_;
+    }
+    Class* get_string_class() const { return string_class_; }
+    Class* get_symbol_class() const { return symbol_class_; }
 
-    Class* any_class;
-    Class* class_class;
-    Class* int_class;
-    Class* char_class;
-    Class* nil_class;
-    Class* bool_class;
-    Class* array_class;
-    Class* method_class;
-    Class* bytecode_function_class;
-    Class* native_function_class;
-    Class* hashtable_class;
-    Class* string_class;
-    Class* symbol_class;
+    Symbol* get_symbol(const char* cstr) const {
+    	return symbol_provider_->get_symbol(cstr);
+    }
+
+    Symbol* get_symbol(const char* cstr, size_t len) const {
+    	return symbol_provider_->get_symbol(cstr, len);
+    }
+
+    template <class T>
+    void* allocate_object() {
+    	return allocator_->allocate_object<T>();
+    }
+
+    Value* allocate_raw_array(unsigned size) {
+    	return allocator_->allocate_raw_array(size);
+    }
+
+    template <class T>
+    T* allocate_block(unsigned size) {
+    	return allocator_->allocate_block<T>(size);
+    }
+
+    void release_block(void* p) {
+    	allocator_->release_block(p);
+    }
+
+    template <class T>
+    void* allocate_struct() {
+    	return allocator_->allocate_struct<T>();
+    }
+
+    void release_struct(void* p) {
+    	return allocator_->release_struct(p);
+    }
 
     State();
     ~State();
@@ -68,8 +107,8 @@ public:
     bool add_class(Class* klass, const Symbol* name);
     bool add_class(Class* klass);
 
-    void set_symbol_provider(SymbolProvider* s) { s_prv = s; } 
-    bool has_symbol_provider() const { return (s_prv != nullptr); }
+    void set_symbol_provider(SymbolProvider* s) { symbol_provider_ = s; } 
+    bool has_symbol_provider() const { return (symbol_provider_ != nullptr); }
 
     bool get_class(Symbol* id, Value& klass) const {
     	return klass_slots_->find(Value::by_object(id), klass);
@@ -108,6 +147,24 @@ private:
     HashTable* var_slots_;
     HashTable* klass_slots_;
 
+    Class* any_class_;
+    Class* class_class_;
+    Class* int_class_;
+    Class* char_class_;
+    Class* nil_class_;
+    Class* bool_class_;
+    Class* array_class_;
+    Class* method_class_;
+    Class* bytecode_function_class_;
+    Class* native_function_class_;
+    Class* hashtable_class_;
+    Class* string_class_;
+    Class* symbol_class_;
+
+    SymbolProvider* symbol_provider_;
+
+    Allocator* allocator_;
+
     bool read_object(FILE* fp);
     bool read_function(FILE* fp);
     bool read_class(FILE* fp);
@@ -140,7 +197,7 @@ struct Frame : public PlacementNewObj {
 
     static Frame* create(State* R, BytecodeFunction* fn, Frame* parent, Frame* closure,
         unsigned argc, Value* args) {
-        void* p = R->ator->allocateStruct<Frame>();
+        void* p = R->allocate_struct<Frame>();
         return new (p) Frame(R, fn, parent, closure, argc, args);
     }
 

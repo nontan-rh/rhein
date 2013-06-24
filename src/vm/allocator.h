@@ -16,29 +16,29 @@ public:
     static void* operator new (size_t /* size */, void* p) { return p; }
 
     template <class T>
-    void* allocateObject() {
+    void* allocate_object() {
         return GC_malloc(sizeof(T));
     }
 
-    Value* allocateRawArray(unsigned size) {
+    Value* allocate_raw_array(unsigned size) {
         return (Value*)GC_malloc(sizeof(Value) * size);
     }
 
     template <class T>
-    T* allocateBlock(unsigned size) {
+    T* allocate_block(unsigned size) {
         return (T*)GC_malloc(sizeof(T) * size);
     }
 
-    void releaseBlock(void* p) {
+    void release_block(void* p) {
         return GC_free(p);
     }
 
     template <class T>
-    void* allocateStruct() {
+    void* allocate_struct() {
         return GC_malloc(sizeof(T));
     }
 
-    void releaseStruct(void* p) {
+    void release_struct(void* p) {
         return GC_free(p);
     }
 };

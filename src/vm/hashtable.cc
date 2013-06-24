@@ -22,14 +22,14 @@ struct HashTableNode : public PlacementNewObj {
         : next(next_), key(key_), value(value_) { }
 
     static HashTableNode* create(State* R, HashTableNode* next, Value key, Value value) {
-        void *p = R->ator->allocateStruct<HashTableNode>();
+        void *p = R->allocate_struct<HashTableNode>();
         return new (p) HashTableNode(next, key, value);
     }
 };
 
 HashTable::HashTable(State* R)
-    : Object(R->hashtable_class), table_size_(kDefaultTableSize), num_entries_(0) {
-    table_ = R->ator->allocateBlock<HashTableNode>(kDefaultTableSize);
+    : Object(R->get_hashtable_class()), table_size_(kDefaultTableSize), num_entries_(0) {
+    table_ = R->allocate_block<HashTableNode>(kDefaultTableSize);
     for (unsigned i = 0; i < num_entries_; i++) {
         table_[i].next = nullptr;
     }
@@ -37,7 +37,7 @@ HashTable::HashTable(State* R)
 
 HashTable*
 HashTable::create(State* R) {
-    void *p = R->ator->allocateObject<HashTable>();
+    void *p = R->allocate_object<HashTable>();
     return new (p) HashTable(R);
 }
 
@@ -60,7 +60,7 @@ HashTable::literal(State* R, Array* keys, Array* values) {
 void
 HashTable::rehash(State* R) {
     unsigned newtable_size = table_size_ * 2 + 1;
-    HashTableNode* newtable = R->ator->allocateBlock<HashTableNode>(newtable_size);
+    HashTableNode* newtable = R->allocate_block<HashTableNode>(newtable_size);
 
     for (unsigned i = 0; i < table_size_; i++) {
         HashTableNode* node = table_[i].next;
@@ -75,7 +75,7 @@ HashTable::rehash(State* R) {
         }
     }
 
-    R->ator->releaseBlock(table_);
+    R->release_block(table_);
     table_size_ = newtable_size;
     table_ = newtable;
 }
@@ -159,7 +159,7 @@ HashTable::remove(State* R, Value key) {
     for (; node != nullptr; ) {
         if (key.eq(node->key)) {
             prev->next = node->next;
-            R->ator->releaseBlock(node);
+            R->release_block(node);
             return true;
         }
 

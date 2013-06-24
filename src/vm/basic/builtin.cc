@@ -20,9 +20,9 @@ register_function(State* R, unsigned argc, Value* args) {
     Value fn = args[0];
     Value name = args[1];
 
-    if (!((fn.get_class(R) == R->bytecode_function_class
-           || fn.get_class(R) == R->native_function_class)
-          && name.get_class(R) == R->symbol_class)) {
+    if (!((fn.get_class(R) == R->get_bytecode_function_class()
+           || fn.get_class(R) == R->get_native_function_class())
+          && name.get_class(R) == R->get_symbol_class())) {
         fatal("Invalid arguments");
     }
 
@@ -41,7 +41,7 @@ register_class(State* R, unsigned argc, Value* args) {
     Class* klass = args[0].get_class(R);
     Value name = args[1];
 
-    if (name.get_class(R) != R->symbol_class) {
+    if (name.get_class(R) != R->get_symbol_class()) {
         fatal("Invalid arguments");
     }
 
@@ -52,7 +52,7 @@ register_class(State* R, unsigned argc, Value* args) {
 static Value
 register_variable(State* R, unsigned argc, Value* args) {
     if (!((argc == 2)
-          && args[0].get_class(R) == R->symbol_class)) {
+          && args[0].get_class(R) == R->get_symbol_class())) {
         fatal("Invalid arguments");
     }
 
@@ -62,14 +62,14 @@ register_variable(State* R, unsigned argc, Value* args) {
 
 BuiltinModule*
 BuiltinModule::create(State* R) {
-    void* p = R->ator->allocateStruct<BuiltinModule>();
+    void* p = R->allocate_struct<BuiltinModule>();
     return new (p) BuiltinModule;
 }
 
 static inline void
 add_function(State* R, const char* name, NativeFunctionBody fn) {
 	R->add_function(NativeFunction::create(R,
-			FunctionInfo::create(R, R->s_prv->get_symbol(name)), fn));
+			FunctionInfo::create(R, R->get_symbol(name)), fn));
 }
 
 bool

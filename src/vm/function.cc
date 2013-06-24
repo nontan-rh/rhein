@@ -16,13 +16,13 @@ FunctionInfo::create(State* R, Symbol* id) {
 FunctionInfo*
 FunctionInfo::create(State* R, Symbol* id, bool variadic, unsigned num_args,
 		Symbol** arg_class_ids) {
-	void* p = R->ator->allocateStruct<FunctionInfo>();
+	void* p = R->allocate_struct<FunctionInfo>();
 	return new (p) FunctionInfo(id, variadic, num_args, arg_class_ids);
 }
 
 bool
 FunctionInfo::resolve(State* R) {
-    arg_classes_ = R->ator->allocateBlock<Class*>(num_args_);
+    arg_classes_ = R->allocate_block<Class*>(num_args_);
 
     for (unsigned i = 0; i < num_args_; i++) {
         Value klass;
@@ -37,17 +37,17 @@ FunctionInfo::resolve(State* R) {
 }
 
 NativeFunction::NativeFunction(State* R, FunctionInfo* info, NativeFunctionBody body_)
-    : Function(R->native_function_class, info), body_(body_), copied_(false) { }
+    : Function(R->get_native_function_class(), info), body_(body_), copied_(false) { }
 
 NativeFunction*
 NativeFunction::create(State* R, FunctionInfo* info, NativeFunctionBody body) {
-    void* p = R->ator->allocateObject<NativeFunction>();
+    void* p = R->allocate_object<NativeFunction>();
     return new (p) NativeFunction(R, info, body);
 }
 
 NativeFunction*
 NativeFunction::copy(State* R) {
-    void* p = R->ator->allocateObject<NativeFunction>();
+    void* p = R->allocate_object<NativeFunction>();
     NativeFunction* copy_func = new (p) NativeFunction(*this);
     copy_func->copied_ = true;
     return copy_func;
@@ -64,7 +64,7 @@ BytecodeFunction::BytecodeFunction(State* R, FunctionInfo* info,
     unsigned func_slot_size, unsigned var_slot_size,
     unsigned stack_size, unsigned constant_table_size,
     Value* constant_table, unsigned bytecode_size, uint32_t* bytecode)
-    : Function(R->bytecode_function_class, info),
+    : Function(R->get_bytecode_function_class(), info),
       copied_(false),
       stack_size_(stack_size), func_slot_size_(func_slot_size),
       var_slot_size_(var_slot_size),
@@ -79,7 +79,7 @@ BytecodeFunction::create(State* R, FunctionInfo* info,
     unsigned constant_table_size, Value* constant_table,
     unsigned bytecode_size, uint32_t* bytecode) {
 
-    void* p = R->ator->allocateObject<BytecodeFunction>();
+    void* p = R->allocate_object<BytecodeFunction>();
     return new (p) BytecodeFunction(R, info,
         func_slot_size, var_slot_size, stack_size, constant_table_size,
         constant_table, bytecode_size, bytecode);
@@ -87,7 +87,7 @@ BytecodeFunction::create(State* R, FunctionInfo* info,
 
 BytecodeFunction*
 BytecodeFunction::copy(State* R) {
-    void* p = R->ator->allocateObject<BytecodeFunction>();
+    void* p = R->allocate_object<BytecodeFunction>();
     BytecodeFunction* copy_func = new (p) BytecodeFunction(*this);
     copy_func->copied_ = true;
     return copy_func;
@@ -103,7 +103,7 @@ BytecodeFunction::enclose(State* R, Frame* closure) {
 class DispatcherNode {
 public:
     static DispatcherNode* create(State* R) {
-        void* p = R->ator->allocateStruct<DispatcherNode>();
+        void* p = R->allocate_struct<DispatcherNode>();
         return new (p) DispatcherNode(R);
     }
 
@@ -185,13 +185,13 @@ private:
 };
 
 Method::Method(State* R)
-    : Object(R->method_class), copied_(false),
+    : Object(R->get_method_class()), copied_(false),
       node_(DispatcherNode::create(R)),
       closure_(nullptr) { }
 
 Method*
 Method::create(State* R) {
-    void* p = R->ator->allocateObject<Method>();
+    void* p = R->allocate_object<Method>();
     return new (p) Method(R);
 }
 
@@ -210,7 +210,7 @@ Method::add_function(State* R, Function* func) {
 
 Method*
 Method::copy(State* R) {
-    void* p = R->ator->allocateObject<Method>();
+    void* p = R->allocate_object<Method>();
     Method* copy_method = new (p) Method(*this);
 
     copy_method->copied_ = true;

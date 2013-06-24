@@ -10,9 +10,9 @@
 namespace rhein {
 
 String::String(State* R, const char* str, size_t len)
-	: Object(R->string_class), length_(len), hash_value_(0) {
+	: Object(R->get_string_class()), length_(len), hash_value_(0) {
 
-	char* buf = R->ator->allocateBlock<char>(length_ + 1);
+	char* buf = R->allocate_block<char>(length_ + 1);
 	memcpy(buf, str, length_ + 1);
 	body_ = buf;
 }
@@ -24,7 +24,7 @@ String::create(State* R, const char *str) {
 
 String*
 String::create(State *R, const char *str, size_t len) {
-	void* p = R->ator->allocateObject<String>();
+	void* p = R->allocate_object<String>();
 	return new (p) String(R, str, len);
 }
 
@@ -48,11 +48,11 @@ String::get_cstr(const char*& body, size_t& length) const {
 String*
 String::append(State* R, String* rht) const {
     size_t newlength = this->length_ + rht->length_;
-    char* buffer = R->ator->allocateBlock<char>(newlength);
+    char* buffer = R->allocate_block<char>(newlength);
     memcpy(buffer, this->body_, this->length_);
     memcpy(buffer + this->length_, rht->body_, rht->length_);
     String* ret = String::create(R, buffer, newlength);
-    R->ator->releaseBlock(buffer);
+    R->release_block(buffer);
     return ret;
 }
 
@@ -92,7 +92,7 @@ String::to_array(State* R, Array*& array) const {
 
 Symbol*
 String::to_symbol(State* R) const {
-	 return R->s_prv->get_symbol(body_, length_);
+	 return R->get_symbol(body_, length_);
 }
 
 }

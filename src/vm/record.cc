@@ -37,7 +37,7 @@ RecordInfo*
 RecordInfo::create(State* R, RecordInfo* parent, unsigned slot_num,
     Symbol** slot_ids) {
 
-    void* p = R->ator->allocateStruct<RecordInfo>();
+    void* p = R->allocate_struct<RecordInfo>();
     return new (p) RecordInfo(R, parent, slot_num, slot_ids);
 }
 
@@ -55,12 +55,12 @@ RecordInfo::get_slot_index(Symbol* slot_id, unsigned& index) const {
 
 Record::Record(State* R, Class* klass)
     : Object(klass),
-      member_slots_(R->ator->allocateRawArray(klass->get_record_info()->num_slots())) { }
+      member_slots_(R->allocate_raw_array(klass->get_record_info()->num_slots())) { }
 
 Record*
 Record::create(State* R, Class* klass) {
     assert(klass->has_record_info());
-    void* p = R->ator->allocateObject<Record>();
+    void* p = R->allocate_object<Record>();
 
     return new(p) Record(R, klass);
 }

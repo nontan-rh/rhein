@@ -31,7 +31,7 @@ struct SymbolHashTableNode : public PlacementNewObj {
         State* R, SymbolHashTableNode* next, unsigned long key_hash,
         size_t length, const char* key, Symbol* value) {
 
-        void *p = R->ator->allocateStruct<SymbolHashTableNode>();
+        void *p = R->allocate_struct<SymbolHashTableNode>();
         return new (p) SymbolHashTableNode(next, key_hash, length, key, value);
     }
 };
@@ -39,7 +39,7 @@ struct SymbolHashTableNode : public PlacementNewObj {
 class SymbolHashTable : public PlacementNewObj {
 public:
     static SymbolHashTable* create(State* R) {
-        void* p = R->ator->allocateStruct<SymbolHashTable>();
+        void* p = R->allocate_struct<SymbolHashTable>();
         return new (p) SymbolHashTable(R);
     }
 
@@ -85,7 +85,7 @@ public:
                     || memcmp(value->body_, curr->key, value->length_) == 0) {
 
                     prev->next = curr->next;
-                    R->ator->releaseStruct(curr);
+                    R->release_struct(curr);
                     return;
                 }
             }
@@ -97,7 +97,7 @@ public:
 
     void rehash(State* R) {
         unsigned newtable_size = table_size_ * 2 + 1;
-        SymbolHashTableNode* newtable = R->ator->allocateBlock<SymbolHashTableNode>(newtable_size);
+        SymbolHashTableNode* newtable = R->allocate_block<SymbolHashTableNode>(newtable_size);
         for(unsigned i = 0; i < table_size_; i++) {
             SymbolHashTableNode* node = table_[i].next;
             for(; node != nullptr; ) {
@@ -108,7 +108,7 @@ public:
                 node = oldnext;
             }
         }
-        R->ator->releaseBlock(table_);
+        R->release_block(table_);
         table_size_ = newtable_size;
         table_ = newtable;
     }
@@ -121,7 +121,7 @@ private:
     unsigned num_items_;
 
     SymbolHashTable(State* R) : table_size_(kDefaultTableSize), num_items_(0) {
-        table_ = R->ator->allocateBlock<SymbolHashTableNode>(kDefaultTableSize);
+        table_ = R->allocate_block<SymbolHashTableNode>(kDefaultTableSize);
         for (unsigned i = 0; i < kDefaultTableSize ; i++) {
             table_[i].next = nullptr;
         }
@@ -137,17 +137,17 @@ SymbolProvider::SymbolProvider(State* R)
 
 SymbolProvider*
 SymbolProvider::create(State* R) {
-    void *p = R->ator->allocateStruct<SymbolProvider>();
+    void *p = R->allocate_struct<SymbolProvider>();
     return new (p) SymbolProvider(R);
 }
 
 Symbol::Symbol(State* R, const char* body_, size_t length_)
-    : Object(R->symbol_class), body_(body_), length_(length_),
+    : Object(R->get_symbol_class()), body_(body_), length_(length_),
       hash_value_(0) { }
 
 Symbol*
 Symbol::create(State* R, const char* body, size_t length) {
-    void* p = R->ator->allocateObject<Symbol>();
+    void* p = R->allocate_object<Symbol>();
     return new (p) Symbol(R, body, length);
 }
 
@@ -158,7 +158,7 @@ SymbolProvider::get_symbol(const char* buffer, size_t length) {
         return registered;
     }
 
-    char* copybuffer = owner->ator->allocateBlock<char>(length + 1);
+    char* copybuffer = owner->allocate_block<char>(length + 1);
     memcpy(copybuffer, buffer, length + 1);
     Symbol* new_string = Symbol::create(owner, copybuffer, length);
     string_hash_table->insert(owner, new_string);

@@ -70,10 +70,10 @@ struct Insn {
 Frame::Frame(State* R, BytecodeFunction* fn_, Frame* parent_, Frame* closure_,
     unsigned argc_, Value* args_)
     : fn(fn_), closure(closure_), parent(parent_),
-      stack(R->ator->allocateRawArray(fn_->get_stack_size())),
+      stack(R->allocate_raw_array(fn_->get_stack_size())),
       argc(argc_), args(args_),
-      func_slots(R->ator->allocateRawArray(fn_->get_function_slot_num())),
-      var_slots(R->ator->allocateRawArray(fn_->get_variable_slot_num())),
+      func_slots(R->allocate_raw_array(fn_->get_function_slot_num())),
+      var_slots(R->allocate_raw_array(fn_->get_variable_slot_num())),
       pc(nullptr), sp(nullptr) { }
 
 bool
@@ -172,9 +172,9 @@ Frame::local_arg_set(unsigned depth, unsigned offset, Value value) {
     return true;
 }
 
-State::State() : s_prv(nullptr) {
+State::State() : symbol_provider_(nullptr) {
     // Bootstrap type system
-    ator = new (GC_malloc(sizeof(Allocator))) Allocator();
+    allocator_ = new (GC_malloc(sizeof(Allocator))) Allocator();
 
     initialize_class1();
     initialize_symbol();
@@ -196,37 +196,37 @@ State::~State() {
 
 void
 State::initialize_class1() {
-    any_class = Class::create(this, nullptr, nullptr);
-    class_class = Class::create(this, nullptr, any_class);
-    any_class->klass_ = class_class;
-    nil_class = Class::create(this, nullptr, any_class);
-    bool_class = Class::create(this, nullptr, any_class);
-    int_class = Class::create(this, nullptr, any_class);
-    char_class = Class::create(this, nullptr, any_class);
-    symbol_class = Class::create(this, nullptr, any_class);
-    string_class = Class::create(this, nullptr, any_class);
-    array_class = Class::create(this, nullptr, any_class);
-    hashtable_class = Class::create(this, nullptr, any_class);
-    method_class = Class::create(this, nullptr, any_class);
-    bytecode_function_class = Class::create(this, nullptr, any_class);
-    native_function_class = Class::create(this, nullptr, any_class);
+    any_class_ = Class::create(this, nullptr, nullptr);
+    class_class_ = Class::create(this, nullptr, any_class_);
+    any_class_->klass_ = class_class_;
+    nil_class_ = Class::create(this, nullptr, any_class_);
+    bool_class_ = Class::create(this, nullptr, any_class_);
+    int_class_ = Class::create(this, nullptr, any_class_);
+    char_class_ = Class::create(this, nullptr, any_class_);
+    symbol_class_ = Class::create(this, nullptr, any_class_);
+    string_class_ = Class::create(this, nullptr, any_class_);
+    array_class_ = Class::create(this, nullptr, any_class_);
+    hashtable_class_ = Class::create(this, nullptr, any_class_);
+    method_class_ = Class::create(this, nullptr, any_class_);
+    bytecode_function_class_ = Class::create(this, nullptr, any_class_);
+    native_function_class_ = Class::create(this, nullptr, any_class_);
 }
 
 void
 State::initialize_class2() {
-	any_class->set_id(s_prv->get_symbol("any"));
-	class_class->set_id(s_prv->get_symbol("class"));
-	nil_class->set_id(s_prv->get_symbol("nil"));
-	bool_class->set_id(s_prv->get_symbol("bool"));
-	int_class->set_id(s_prv->get_symbol("int"));
-	char_class->set_id(s_prv->get_symbol("char"));
-	symbol_class->set_id(s_prv->get_symbol("symbol"));
-	string_class->set_id(s_prv->get_symbol("string"));
-	array_class->set_id(s_prv->get_symbol("array"));
-	hashtable_class->set_id(s_prv->get_symbol("hashtable"));
-	method_class->set_id(s_prv->get_symbol("method"));
-	bytecode_function_class->set_id(s_prv->get_symbol("bytecode_function"));
-	native_function_class->set_id(s_prv->get_symbol("native_function"));
+	any_class_->set_id(get_symbol("any"));
+	class_class_->set_id(get_symbol("class"));
+	nil_class_->set_id(get_symbol("nil"));
+	bool_class_->set_id(get_symbol("bool"));
+	int_class_->set_id(get_symbol("int"));
+	char_class_->set_id(get_symbol("char"));
+	symbol_class_->set_id(get_symbol("symbol"));
+	string_class_->set_id(get_symbol("string"));
+	array_class_->set_id(get_symbol("array"));
+	hashtable_class_->set_id(get_symbol("hashtable"));
+	method_class_->set_id(get_symbol("method"));
+	bytecode_function_class_->set_id(get_symbol("bytecode_function"));
+	native_function_class_->set_id(get_symbol("native_function"));
 }
 
 void
@@ -238,24 +238,24 @@ State::set_class_hash(Class* klass){
 
 void
 State::initialize_class3() {
-	set_class_hash(any_class);
-	set_class_hash(class_class);
-	set_class_hash(nil_class);
-	set_class_hash(bool_class);
-	set_class_hash(int_class);
-	set_class_hash(char_class);
-	set_class_hash(symbol_class);
-	set_class_hash(string_class);
-	set_class_hash(array_class);
-	set_class_hash(hashtable_class);
-	set_class_hash(method_class);
-	set_class_hash(bytecode_function_class);
-	set_class_hash(native_function_class);
+	set_class_hash(any_class_);
+	set_class_hash(class_class_);
+	set_class_hash(nil_class_);
+	set_class_hash(bool_class_);
+	set_class_hash(int_class_);
+	set_class_hash(char_class_);
+	set_class_hash(symbol_class_);
+	set_class_hash(string_class_);
+	set_class_hash(array_class_);
+	set_class_hash(hashtable_class_);
+	set_class_hash(method_class_);
+	set_class_hash(bytecode_function_class_);
+	set_class_hash(native_function_class_);
 }
 
 void
 State::initialize_symbol() {
-    s_prv = SymbolProvider::create(this);
+    symbol_provider_ = SymbolProvider::create(this);
 }
 
 bool
@@ -268,15 +268,15 @@ State::add_function(Function* func, const Symbol* name) {
     Value old;
     if (func_slots_->find(Value::by_object(name), old)) {
         Object* fold = old.get_obj<Object>();
-        if (fold->get_class() == native_function_class
-            || fold->get_class() == bytecode_function_class) {
+        if (fold->get_class() == native_function_class_
+            || fold->get_class() == bytecode_function_class_) {
 
             Method* method = Method::create(this);
             method->add_function(this, (Function*)fold);
             method->add_function(this, func);
 
             return func_slots_->assign(Value::by_object(name), Value::by_object(method));
-        } else if (fold->get_class() == method_class) {
+        } else if (fold->get_class() == method_class_) {
             return static_cast<Method*>(fold)->add_function(this, func);
         } else {
             exit(1);
@@ -331,7 +331,7 @@ execute(State* R, Symbol* entry_point, unsigned argc, Value* argv) {
         fatal("Not excutable object");
     }
 
-    if (fn.get_obj<Object>()->get_class() == R->method_class) {
+    if (fn.get_obj<Object>()->get_class() == R->get_method_class()) {
         fn.get_obj<Method>()->dispatch(R, argc, argv, fn);
     }
 
@@ -340,9 +340,9 @@ execute(State* R, Symbol* entry_point, unsigned argc, Value* argv) {
     }
 
     Object* ofn = fn.get_obj<Object>();
-    if (ofn->get_class() == R->bytecode_function_class) {
+    if (ofn->get_class() == R->get_bytecode_function_class()) {
         return execute(R, (BytecodeFunction*)ofn, argc, argv);
-    } else if (ofn->get_class() == R->native_function_class) {
+    } else if (ofn->get_class() == R->get_native_function_class()) {
         return ((NativeFunction*)ofn)->get_body()(R, argc, argv);
     } else {
         fatal("Not excutable object");
@@ -407,7 +407,7 @@ getInsnArgUU2(uint32_t insn) {
 #define GLOBAL_REFER_OP(op) { \
     Value id = fn->get_constant_table()[getInsnArgU(insn)]; \
     if (!id.is(Value::Type::Object) \
-			|| id.get_obj<Object>()->get_class() != R->symbol_class) { \
+			|| id.get_obj<Object>()->get_class() != R->get_symbol_class()) { \
         fatal("Error on global refer"); \
     } \
     if (!R->op(id.get_obj<Symbol>(), *(--sp))) { \
@@ -420,7 +420,7 @@ getInsnArgUU2(uint32_t insn) {
 #define GLOBAL_SET_OP(op) { \
     Value id = fn->get_constant_table()[getInsnArgU(insn)]; \
     if (!id.is(Value::Type::Object) \
-    		|| id.get_obj<Object>()->get_class() != R->symbol_class) { \
+    		|| id.get_obj<Object>()->get_class() != R->get_symbol_class()) { \
         fatal("Error on global set"); \
     } \
     if (!R->op(id.get_obj<Symbol>(), *(sp))) { \
@@ -499,7 +499,7 @@ execute(State* R, BytecodeFunction* bfn, unsigned argc_, Value* args_) {
                 }
 
                 Frame* closure = nullptr;
-                if (func.get_obj<Object>()->get_class() == R->method_class) {
+                if (func.get_obj<Object>()->get_class() == R->get_method_class()) {
                     if (!func.get_obj<Method>()->dispatch(R, argc, sp, func)) {
                         fatal("Could not dispatch");
                     }
@@ -508,10 +508,10 @@ execute(State* R, BytecodeFunction* bfn, unsigned argc_, Value* args_) {
 
                 Function* ofunc = func.get_obj<Function>();
 
-                if (ofunc->get_class() == R->bytecode_function_class) {
+                if (ofunc->get_class() == R->get_bytecode_function_class()) {
                     fn = (BytecodeFunction*)ofunc;
                     unsigned arg_count = fn->get_info()->num_args() + (fn->get_info()->variadic() ? 1 : 0);
-                    Value* args = R->ator->allocateRawArray(arg_count);
+                    Value* args = R->allocate_raw_array(arg_count);
                     for (unsigned i = 0; i < fn->get_info()->num_args(); i++) {
                     	args[i] = stack_args[i];
                     }
@@ -534,7 +534,7 @@ execute(State* R, BytecodeFunction* bfn, unsigned argc_, Value* args_) {
                     fr = Frame::create(R, fn, fr, closure, argc, args);
                     pc = fn->get_bytecode();
                     sp = fr->stack + fn->get_stack_size();
-                } else if (ofunc->get_class() == R->native_function_class) {
+                } else if (ofunc->get_class() == R->get_native_function_class()) {
                     Value ret = (*func.get_obj<NativeFunction>()->get_body())(R, argc, sp);
                     sp += argc;
                     *(--sp) = ret;
@@ -568,7 +568,7 @@ execute(State* R, BytecodeFunction* bfn, unsigned argc_, Value* args_) {
            Value index = *sp++;
                 Value array = *sp;
 
-                if (!array.is(Value::Type::Object) || array.get_obj<Object>()->get_class() != R->array_class) {
+                if (!array.is(Value::Type::Object) || array.get_obj<Object>()->get_class() != R->get_array_class()) {
                     fatal("Invalid type");
                 }
 
@@ -583,7 +583,7 @@ execute(State* R, BytecodeFunction* bfn, unsigned argc_, Value* args_) {
                 Value index = sp[0];
                 Value array = sp[1];
 
-                if (!array.is(Value::Type::Object) || array.get_obj<Object>()->get_class() != R->array_class) {
+                if (!array.is(Value::Type::Object) || array.get_obj<Object>()->get_class() != R->get_array_class()) {
                     fatal("Invalid type");
                 }
 
@@ -625,7 +625,7 @@ execute(State* R, BytecodeFunction* bfn, unsigned argc_, Value* args_) {
                 Value id = fn->get_constant_table()[getInsnArgU(insn)];
 
                 if (!obj.is(Value::Type::Object) || !id.is(Value::Type::Object)
-                    || id.get_obj<Object>()->get_class() != R->symbol_class) {
+                    || id.get_obj<Object>()->get_class() != R->get_symbol_class()) {
 
                     obj.get_class(R)->get_id()->dump();
                     fatal("Cannot refer");
@@ -643,7 +643,7 @@ execute(State* R, BytecodeFunction* bfn, unsigned argc_, Value* args_) {
                 Value id = fn->get_constant_table()[getInsnArgU(insn)];
 
                 if (!obj.is(Value::Type::Object) || !id.is(Value::Type::Object)
-                    || id.get_obj<Object>()->get_class() != R->symbol_class) {
+                    || id.get_obj<Object>()->get_class() != R->get_symbol_class()) {
                     
                     fatal("Cannot set");
                 }
@@ -670,7 +670,7 @@ execute(State* R, BytecodeFunction* bfn, unsigned argc_, Value* args_) {
             case Insn::LoadClass: {
                 Value id = fn->get_constant_table()[getInsnArgU(insn)];
 
-                if (!(id.is(Value::Type::Object) && id.get_obj<Object>()->get_class() == R->symbol_class)) {
+                if (!(id.is(Value::Type::Object) && id.get_obj<Object>()->get_class() == R->get_symbol_class())) {
                     fatal("Name must be string");
                 }
 
@@ -699,7 +699,7 @@ execute(State* R, BytecodeFunction* bfn, unsigned argc_, Value* args_) {
             case Insn::Enclose: {
                 Value id = fn->get_constant_table()[getInsnArgU(insn)];
 
-                if (!id.is(Value::Type::Object) || id.get_obj<Object>()->get_class() != R->symbol_class) {
+                if (!id.is(Value::Type::Object) || id.get_obj<Object>()->get_class() != R->get_symbol_class()) {
                     fatal("Cannot enclose");
                 }
 
@@ -712,11 +712,11 @@ execute(State* R, BytecodeFunction* bfn, unsigned argc_, Value* args_) {
                     fatal("Cannot enclose");
                 }
 
-                if (func.get_obj<Object>()->get_class() == R->native_function_class) {
+                if (func.get_obj<Object>()->get_class() == R->get_native_function_class()) {
                     *(--sp) = Value::by_object(func.get_obj<NativeFunction>()->enclose(R, fr));
-                } else if (func.get_obj<Object>()->get_class() == R->bytecode_function_class) {
+                } else if (func.get_obj<Object>()->get_class() == R->get_bytecode_function_class()) {
                     *(--sp) = Value::by_object(func.get_obj<BytecodeFunction>()->enclose(R, fr));
-                } else if (func.get_obj<Object>()->get_class() == R->method_class) {
+                } else if (func.get_obj<Object>()->get_class() == R->get_method_class()) {
                     *(--sp) = Value::by_object(func.get_obj<Method>()->enclose(R, fr));
                 } else {
                     fatal("Cannot enclose");
