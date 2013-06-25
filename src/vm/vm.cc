@@ -371,17 +371,17 @@ execute(State* R, Symbol* entry_point, unsigned argc, Value* argv) {
 }
 
 inline uint32_t
-getInsnArgU(uint32_t insn) {
+get_insn_arg_u(uint32_t insn) {
     return insn >> 8;
 }
 
 inline uint32_t
-getInsnArgUU1(uint32_t insn) {
+get_insn_arg_uu1(uint32_t insn) {
     return (insn >> 8) & 0xff;
 }
 
 inline uint32_t
-getInsnArgUU2(uint32_t insn) {
+get_insn_arg_uu2(uint32_t insn) {
     return (insn >> 16) & 0xff;
 }
 
@@ -402,8 +402,8 @@ getInsnArgUU2(uint32_t insn) {
     break;
 
 #define LOCAL_REFER_OP(op) { \
-    uint32_t depth = getInsnArgUU1(insn); \
-    uint32_t offset = getInsnArgUU2(insn); \
+    uint32_t depth = get_insn_arg_uu1(insn); \
+    uint32_t offset = get_insn_arg_uu2(insn); \
     if (!op(depth, offset, *(--sp))) { \
         fprintf(stderr, #op ":%u:%u\n", depth, offset); \
         fatal("Error on local refer"); \
@@ -413,8 +413,8 @@ getInsnArgUU2(uint32_t insn) {
     break;
 
 #define LOCAL_SET_OP(op) { \
-    uint32_t depth = getInsnArgUU1(insn); \
-    uint32_t offset = getInsnArgUU2(insn); \
+    uint32_t depth = get_insn_arg_uu1(insn); \
+    uint32_t offset = get_insn_arg_uu2(insn); \
     if (!op(depth, offset, *(sp))) { \
         fprintf(stderr, #op ":%u:%u\n", depth, offset); \
         fatal("Error on local set"); \
@@ -424,7 +424,7 @@ getInsnArgUU2(uint32_t insn) {
     break;
 
 #define GLOBAL_REFER_OP(op) { \
-    Value id = fn->get_constant_table()[getInsnArgU(insn)]; \
+    Value id = fn->get_constant_table()[get_insn_arg_u(insn)]; \
     if (!id.is(Value::Type::Object) \
             || id.get_obj<Object>()->get_class() != R->get_symbol_class()) { \
         fatal("Error on global refer"); \
@@ -437,7 +437,7 @@ getInsnArgUU2(uint32_t insn) {
     break;
 
 #define GLOBAL_SET_OP(op) { \
-    Value id = fn->get_constant_table()[getInsnArgU(insn)]; \
+    Value id = fn->get_constant_table()[get_insn_arg_u(insn)]; \
     if (!id.is(Value::Type::Object) \
             || id.get_obj<Object>()->get_class() != R->get_symbol_class()) { \
         fatal("Error on global set"); \
@@ -477,12 +477,12 @@ execute(State* R, BytecodeFunction* entry_fn, unsigned argc_, Value* args_) {
             case Insn::Ge: BINARY_OP(op_ge)
             case Insn::Le: BINARY_OP(op_le)
             case Insn::Jump: {
-                uint32_t dest = getInsnArgU(insn);
+                uint32_t dest = get_insn_arg_u(insn);
                 pc = fn->get_bytecode() + dest;
             }
                 break;
             case Insn::IfJump: {
-                uint32_t dest = getInsnArgU(insn);
+                uint32_t dest = get_insn_arg_u(insn);
                 if ((*sp++).like_true()) {
                     pc = fn->get_bytecode() + dest;
                 } else {
@@ -491,7 +491,7 @@ execute(State* R, BytecodeFunction* entry_fn, unsigned argc_, Value* args_) {
             }
                 break;
             case Insn::UnlessJump: {
-                uint32_t dest = getInsnArgU(insn);
+                uint32_t dest = get_insn_arg_u(insn);
                 if ((*sp++).like_false()) {
                     pc = fn->get_bytecode() + dest;
                 } else {
@@ -500,7 +500,7 @@ execute(State* R, BytecodeFunction* entry_fn, unsigned argc_, Value* args_) {
             }
                 break;
             case Insn::Call: {
-                uint32_t argc = getInsnArgU(insn);
+                uint32_t argc = get_insn_arg_u(insn);
                 Value func = *sp++;
                 Value* stack_args = sp;
 
@@ -630,7 +630,7 @@ execute(State* R, BytecodeFunction* entry_fn, unsigned argc_, Value* args_) {
                 break;
             case Insn::Mref: {
                 Value obj = sp[0];
-                Value id = fn->get_constant_table()[getInsnArgU(insn)];
+                Value id = fn->get_constant_table()[get_insn_arg_u(insn)];
 
                 if (!obj.is(Value::Type::Object) || !id.is(Value::Type::Object)
                     || id.get_obj<Object>()->get_class() != R->get_symbol_class()) {
@@ -648,7 +648,7 @@ execute(State* R, BytecodeFunction* entry_fn, unsigned argc_, Value* args_) {
                 break;
             case Insn::Mset: {
                 Value obj = *sp++;
-                Value id = fn->get_constant_table()[getInsnArgU(insn)];
+                Value id = fn->get_constant_table()[get_insn_arg_u(insn)];
 
                 if (!obj.is(Value::Type::Object) || !id.is(Value::Type::Object)
                     || id.get_obj<Object>()->get_class() != R->get_symbol_class()) {
@@ -672,11 +672,11 @@ execute(State* R, BytecodeFunction* entry_fn, unsigned argc_, Value* args_) {
             case Insn::Gvref: GLOBAL_REFER_OP(global_var_ref)
             case Insn::Gvset: GLOBAL_SET_OP(global_var_set)
             case Insn::Load:
-                *(--sp) = fn->get_constant_table()[getInsnArgU(insn)];
+                *(--sp) = fn->get_constant_table()[get_insn_arg_u(insn)];
                 pc++;
                 break;
             case Insn::LoadClass: {
-                Value id = fn->get_constant_table()[getInsnArgU(insn)];
+                Value id = fn->get_constant_table()[get_insn_arg_u(insn)];
 
                 if (!(id.is(Value::Type::Object) && id.get_obj<Object>()->get_class() == R->get_symbol_class())) {
                     fatal("Name must be string");
@@ -705,7 +705,7 @@ execute(State* R, BytecodeFunction* entry_fn, unsigned argc_, Value* args_) {
                 pc++;
                 break;
             case Insn::Enclose: {
-                Value id = fn->get_constant_table()[getInsnArgU(insn)];
+                Value id = fn->get_constant_table()[get_insn_arg_u(insn)];
 
                 if (!id.is(Value::Type::Object) || id.get_obj<Object>()->get_class() != R->get_symbol_class()) {
                     fatal("Cannot enclose");
@@ -743,7 +743,7 @@ execute(State* R, BytecodeFunction* entry_fn, unsigned argc_, Value* args_) {
                 break;
             case Insn::Escape: {
                 Value value = *sp++;
-                sp += getInsnArgU(insn);
+                sp += get_insn_arg_u(insn);
                 *(--sp) = value;
                 pc++;
             }
