@@ -3,11 +3,14 @@
 //
 
 #include <iostream>
+#include <cstring>
+
 using namespace std;
 
 #include <tr1/cstdint>
-#include <cstring>
-#include <type_traits>
+#include <tr1/type_traits>
+
+using namespace std::tr1;
 
 #include "object.h"
 #include "error.h"
@@ -86,7 +89,10 @@ Frame::Frame(State* R, Value* stack_ptr, BytecodeFunction* fn_, Frame* parent_,
     if (istack % align) {
         next_stack_ptr = reinterpret_cast<Value*>(
                     istack + align - (istack % align));
+    } else {
+        next_stack_ptr = stack;
     }
+
     if (next_stack_ptr > R->get_stack_end()) {
         fatal("Stack overflow");
     }
