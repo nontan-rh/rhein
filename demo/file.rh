@@ -1,0 +1,9 @@
+
+def main() {
+    local x
+    x = open("../rhein/demo/calc.rh")
+    print(x.read_byte())
+    print(x.read_byte())
+    print(x.read_byte())
+    print(x.read_byte())
+}

@@ -13,7 +13,7 @@ add_executable(
     rhein
     main.cc vm.cc operate.cc byteio.cc loader.cc basic/basic.cc
     object.cc array.cc function.cc string.cc symbol.cc
-    record.cc hashtable.cc basic/builtin.cc)
+    record.cc hashtable.cc basic/builtin.cc basic/port.cc)
 
 target_link_libraries(
     rhein

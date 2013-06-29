@@ -15,6 +15,8 @@
 namespace rhein {
 
 typedef int Int;
+typedef uint8_t Byte;
+typedef uint32_t Char;
 
 class Value {
 public:

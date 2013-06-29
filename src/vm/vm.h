@@ -114,6 +114,14 @@ public:
         return klass_slots_->find(Value::by_object(id), klass);
     }
 
+    Class* get_class(const char* id) const {
+        Value klass;
+        if (!klass_slots_->find(Value::by_object(get_symbol(id)), klass)) {
+            throw "No such class";
+        }
+        return klass.get_obj<Class>();
+    }
+
     // Bytecode level interface
     bool global_func_ref(Symbol* id, Value& func) const {
         if (!func_slots_->find(Value::by_object(id), func)) {
