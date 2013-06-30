@@ -57,10 +57,6 @@ File::eof() {
 
 Value
 fn_open(State* R, unsigned argc, Value* args) {
-    if (!(argc == 1 && args[0].get_class(R) == R->get_string_class())) {
-        fatal("Invalid arguments");
-    }
-
     return Value::by_object(
             File::create(R, args[0].get_obj<String>(),
                     File::RWFlags::Read, File::PosFlags::Head));
@@ -68,25 +64,16 @@ fn_open(State* R, unsigned argc, Value* args) {
 
 Value
 fn_read_char(State* R, unsigned argc, Value* args) {
-    if (!(argc == 1 && args[0].get_class(R) == R->get_class("File"))) {
-        fatal("Invalid arguments");
-    }
     return Value::by_char(args[0].get_obj<Port>()->read_char());
 }
 
 Value
 fn_read_byte(State* R, unsigned argc, Value* args) {
-    if (!(argc == 1 && args[0].get_class(R) == R->get_class("File"))) {
-        fatal("Invalid arguments");
-    }
     return Value::by_int(args[0].get_obj<Port>()->read_byte());
 }
 
 Value
 fn_eof(State* R, unsigned argc, Value* args) {
-    if (!(argc == 1 && args[0].get_class(R) == R->get_class("File"))) {
-        fatal("Invalid arguments");
-    }
     return Value::by_bool(args[0].get_obj<Port>()->eof());
 }
 
@@ -96,27 +83,17 @@ FileModule::create(State* R) {
     return new (p) FileModule;
 }
 
-static inline void
-add_function(State* R, const char* name, NativeFunctionBody fn) {
-    R->add_function(NativeFunction::create(R,
-            FunctionInfo::create(R, R->get_symbol(name)), fn));
-}
-
-static inline void
-add_class(State* R, const char* name, const char* parent) {
-    R->add_class(Class::create(R,
-            R->get_symbol(name), R->get_class(parent)));
-}
-
 bool
 FileModule::initialize(State* R) {
-    add_class(R, "File", "any");
-    add_function(R, "open", fn_open);
-    add_function(R, "read_char", fn_read_char);
-    add_function(R, "read_byte", fn_read_byte);
-    add_function(R, "eof", fn_eof);
+    R->add_class("File", "any");
+    R->add_native_function("open", false, 1, {"string"}, fn_open);
+    R->add_native_function("read_char", false, 1, {"File"}, fn_read_char);
+    R->add_native_function("read_byte", false, 1, {"File"}, fn_read_byte);
+    R->add_native_function("eof", false, 1, {"File"}, fn_eof);
     return false;
 }
 
 }
+
 }
+

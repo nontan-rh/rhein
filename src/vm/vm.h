@@ -7,6 +7,8 @@
 
 #include <cstdio>
 
+#include <initializer_list>
+
 #include "allocator.h"
 #include "object.h"
 
@@ -101,9 +103,13 @@ public:
     void initialize_symbol();
 
     // Installation
+    bool add_native_function(const char* id, bool variadic,
+            unsigned num_args, std::initializer_list<const char*> arg_class_ids,
+            NativeFunctionBody body);
     bool add_function(Function* func); 
     bool add_function(Function* func, const Symbol* name); 
     bool add_variable(Symbol* id, Value val);
+    Class* add_class(const char* name, const char* parent);
     bool add_class(Class* klass, const Symbol* name);
     bool add_class(Class* klass);
 

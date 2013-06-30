@@ -56,10 +56,6 @@ fn_print(State* R, unsigned argc, Value* args) {
 
 Value
 fn_write(State* R, unsigned argc, Value* args) {
-    if (argc != 1) {
-        fatal("Invalid arguments");
-    }
-
     Value v = args[0];
     if (v.is(Value::Type::Int)) {
         printf("%d", v.get_int());
@@ -88,14 +84,16 @@ fn_write(State* R, unsigned argc, Value* args) {
 }
 
 Value
-fn_input(State* R, unsigned argc, Value* args) {
-    if (argc >= 2) {
-        fatal("Invalid arguments");
-    }
+fn_input_0(State* R, unsigned argc, Value* args) {
+    char buf[256];
+    scanf("%255s", buf);
 
-    if (argc == 1) {
-        print_value(R, args[0]);
-    }
+    return Value::by_object(String::create(R, buf));
+}
+
+Value
+fn_input_1(State* R, unsigned argc, Value* args) {
+    print_value(R, args[0]);
 
     char buf[256];
     scanf("%255s", buf);
@@ -105,13 +103,6 @@ fn_input(State* R, unsigned argc, Value* args) {
 
 Value
 fn_new(State* R, unsigned argc, Value* args) {
-    if (argc != 1) {
-        fatal("Too many arguments for new");
-    }
-
-    if (args[0].get_class(R) != R->get_class_class()) {
-        return Value::k_nil();
-    }
     return Value::by_object(Record::create(R, args[0].get_obj<Class>()));
 }
 
@@ -147,10 +138,6 @@ fn_literal(State* R, unsigned argc, Value* args) {
 
 Value
 fn_to_array(State* R, unsigned argc, Value* args) {
-    if (!(argc == 1 && args[0].get_class(R) == R->get_string_class())) {
-        fatal("Invalid arguments");
-    }
-
     Array* array;
     if (!args[0].get_obj<String>()->to_array(R, array)) {
         fatal("Error occurred");
@@ -161,10 +148,6 @@ fn_to_array(State* R, unsigned argc, Value* args) {
 
 Value
 fn_to_string(State* R, unsigned argc, Value* args) {
-    if (!(argc == 1 && args[0].get_class(R) == R->get_array_class())) {
-        fatal("Invalid arguments");
-    }
-
     String* string;
     if (!args[0].get_obj<Array>()->to_string(R, string)) {
         fatal("Error occurred");
@@ -175,14 +158,6 @@ fn_to_string(State* R, unsigned argc, Value* args) {
 
 Value
 fn_append(State* R, unsigned argc, Value* args) {
-    if (argc == 0) {
-        return Value::by_object(String::create(R, ""));
-    }
-
-    if (args[0].get_class(R) != R->get_string_class()) {
-        fatal("Cannot append");
-    }
-
     String* result = args[0].get_obj<String>();
     for (unsigned i = 1; i < argc; i++) {
         if (args[i].get_class(R) != R->get_string_class()) {
@@ -261,10 +236,6 @@ fn_die(State* R, unsigned argc, Value* args) {
 
 Value
 fn_is_a(State* R, unsigned argc, Value* args) {
-    if (!(argc == 2 && args[1].get_class(R) == R->get_class_class())) {
-        fatal("Invalid arguments");
-    }
-
     Class* objklass = args[0].get_class(R);
     Class* cmpklass = args[1].get_obj<Class>();
     for (; objklass != nullptr; objklass = objklass->get_parent()) {
@@ -302,34 +273,23 @@ BasicModule::create(State* R) {
     return new (p) BasicModule;
 }
 
-static inline void
-add_function(State* R, const char* name, NativeFunctionBody fn) {
-    R->add_function(NativeFunction::create(R,
-            FunctionInfo::create(R, R->get_symbol(name)), fn));
-}
-
 bool
 BasicModule::initialize(State* R) {
-    add_function(R, "print", fn_print);
-    add_function(R, "input", fn_input);
-    add_function(R, "new", fn_new);
-    add_function(R, "literal", fn_literal);
-    add_function(R, "to_array", fn_to_array);
-    add_function(R, "to_string", fn_to_string);
-    add_function(R, "append", fn_append);
-    add_function(R, "head", fn_head);
-    add_function(R, "tail", fn_tail);
-    add_function(R, "sub", fn_sub);
-    add_function(R, "length", fn_length);
-    add_function(R, "die", fn_die);
-    add_function(R, "is_a", fn_is_a);
-    //add_function(R, "load", fn_load);
-    R->add_function(NativeFunction::create(R,
-                FunctionInfo::create(R,
-                    R->get_symbol("load"),
-                    false,
-                    1,
-                    {"string"}), fn_load));
+    R->add_native_function("print", true, 0, {}, fn_print);
+    R->add_native_function("input", false, 0, {}, fn_input_0);
+    R->add_native_function("input", false, 1, {"any"}, fn_input_1);
+    R->add_native_function("new", false, 1, {"class"}, fn_new);
+    R->add_native_function("literal", true, 0, {}, fn_literal);
+    R->add_native_function("to_array", false, 1, {"string"}, fn_to_array);
+    R->add_native_function("to_string", false, 1, {"array"}, fn_to_string);
+    R->add_native_function("append", true, 1, {"string"}, fn_append);
+    R->add_native_function("head", false, 2, {"string", "int"}, fn_head);
+    R->add_native_function("tail", false, 2, {"string", "int"}, fn_tail);
+    R->add_native_function("sub", false, 3, {"string", "int", "int"}, fn_sub);
+    R->add_native_function("length", false, 1, {"any"}, fn_length);
+    R->add_native_function("die", true, 0, {}, fn_die);
+    R->add_native_function("is_a", false, 2, {"string", "class"}, fn_is_a);
+    R->add_native_function("load", false, 1, {"string"}, fn_load);
     return false;
 }
 

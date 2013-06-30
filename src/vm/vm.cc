@@ -6,6 +6,7 @@
 #include <cstring>
 #include <cstdint>
 #include <type_traits>
+#include <initializer_list>
 
 using namespace std;
 
@@ -281,6 +282,21 @@ State::initialize_symbol() {
 }
 
 bool
+State::add_native_function(const char* id, bool variadic,
+        unsigned num_args, std::initializer_list<const char*> arg_class_ids,
+        NativeFunctionBody body) {
+    return this->add_function(NativeFunction::create(
+                this,
+                FunctionInfo::create(
+                    this,
+                    this->get_symbol(id),
+                    variadic,
+                    num_args,
+                    arg_class_ids),
+                body));
+}
+
+bool
 State::add_function(Function* func) {
     return add_function(func, func->get_info()->name());
 }
@@ -305,6 +321,13 @@ State::add_function(Function* func, const Symbol* name) {
         }
     }
     return func_slots_->insert_if_absent(this, Value::by_object(name), Value::by_object(func));
+}
+
+Class*
+State::add_class(const char* name, const char* parent) {
+    Class* klass = Class::create(this, get_symbol(name), get_class(parent));
+    this->add_class(klass);
+    return klass;
 }
 
 bool

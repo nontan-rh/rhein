@@ -13,18 +13,8 @@ namespace builtin {
 
 static Value
 register_function(State* R, unsigned argc, Value* args) {
-    if (!(argc == 2)) {
-        fatal("Invalid arguments");
-    }
-
     Value fn = args[0];
     Value name = args[1];
-
-    if (!((fn.get_class(R) == R->get_bytecode_function_class()
-           || fn.get_class(R) == R->get_native_function_class())
-          && name.get_class(R) == R->get_symbol_class())) {
-        fatal("Invalid arguments");
-    }
 
     fn.get_obj<Function>()->resolve(R);
 
@@ -34,28 +24,14 @@ register_function(State* R, unsigned argc, Value* args) {
 
 static Value
 register_class(State* R, unsigned argc, Value* args) {
-    if (!(argc == 2)) {
-        fatal("Invalid arguments");
-    }
-
-    Class* klass = args[0].get_class(R);
-    Value name = args[1];
-
-    if (name.get_class(R) != R->get_symbol_class()) {
-        fatal("Invalid arguments");
-    }
-
-    R->add_class(klass, name.get_obj<Symbol>());
+    Class* klass = args[0].get_obj<Class>();
+    Symbol* name = args[1].get_obj<Symbol>();
+    R->add_class(klass, name);
     return Value::k_nil();
 }
 
 static Value
 register_variable(State* R, unsigned argc, Value* args) {
-    if (!((argc == 2)
-          && args[0].get_class(R) == R->get_symbol_class())) {
-        fatal("Invalid arguments");
-    }
-
     R->add_variable(args[0].get_obj<Symbol>(), args[1]);
     return Value::k_nil();
 }
@@ -66,17 +42,14 @@ BuiltinModule::create(State* R) {
     return new (p) BuiltinModule;
 }
 
-static inline void
-add_function(State* R, const char* name, NativeFunctionBody fn) {
-    R->add_function(NativeFunction::create(R,
-            FunctionInfo::create(R, R->get_symbol(name)), fn));
-}
-
 bool
 BuiltinModule::initialize(State* R) {
-    add_function(R, "!!register_function", register_function);
-    add_function(R, "!!register_class", register_class);
-    add_function(R, "!!register_variable", register_variable);
+    R->add_native_function("!!register_function", false, 2, {"any", "symbol"},
+            register_function);
+    R->add_native_function("!!register_class", false, 2, {"class", "symbol"},
+            register_class);
+    R->add_native_function("!!register_variable", false, 2, {"symbol", "any"},
+            register_variable);
     return false;
 }
 
