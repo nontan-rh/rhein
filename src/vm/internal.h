@@ -5,8 +5,11 @@
 #ifndef INTERNAL_H
 #define INTERNAL_H
 
+#include <initializer_list>
+
 namespace rhein {
 
+class Value;
 class Object;
 class Symbol;
 class String;
@@ -28,6 +31,8 @@ public:
     static FunctionInfo* create(State* R, Symbol* id);
     static FunctionInfo* create(State* R, Symbol* id, bool variadic,
             unsigned num_args, Symbol** arg_class_ids);
+    static FunctionInfo* create(State* R, Symbol* id, bool variadic,
+            unsigned num_args, std::initializer_list<const char*> arg_class_ids);
 
     Symbol* name() const { return name_; }
     bool variadic() const { return variadic_; }
@@ -35,18 +40,22 @@ public:
     Symbol** arg_class_ids() const { return arg_class_ids_; }
     Class** arg_classes() const { return arg_classes_; }
 
+    bool is_resolved() const { return resolved_; }
     bool resolve(State* R);
+
+    bool check_type(State* R, unsigned argc, Value* args);
 private:
     Symbol* name_;
     bool variadic_;
     unsigned num_args_;
     Symbol** arg_class_ids_;
     Class** arg_classes_;
+    bool resolved_;
 
     FunctionInfo(Symbol* name, bool variadic, unsigned num_args,
             Symbol** arg_class_ids) : name_(name), variadic_(variadic),
             num_args_(num_args), arg_class_ids_(arg_class_ids),
-            arg_classes_(nullptr) { }
+            arg_classes_(nullptr), resolved_(false) { }
 };
 
 class RecordInfo {

@@ -6,7 +6,7 @@
 #define OBJECT_H
 
 #include <climits>
-#include <tr1/cstdint>
+#include <cstdint>
 #include <cassert>
 #include <cstddef>
 
@@ -152,6 +152,8 @@ public:
     Class* get_parent() const { return parent_; }
     bool has_record_info() const { return (record_info_ != nullptr); }
     const RecordInfo* get_record_info() const { return record_info_; }
+
+    bool is_subclass_of(Class* k) const;
 private:
     Symbol* id_;
     Class* parent_;

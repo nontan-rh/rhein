@@ -323,7 +323,13 @@ BasicModule::initialize(State* R) {
     add_function(R, "length", fn_length);
     add_function(R, "die", fn_die);
     add_function(R, "is_a", fn_is_a);
-    add_function(R, "load", fn_load);
+    //add_function(R, "load", fn_load);
+    R->add_function(NativeFunction::create(R,
+                FunctionInfo::create(R,
+                    R->get_symbol("load"),
+                    false,
+                    1,
+                    {"string"}), fn_load));
     return false;
 }
 

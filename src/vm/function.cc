@@ -2,6 +2,9 @@
 // function.cc
 //
 
+#include <initializer_list>
+#include <cstring>
+
 #include "object.h"
 #include "allocator.h"
 #include "vm.h"
@@ -20,6 +23,17 @@ FunctionInfo::create(State* R, Symbol* id, bool variadic, unsigned num_args,
     return new (p) FunctionInfo(id, variadic, num_args, arg_class_ids);
 }
 
+FunctionInfo*
+FunctionInfo::create(State* R, Symbol* id, bool variadic, unsigned num_args,
+        std::initializer_list<const char*> ids) {
+    Symbol** s = R->allocate_block<Symbol*>(ids.size());
+    int c = 0;
+    for (auto i = ids.begin(); i != ids.end(); i++) {
+        s[c++] = R->get_symbol(*i);
+    }
+    return create(R, id, variadic, num_args, s);
+}
+
 bool
 FunctionInfo::resolve(State* R) {
     arg_classes_ = R->allocate_block<Class*>(num_args_);
@@ -33,7 +47,22 @@ FunctionInfo::resolve(State* R) {
         arg_classes_[i] = klass.get_obj<Class>();
     }
 
+    resolved_ = true;
     return true;
+}
+
+bool
+FunctionInfo::check_type(State* R, unsigned argc, Value* args) {
+    if (!resolved_) { resolve(R); }
+    if (argc == num_args_ || (variadic_ && argc >= num_args_)) {
+        for (unsigned i = 0; i < num_args_; i++) {
+            if (!args[i].get_class(R)->is_subclass_of(arg_classes_[i])) {
+                return false;
+            }
+        }
+        return true;
+    }
+    return false;
 }
 
 NativeFunction::NativeFunction(State* R, FunctionInfo* info, NativeFunctionBody body_)
@@ -205,6 +234,7 @@ Method::dispatch(State* R, unsigned argc, Value* args, Value& result) {
 
 bool
 Method::add_function(State* R, Function* func) {
+    if (!func->get_info()->is_resolved()) { func->get_info()->resolve(R); }
     return node_->addFunction(R, Value::by_object(func), func, 0);
 }
 

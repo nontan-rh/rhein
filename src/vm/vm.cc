@@ -4,13 +4,10 @@
 
 #include <iostream>
 #include <cstring>
+#include <cstdint>
+#include <type_traits>
 
 using namespace std;
-
-#include <tr1/cstdint>
-#include <tr1/type_traits>
-
-using namespace std::tr1;
 
 #include "object.h"
 #include "error.h"
@@ -516,13 +513,17 @@ execute(State* R, BytecodeFunction* entry_fn, unsigned argc_, Value* args_) {
 
                 Frame* closure = nullptr;
                 if (func.get_obj<Object>()->get_class() == R->get_method_class()) {
-                    if (!func.get_obj<Method>()->dispatch(R, argc, sp, func)) {
+                    if (!func.get_obj<Method>()->dispatch(R, argc, stack_args, func)) {
                         fatal("Could not dispatch");
                     }
                     closure = func.get_obj<Method>()->get_closure();
                 }
 
                 Function* ofunc = func.get_obj<Function>();
+                if (!ofunc->get_info()->check_type(R, argc, stack_args)) {
+                    ofunc->get_info()->name()->dump();
+                    fatal("Type error");
+                }
 
                 if (ofunc->get_class() == R->get_bytecode_function_class()) {
                     fn = (BytecodeFunction*)ofunc;

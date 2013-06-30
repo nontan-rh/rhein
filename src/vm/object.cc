@@ -47,4 +47,15 @@ Value::get_class(State *R) const {
     return nullptr;
 }
 
+
+bool
+Class::is_subclass_of(Class* k) const {
+    for (const Class* s = this; s; s = s->parent_) {
+        if (s == k) {
+            return true;
+        }
+    }
+    return false;
+}
+
 }
