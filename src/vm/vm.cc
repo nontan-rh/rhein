@@ -663,7 +663,7 @@ execute(State* R, BytecodeFunction* entry_fn, unsigned argc_, Value* args_) {
                 Value id = fn->get_constant_table()[get_insn_arg_u(insn)];
 
                 if (!(id.is(Value::Type::Object)
-                    && id.get_obj<Object>()->get_class() != R->get_symbol_class())) { 
+                    && id.get_obj<Object>()->get_class() == R->get_symbol_class())) { 
                     obj.get_class(R)->get_id()->dump();
                     fatal("Cannot refer");
                 }
@@ -686,7 +686,7 @@ execute(State* R, BytecodeFunction* entry_fn, unsigned argc_, Value* args_) {
                 Value id = fn->get_constant_table()[get_insn_arg_u(insn)];
 
                 if (!(id.is(Value::Type::Object)
-                    && id.get_obj<Object>()->get_class() != R->get_symbol_class())) {
+                    && id.get_obj<Object>()->get_class() == R->get_symbol_class())) {
                     
                     fatal("Cannot set");
                 }

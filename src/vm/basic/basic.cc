@@ -284,7 +284,7 @@ BasicModule::initialize(State* R) {
     R->add_native_function("sub", false, 3, {"string", "int", "int"}, fn_sub);
     R->add_native_function("length", false, 1, {"any"}, fn_length);
     R->add_native_function("die", true, 0, {}, fn_die);
-    R->add_native_function("is_a", false, 2, {"string", "class"}, fn_is_a);
+    R->add_native_function("is_a", false, 2, {"any", "class"}, fn_is_a);
     R->add_native_function("load", false, 1, {"string"}, fn_load);
     return false;
 }
