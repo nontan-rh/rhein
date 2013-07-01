@@ -27,6 +27,7 @@ public:
         Int,
         Char,
         Object,
+        Record,
     };
 
     static Value k_nil() { return Value(Type::Nil); }
@@ -36,9 +37,10 @@ public:
     static Value by_bool(bool value) { return Value(value); }
     static Value by_int(Int value) { return Value(value); }
     static Value by_char(uint32_t ch) { return Value(ch); }
-    static Value by_object(const Object *obj) {
-        return Value(const_cast<Object *>(obj));
+    static Value by_object(const Object* obj) {
+        return Value(const_cast<Object*>(obj));
     }
+    static Value by_record(Record* rec) { return Value(rec); }
 
     bool is(Type t) const { return type_id_ == t; }
     bool like_true() const { return !like_false(); }
@@ -51,12 +53,13 @@ public:
         assert(type_id_ == Type::Object);
         return reinterpret_cast<T*>(u_.v_obj_);
     }
+    Record* get_rec() const { assert(type_id_ == Type::Record); return u_.v_rec_; }
 
     Value::Type get_type() const { return type_id_; }
 
     unsigned long get_hash() const;
 
-    Class *get_class(State *R) const;
+    Class* get_class(State* R) const;
 
     bool eq(const Value& rht) const {
         if (type_id_ != rht.type_id_) {
@@ -74,6 +77,8 @@ public:
             return u_.v_char_ == rht.u_.v_char_;
         case Type::Object:
             return u_.v_obj_ == rht.u_.v_obj_;
+        case Type::Record:
+            return u_.v_rec_ == rht.u_.v_rec_;
         }
         return false;
     }
@@ -84,6 +89,7 @@ private:
     union Body {
         Int v_int_;
         Object *v_obj_;
+        Record *v_rec_;
         uint32_t v_char_;
         bool v_bool_;
 
@@ -91,14 +97,16 @@ private:
         Body(bool value) : v_bool_(value) { }
         Body(Int value) : v_int_(value) { }
         Body(uint32_t ch) : v_char_(ch) { }
-        Body(Object *obj) : v_obj_(obj) { }
+        Body(Object* obj) : v_obj_(obj) { }
+        Body(Record* rec) : v_rec_(rec) { }
     } u_;
 
     Value(Type type) : type_id_(type) { }
     Value(bool value) : type_id_(Type::Bool), u_(value) { }
     Value(Int value) : type_id_(Type::Int), u_(value) { }
     Value(uint32_t ch) : type_id_(Type::Char), u_(ch) { }
-    Value(Object *obj) : type_id_(Type::Object), u_(obj) { }
+    Value(Object* obj) : type_id_(Type::Object), u_(obj) { }
+    Value(Record* rec) : type_id_(Type::Record), u_(rec) { }
 };
 
 class Object : public PlacementNewObj {
@@ -180,6 +188,8 @@ Value::get_hash() const {
         return u_.v_char_;
     case Type::Object:
         return u_.v_obj_->get_hash();
+    case Type::Record:
+        return reinterpret_cast<unsigned long>(u_.v_rec_);
     }
     return 0;
 }
@@ -340,19 +350,20 @@ private:
     void rehash(State* R);
 };
 
-class Record : public Object {
+class Record : public PlacementNewObj {
 public:
     static Record* create(State* R, Class* klass);
 
-    // Override
-    bool slot_ref(State* /* R */, Symbol* slot_id, Value& value) const;
-    // Override
-    bool slot_set(State* /* R */, Symbol* slot_id, Value value);
-public:
+    bool slot_ref(Symbol* slot_id, Value& value) const;
+    bool slot_set(Symbol* slot_id, Value value);
+
+    Class* get_class() const { return klass_; }
+private:
+    Class* klass_;
+    Value inherit_instance_;
     Value* member_slots_;
 
     Record(State* R, Class* klass);
-
 };
 
 typedef Value (*NativeFunctionBody)(State*, unsigned, Value*);

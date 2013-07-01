@@ -43,6 +43,8 @@ Value::get_class(State *R) const {
         return R->get_char_class();
     case Type::Object:
         return u_.v_obj_->get_class();
+    case Type::Record:
+        return u_.v_rec_->get_class();
     }
     return nullptr;
 }

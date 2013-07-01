@@ -55,7 +55,7 @@ fn_print(State* R, unsigned argc, Value* args) {
 }
 
 Value
-fn_write(State* R, unsigned argc, Value* args) {
+fn_write(State* R, unsigned /* argc */, Value* args) {
     Value v = args[0];
     if (v.is(Value::Type::Int)) {
         printf("%d", v.get_int());
@@ -84,7 +84,7 @@ fn_write(State* R, unsigned argc, Value* args) {
 }
 
 Value
-fn_input_0(State* R, unsigned argc, Value* args) {
+fn_input_0(State* R, unsigned /* argc */, Value* /* args */) {
     char buf[256];
     scanf("%255s", buf);
 
@@ -92,7 +92,7 @@ fn_input_0(State* R, unsigned argc, Value* args) {
 }
 
 Value
-fn_input_1(State* R, unsigned argc, Value* args) {
+fn_input_1(State* R, unsigned /* argc */, Value* args) {
     print_value(R, args[0]);
 
     char buf[256];
@@ -102,8 +102,8 @@ fn_input_1(State* R, unsigned argc, Value* args) {
 }
 
 Value
-fn_new(State* R, unsigned argc, Value* args) {
-    return Value::by_object(Record::create(R, args[0].get_obj<Class>()));
+fn_new(State* R, unsigned /* argc */, Value* args) {
+    return Value::by_record(Record::create(R, args[0].get_obj<Class>()));
 }
 
 Value
@@ -137,7 +137,7 @@ fn_literal(State* R, unsigned argc, Value* args) {
 }
 
 Value
-fn_to_array(State* R, unsigned argc, Value* args) {
+fn_to_array(State* R, unsigned /* argc */, Value* args) {
     Array* array;
     if (!args[0].get_obj<String>()->to_array(R, array)) {
         fatal("Error occurred");
@@ -147,7 +147,7 @@ fn_to_array(State* R, unsigned argc, Value* args) {
 }
 
 Value
-fn_to_string(State* R, unsigned argc, Value* args) {
+fn_to_string(State* R, unsigned /* argc */, Value* args) {
     String* string;
     if (!args[0].get_obj<Array>()->to_string(R, string)) {
         fatal("Error occurred");
@@ -235,7 +235,7 @@ fn_die(State* R, unsigned argc, Value* args) {
 }
 
 Value
-fn_is_a(State* R, unsigned argc, Value* args) {
+fn_is_a(State* R, unsigned /* argc */, Value* args) {
     Class* objklass = args[0].get_class(R);
     Class* cmpklass = args[1].get_obj<Class>();
     for (; objklass != nullptr; objklass = objklass->get_parent()) {
@@ -247,11 +247,7 @@ fn_is_a(State* R, unsigned argc, Value* args) {
 }
 
 Value
-fn_load(State* R, unsigned argc, Value* args) {
-    if (!(argc == 1 && args[0].get_class(R) == R->get_string_class())) {
-        fatal("Invalid arguments");
-    }
-
+fn_load(State* R, unsigned /* argc */, Value* args) {
     char *fn;
     const char *buf;
     size_t len;

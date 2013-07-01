@@ -54,7 +54,8 @@ RecordInfo::get_slot_index(Symbol* slot_id, unsigned& index) const {
 }
 
 Record::Record(State* R, Class* klass)
-    : Object(klass),
+    : klass_(klass),
+      inherit_instance_(Value::k_undef()),
       member_slots_(R->allocate_raw_array(klass->get_record_info()->num_slots())) { }
 
 Record*
@@ -66,7 +67,7 @@ Record::create(State* R, Class* klass) {
 }
 
 bool
-Record::slot_ref(State* /* R */, Symbol* slot_id, Value& value) const {
+Record::slot_ref(Symbol* slot_id, Value& value) const {
     unsigned index;
     if (!klass_->get_record_info()->get_slot_index(slot_id, index)) {
         return false;
@@ -77,7 +78,7 @@ Record::slot_ref(State* /* R */, Symbol* slot_id, Value& value) const {
 }
 
 bool
-Record::slot_set(State* /* R */, Symbol* slot_id, Value value) {
+Record::slot_set(Symbol* slot_id, Value value) {
     unsigned index;
     if (!klass_->get_record_info()->get_slot_index(slot_id, index)) {
         return false;

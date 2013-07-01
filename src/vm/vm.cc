@@ -662,14 +662,19 @@ execute(State* R, BytecodeFunction* entry_fn, unsigned argc_, Value* args_) {
                 Value obj = sp[0];
                 Value id = fn->get_constant_table()[get_insn_arg_u(insn)];
 
-                if (!obj.is(Value::Type::Object) || !id.is(Value::Type::Object)
-                    || id.get_obj<Object>()->get_class() != R->get_symbol_class()) {
-
+                if (!(id.is(Value::Type::Object)
+                    && id.get_obj<Object>()->get_class() != R->get_symbol_class())) { 
                     obj.get_class(R)->get_id()->dump();
                     fatal("Cannot refer");
                 }
+                Symbol* id_sym = id.get_obj<Symbol>();
 
-                if (!obj.get_obj<Object>()->slot_ref(R, id.get_obj<Symbol>(), sp[0])) {
+                if (obj.is(Value::Type::Object)
+                        && !obj.get_obj<Object>()->slot_ref(R, id_sym, sp[0])) {
+                    id.get_obj<Symbol>()->dump();
+                    fatal("Cannot refer");
+                } else if (obj.is(Value::Type::Record)
+                        && !obj.get_rec()->slot_ref(id_sym, sp[0])) {
                     id.get_obj<Symbol>()->dump();
                     fatal("Cannot refer");
                 }
@@ -680,13 +685,18 @@ execute(State* R, BytecodeFunction* entry_fn, unsigned argc_, Value* args_) {
                 Value obj = *sp++;
                 Value id = fn->get_constant_table()[get_insn_arg_u(insn)];
 
-                if (!obj.is(Value::Type::Object) || !id.is(Value::Type::Object)
-                    || id.get_obj<Object>()->get_class() != R->get_symbol_class()) {
+                if (!(id.is(Value::Type::Object)
+                    && id.get_obj<Object>()->get_class() != R->get_symbol_class())) {
                     
                     fatal("Cannot set");
                 }
+                Symbol* id_sym = id.get_obj<Symbol>();
 
-                if (!obj.get_obj<Object>()->slot_set(R, id.get_obj<Symbol>(), sp[0])) {
+                if (obj.is(Value::Type::Object)
+                        && !obj.get_obj<Object>()->slot_set(R, id_sym, sp[0])) {
+                    fatal("Cannot set");
+                } else if (obj.is(Value::Type::Record)
+                        && !obj.get_rec()->slot_set(id_sym, sp[0])) {
                     fatal("Cannot set");
                 }
                 pc++;

@@ -56,24 +56,24 @@ File::eof() {
 }
 
 Value
-fn_open(State* R, unsigned argc, Value* args) {
+fn_open(State* R, unsigned /* argc */, Value* args) {
     return Value::by_object(
             File::create(R, args[0].get_obj<String>(),
                     File::RWFlags::Read, File::PosFlags::Head));
 }
 
 Value
-fn_read_char(State* R, unsigned argc, Value* args) {
+fn_read_char(State* /* R */, unsigned /* argc */, Value* args) {
     return Value::by_char(args[0].get_obj<Port>()->read_char());
 }
 
 Value
-fn_read_byte(State* R, unsigned argc, Value* args) {
+fn_read_byte(State* /* R */, unsigned /* argc */, Value* args) {
     return Value::by_int(args[0].get_obj<Port>()->read_byte());
 }
 
 Value
-fn_eof(State* R, unsigned argc, Value* args) {
+fn_eof(State* /* R */, unsigned /* argc */, Value* args) {
     return Value::by_bool(args[0].get_obj<Port>()->eof());
 }
 
