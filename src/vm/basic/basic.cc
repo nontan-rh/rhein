@@ -272,6 +272,7 @@ BasicModule::create(State* R) {
 bool
 BasicModule::initialize(State* R) {
     R->add_native_function("print", true, 0, {}, fn_print);
+    R->add_native_function("write", false, 1, {"any"}, fn_write);
     R->add_native_function("input", false, 0, {}, fn_input_0);
     R->add_native_function("input", false, 1, {"any"}, fn_input_1);
     R->add_native_function("new", false, 1, {"class"}, fn_new);
