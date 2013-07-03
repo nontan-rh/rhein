@@ -116,34 +116,12 @@ public:
     void set_symbol_provider(SymbolProvider* s) { symbol_provider_ = s; } 
     bool has_symbol_provider() const { return (symbol_provider_ != nullptr); }
 
-    bool get_class(Symbol* id, Value& klass) const {
-        return klass_slots_->find(Value::by_object(id), klass);
-    }
-
-    Class* get_class(const char* id) const {
-        Value klass;
-        if (!klass_slots_->find(Value::by_object(get_symbol(id)), klass)) {
-            throw "No such class";
-        }
-        return klass.get_obj<Class>();
-    }
-
+    bool get_class(Symbol* id, Value& klass) const;
+    Class* get_class(const char* id) const;
     // Bytecode level interface
-    bool global_func_ref(Symbol* id, Value& func) const {
-        if (!func_slots_->find(Value::by_object(id), func)) {
-            id->dump();
-            return false;
-        }
-        return true;
-    }
-
-    bool global_var_ref(Symbol* id, Value& value) const {
-        return var_slots_->find(Value::by_object(id), value);
-    }
-
-    bool global_var_set(Symbol* id, Value value) {
-        return var_slots_->assign(Value::by_object(id), value);
-    }
+    bool global_func_ref(Symbol* id, Value& func) const;
+    bool global_var_ref(Symbol* id, Value& value) const;
+    bool global_var_set(Symbol* id, Value value);
 
     // File loading interface
     bool load_file(FILE* fp);
@@ -161,9 +139,9 @@ public:
     void dump_variables();
 
 private:
-    HashTable* func_slots_;
-    HashTable* var_slots_;
-    HashTable* klass_slots_;
+    SysTable<const Symbol*, Object*>* func_slots_;
+    SysTable<const Symbol*, Value>* var_slots_;
+    SysTable<const Symbol*, Class*>* klass_slots_;
 
     Class* any_class_;
     Class* class_class_;

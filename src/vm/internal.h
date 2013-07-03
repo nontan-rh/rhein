@@ -9,6 +9,8 @@
 
 namespace rhein {
 
+template <typename K, typename V> class SysTable;
+
 class Value;
 class Object;
 class Symbol;
@@ -60,7 +62,7 @@ private:
 
 class RecordInfo {
     unsigned num_slots_;
-    HashTable* id_index_table_;
+    SysTable<const Symbol*, unsigned>* id_index_table_;
 
     static void* operator new(size_t /* size */, void *p) { return p; }
 
@@ -92,3 +94,4 @@ calc_string_hash(const char* cstr, size_t length) {
 }
 
 #endif /* INTERNAL_H_ */
+

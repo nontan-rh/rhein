@@ -5,6 +5,7 @@
 #include <cstring>
 #include <cassert>
 
+#include "systable.h"
 #include "object.h"
 #include "vm.h"
 
@@ -14,22 +15,19 @@ RecordInfo::RecordInfo(State* R, RecordInfo* parent, unsigned slot_num_,
     Symbol** slot_ids) : num_slots_(slot_num_) {
 
     if (!(parent == nullptr || parent->id_index_table_ == nullptr)) {
-        id_index_table_ = HashTable::create(R);
+        id_index_table_ = SysTable<const Symbol*, unsigned>::create(R);
         id_index_table_->import(R, parent->id_index_table_);
     }
 
-    if (num_slots_ == 0) {
-        return;
-    }
+    if (num_slots_ == 0) { return; }
 
     if (id_index_table_ == nullptr) {
-        id_index_table_ = HashTable::create(R);
+        id_index_table_ = SysTable<const Symbol*, unsigned>::create(R);
     }
 
     unsigned base = id_index_table_->get_num_entries();
     for (unsigned i = 0; i < num_slots_; i++) {
-        id_index_table_->insert_if_absent(R, Value::by_object(slot_ids[i]),
-                Value::by_int(base + i));
+        id_index_table_->insert_if_absent(R, slot_ids[i], base + i);
     }
 }
 
@@ -43,13 +41,8 @@ RecordInfo::create(State* R, RecordInfo* parent, unsigned slot_num,
 
 bool
 RecordInfo::get_slot_index(Symbol* slot_id, unsigned& index) const {
-    Value vindex;
-    if (!id_index_table_->find(Value::by_object(slot_id), vindex)) {
-        return false;
-    }
-
-    assert(0 <= vindex.get_int() && (size_t)vindex.get_int() < num_slots_);
-    index = vindex.get_int();
+    if (!id_index_table_->exists(slot_id)) { return false; }
+    index = id_index_table_->find(slot_id);
     return true;
 }
 

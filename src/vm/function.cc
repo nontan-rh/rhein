@@ -5,6 +5,7 @@
 #include <initializer_list>
 #include <cstring>
 
+#include "systable.h"
 #include "object.h"
 #include "allocator.h"
 #include "vm.h"
@@ -152,11 +153,9 @@ public:
 
         Class* klass = args[index].get_class(R);
         while (true) {
-            Value child;
-            if (child_table_->find(Value::by_object(klass), child)) {
-                // Unsafe cast!
-                if (child.get_obj<DispatcherNode>()->dispatch(R,
-                        argc, args, index + 1, func)) {
+            if (child_table_->exists(klass)) {
+                DispatcherNode* child = child_table_->find(klass);
+                if (child->dispatch(R, argc, args, index + 1, func)) {
                     return true;
                 }
             }
@@ -190,27 +189,28 @@ public:
             }
         }
         Class* klass = func_body->get_info()->arg_classes()[index];
-        Value child;
-        if (!child_table_->find(Value::by_object(klass), child)) {
-            // Unsafe cast
-            child = Value::by_object((Object*)create(R));
-            child_table_->insert_if_absent(R, Value::by_object(klass), child);
+        DispatcherNode* child;
+
+        if (!child_table_->exists(klass)) {
+            child = create(R);
+            child_table_->insert_if_absent(R, klass, child);
+        } else {
+            child = child_table_->find(klass);
         }
-        // Unsafe cast
-        return child.get_obj<DispatcherNode>()->addFunction(R, func,
-                func_body, index + 1);
+
+        return child->addFunction(R, func, func_body, index + 1);
     }
 
 private:
     Value entry_;
     Value variable_entry_;
-    HashTable* child_table_;
+    SysTable<const Class*, DispatcherNode*>* child_table_;
 
     static void* operator new (size_t /* size */, void* p) { return p; }
 
     DispatcherNode(State* R)
         : entry_(Value::k_nil()), variable_entry_(Value::k_nil()),
-          child_table_(HashTable::create(R)) { }
+          child_table_(SysTable<const Class*, DispatcherNode*>::create(R)) { }
 };
 
 Method::Method(State* R)

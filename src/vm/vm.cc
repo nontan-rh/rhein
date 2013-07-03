@@ -10,6 +10,7 @@
 
 using namespace std;
 
+#include "systable.h"
 #include "object.h"
 #include "error.h"
 #include "operate.h"
@@ -200,9 +201,9 @@ State::State() : symbol_provider_(nullptr) {
     initialize_symbol();
     initialize_class2();
 
-    func_slots_ = HashTable::create(this);
-    var_slots_ = HashTable::create(this);
-    klass_slots_ = HashTable::create(this);
+    func_slots_ = SysTable<const Symbol*, Object*>::create(this);
+    var_slots_ = SysTable<const Symbol*, Value>::create(this);
+    klass_slots_ = SysTable<const Symbol*, Class*>::create(this);
 
     initialize_class3();
 
@@ -254,9 +255,7 @@ State::initialize_class2() {
 
 void
 State::set_class_hash(Class* klass){
-    klass_slots_->insert(this,
-            Value::by_object(klass->get_id()),
-            Value::by_object(klass));
+    klass_slots_->insert(this, klass->get_id(), klass);
 }
 
 void
@@ -282,6 +281,35 @@ State::initialize_symbol() {
 }
 
 bool
+State::get_class(Symbol* id, Value& klass) const {
+    klass = Value::by_object(klass_slots_->find(id));
+    return true;
+}
+
+Class*
+State::get_class(const char* id) const {
+    return klass_slots_->find(get_symbol(id));
+}
+
+bool
+State::global_func_ref(Symbol* id, Value& func) const {
+    func = Value::by_object(func_slots_->find(id));
+    return true;
+}
+
+bool
+State::global_var_ref(Symbol* id, Value& value) const {
+    value = var_slots_->find(id);
+    return true;
+}
+
+bool
+State::global_var_set(Symbol* id, Value value) {
+    var_slots_->insert(this, id, value);
+    return true;
+}
+
+bool
 State::add_native_function(const char* id, bool variadic,
         unsigned num_args, std::initializer_list<const char*> arg_class_ids,
         NativeFunctionBody body) {
@@ -303,24 +331,24 @@ State::add_function(Function* func) {
 
 bool
 State::add_function(Function* func, const Symbol* name) {
-    Value old;
-    if (func_slots_->find(Value::by_object(name), old)) {
-        Object* fold = old.get_obj<Object>();
-        if (fold->get_class() == native_function_class_
-            || fold->get_class() == bytecode_function_class_) {
-
+    if (func_slots_->exists(name)) {
+        Object* old = func_slots_->find(name);
+        if (old->get_class() == native_function_class_
+                || old->get_class() == bytecode_function_class_) {
             Method* method = Method::create(this);
-            method->add_function(this, (Function*)fold);
+            method->add_function(this, static_cast<Function*>(old));
             method->add_function(this, func);
-
-            return func_slots_->assign(Value::by_object(name), Value::by_object(method));
-        } else if (fold->get_class() == method_class_) {
-            return static_cast<Method*>(fold)->add_function(this, func);
+            func_slots_->assign(this, name, method);
+            return true;
+        } else if (old->get_class() == method_class_) {
+            return static_cast<Method*>(old)->add_function(this, func);
         } else {
-            exit(1);
+            throw "";
         }
     }
-    return func_slots_->insert_if_absent(this, Value::by_object(name), Value::by_object(func));
+
+    func_slots_->insert_if_absent(this, name, func);
+    return true;
 }
 
 Class*
@@ -337,12 +365,14 @@ State::add_class(Class* klass) {
 
 bool
 State::add_class(Class* klass, const Symbol* name) {
-    return klass_slots_->insert_if_absent(this, Value::by_object(name), Value::by_object(klass));
+    klass_slots_->insert_if_absent(this, name, klass);
+    return true;
 }
 
 bool
 State::add_variable(Symbol* id, Value val) {
-    return var_slots_->insert_if_absent(this, Value::by_object(id), val);
+    var_slots_->insert_if_absent(this, id, val);
+    return true;
 }
 
 bool
@@ -352,17 +382,17 @@ State::load_module(Module* module) {
 
 void
 State::dump_classes() {
-    klass_slots_->dump();
+    //klass_slots_->dump();
 }
 
 void
 State::dump_functions() {
-    func_slots_->dump();
+    //func_slots_->dump();
 }
 
 void
 State::dump_variables() {
-    var_slots_->dump();
+    //var_slots_->dump();
 }
 
 Value

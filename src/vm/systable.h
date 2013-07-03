@@ -7,20 +7,24 @@
 
 #include <cassert>
 
+#include "vm.h"
 #include "internal.h"
 #include "object.h"
 
 namespace rhein {
 
-unsigned get_sys_hash(void* p) {
+static inline unsigned
+get_sys_hash(const void* p) {
     return static_cast<unsigned>(reinterpret_cast<uintptr_t>(p));
 }
 
-unsigned get_sys_hash(unsigned i) {
+static inline unsigned
+get_sys_hash(unsigned i) {
     return i;
 }
 
-unsigned get_sys_hash(int i) {
+static inline unsigned
+get_sys_hash(int i) {
     return static_cast<unsigned>(i);
 }
 
@@ -37,25 +41,38 @@ public:
 
     unsigned get_num_entries() const { return num_entries_; }
 
+    bool exists(const K& key) const {
+        unsigned hash_value = get_sys_hash(key);
+        unsigned index_begin = hash_value % table_size_;
+
+        if (table_[index_begin].status == EntryStatus::Empty) { return false; }
+        if (entry_is(index_begin, key)) { return true; }
+
+        for (unsigned i = (index_begin + 1) % table_size_;
+                !(i == index_begin || table_[i].status == EntryStatus::Empty);
+                i = (i + 1) % table_size_) {
+            if (entry_is(i, key)) { return true; }
+        }
+
+        return false;
+    }
+
     V find(const K& key) const {
         unsigned hash_value = get_sys_hash(key);
         unsigned index_begin = hash_value % table_size_;
 
-        if (table_[index_begin].status == EntryStatus::Empty) {
-            throw "";
-        }
+        if (table_[index_begin].status == EntryStatus::Empty) { throw ""; }
 
-        if (table_[index_begin].key == key) {
+        if (entry_is(index_begin, key)) {
             return table_[index_begin].value;
         }
 
-        for (int i = (index_begin + 1) % table_size_;
+        for (unsigned i = (index_begin + 1) % table_size_;
                 !(i == index_begin || table_[i].status == EntryStatus::Empty);
                 i = (i + 1) % table_size_) {
-            if (table_[i].key == key) {
-                return table_[i].value;
-            }
+            if (entry_is(i, key)) { return table_[i].value; }
         }
+
         throw "";
     }
 
@@ -64,34 +81,23 @@ public:
         unsigned index_begin = hash_value % table_size_;
 
         if (table_[index_begin].status == EntryStatus::Empty) {
-            table_[index_begin].status = EntryStatus::Exist;
-            table_[index_begin].key = key;
-            table_[index_begin].value = value;
+            set_entry(index_begin, key, value);
             table_used_++;
             num_entries_++;
-
-            if (static_cast<double>(table_used_)
-                    / table_size_ > kRebuildRatio) {
-                rebuild(R);
-            }
+            rebuild_if_required(R);
             return;
         } else if (entry_is(index_begin, key)) {
             table_[index_begin].value = value;
             return;
         }
 
-        for (int i = (index_begin + 1) % table_size_; i != index_begin;
+        for (unsigned i = (index_begin + 1) % table_size_; i != index_begin;
                 i = (i + 1) % table_size_) {
             if (table_[i].status == EntryStatus::Empty) {
-                table_[i].status = EntryStatus::Exist;
-                table_[i].key = key;
-                table_[i].value = value;
+                set_entry(i, key, value);
                 table_used_++;
                 num_entries_++;
-                if (static_cast<double>(table_used_)
-                        / table_size_ > kRebuildRatio) {
-                    rebuild(R);
-                }
+                rebuild_if_required(R);
                 return;
             } else if (entry_is(i, key)) {
                 table_[i].value = value;
@@ -99,7 +105,17 @@ public:
             }
         }
 
-        throw "";
+        assert(false);
+    }
+
+    void insert_if_absent(State* R, const K& key, const V& value) {
+        if (exists(key)) { throw ""; }
+        else { insert(R, key, value); }
+    }
+
+    void assign(State* R, const K& key, const V& value) {
+        if (!exists(key)) { throw ""; }
+        else { insert(R, key, value); }
     }
 
     void remove(const K& key) {
@@ -116,7 +132,7 @@ public:
             return;
         }
 
-        for (int i = (index_begin + 1) % table_size_;
+        for (unsigned i = (index_begin + 1) % table_size_;
                 !(i == index_begin || table_[i].status == EntryStatus::Empty);
                 i = (i + 1) % table_size_) {
             if (entry_is(i, key)) {
@@ -145,9 +161,21 @@ private:
         table_ = R->allocate_block<SysTableEntry>(initial_size);
     }
 
-    bool entry_is(unsigned index, const K& key) {
+    bool entry_is(unsigned index, const K& key) const {
         return (table_[index].status == EntryStatus::Exist
                 && table_[index].key == key);
+    }
+
+    void set_entry(unsigned index, const K& key, const V& value) {
+        table_[index].status = EntryStatus::Exist;
+        table_[index].key = key;
+        table_[index].value = value;
+    }
+
+    void rebuild_if_required(State* R) {
+        if (static_cast<double>(table_used_) / table_size_ > kRebuildRatio) {
+            rebuild(R);
+        }
     }
 
     void rebuild(State* R) {
@@ -165,7 +193,7 @@ private:
                     continue;
                 }
 
-                for (int j = (newindex + 1) % table_size_; ;
+                for (unsigned j = (newindex + 1) % table_size_; ;
                         j = (j + 1) % table_size_) {
                     assert(newindex != j);
                     if (newtable[j].status == EntryStatus::Empty) {
