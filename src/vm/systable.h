@@ -5,6 +5,8 @@
 #ifndef SYSTABLE_H
 #define SYSTABLE_H
 
+#include <cassert>
+
 #include "internal.h"
 #include "object.h"
 
@@ -176,6 +178,7 @@ private:
             }
         }
 
+        table_used_ = num_entries_;
         table_size_ = newtable_size;
         table_ = newtable;
     }
