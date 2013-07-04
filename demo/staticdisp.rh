@@ -1,0 +1,9 @@
+
+def new (x <= int) { 1 }
+def new (x <= string) { "hello" }
+
+def main() {
+    print(~int.new())
+    print(~string.new())
+}
+

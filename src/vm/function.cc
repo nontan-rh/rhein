@@ -184,7 +184,7 @@ public:
         }
 
         if (args[index].get_class(R) == R->get_class_class()) {
-            Class *klass = args[index].get_obj<Class>();
+            Class* klass = args[index].get_obj<Class>();
             while (klass) {
                 if (class_table_->exists(klass)) {
                     DispatcherNode* child = class_table_->find(klass);
@@ -241,6 +241,7 @@ public:
                 } else {
                     child = class_table_->find(klass);
                 }
+                break;
             case FunctionInfo::ArgDispatchKind::Instance:
                 if (!child_table_->exists(klass)) {
                     child = create(R);

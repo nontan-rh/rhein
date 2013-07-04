@@ -2,6 +2,8 @@
 // byteio.cc
 //
 
+#include <iostream>
+
 #include "object.h"
 #include "byteio.h"
 
