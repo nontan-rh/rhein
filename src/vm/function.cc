@@ -14,25 +14,47 @@ namespace rhein {
 
 FunctionInfo*
 FunctionInfo::create(State* R, Symbol* id) {
-    return create(R, id, true, 0, nullptr);
+    return create(R, id, true, 0, nullptr, nullptr);
 }
 
 FunctionInfo*
 FunctionInfo::create(State* R, Symbol* id, bool variadic, unsigned num_args,
-        Symbol** arg_class_ids) {
+        ArgDispatchKind* disp_kinds, Symbol** arg_class_ids) {
     void* p = R->allocate_struct<FunctionInfo>();
-    return new (p) FunctionInfo(id, variadic, num_args, arg_class_ids);
+    return new (p) FunctionInfo(id, variadic, num_args, disp_kinds, arg_class_ids);
 }
 
 FunctionInfo*
 FunctionInfo::create(State* R, Symbol* id, bool variadic, unsigned num_args,
         std::initializer_list<const char*> ids) {
     Symbol** s = R->allocate_block<Symbol*>(ids.size());
-    int c = 0;
+    ArgDispatchKind* d = R->allocate_block<ArgDispatchKind>(ids.size());
+    unsigned c = 0;
     for (auto i = ids.begin(); i != ids.end(); i++) {
-        s[c++] = R->get_symbol(*i);
+        s[c] = R->get_symbol(*i);
+        d[c] = ArgDispatchKind::Instance;
+        c++;
     }
-    return create(R, id, variadic, num_args, s);
+    return create(R, id, variadic, num_args, d, s);
+}
+
+FunctionInfo*
+FunctionInfo::create(State* R, Symbol* id, bool variadic, unsigned num_args,
+        std::initializer_list<ArgDispatchKind> kinds,
+        std::initializer_list<const char*> ids) {
+    if (ids.size() != kinds.size()) { throw ""; }
+
+    Symbol** s = R->allocate_block<Symbol*>(ids.size());
+    ArgDispatchKind* d = R->allocate_block<ArgDispatchKind>(ids.size());
+
+    unsigned c = 0;
+    auto i = ids.begin();
+    auto k = kinds.begin();
+    for (; c < ids.size() ; i++, k++, c++) {
+        s[c] = R->get_symbol(*i);
+        d[c] = *k;
+    }
+    return create(R, id, variadic, num_args, d, s);
 }
 
 bool
@@ -57,8 +79,18 @@ FunctionInfo::check_type(State* R, unsigned argc, Value* args) {
     if (!resolved_) { resolve(R); }
     if (argc == num_args_ || (variadic_ && argc >= num_args_)) {
         for (unsigned i = 0; i < num_args_; i++) {
-            if (!args[i].get_class(R)->is_subclass_of(arg_classes_[i])) {
-                return false;
+            switch (disp_kinds_[i]) {
+                case ArgDispatchKind::Class:
+                    if (!(args[i].get_class(R) == R->get_class_class()
+                                && args[i].get_obj<Class>() == arg_classes_[i])) {
+                        return false;
+                    }
+                    break;
+                case ArgDispatchKind::Instance:
+                    if (!args[i].get_class(R)->is_subclass_of(arg_classes_[i])) {
+                        return false;
+                    }
+                    break;
             }
         }
         return true;
@@ -151,8 +183,21 @@ public:
             }
         }
 
+        if (args[index].get_class(R) == R->get_class_class()) {
+            Class *klass = args[index].get_obj<Class>();
+            while (klass) {
+                if (class_table_->exists(klass)) {
+                    DispatcherNode* child = class_table_->find(klass);
+                    if (child->dispatch(R, argc, args, index + 1, func)) {
+                        return true;
+                    }
+                }
+                klass = klass->get_parent();
+            }
+        }
+
         Class* klass = args[index].get_class(R);
-        while (true) {
+        while (klass) {
             if (child_table_->exists(klass)) {
                 DispatcherNode* child = child_table_->find(klass);
                 if (child->dispatch(R, argc, args, index + 1, func)) {
@@ -160,9 +205,6 @@ public:
                 }
             }
             klass = klass->get_parent();
-            if (klass == nullptr) {
-                break;
-            }
         }
         if (!variable_entry_.is(Value::Type::Nil)) {
             func = variable_entry_;
@@ -191,11 +233,22 @@ public:
         Class* klass = func_body->get_info()->arg_classes()[index];
         DispatcherNode* child;
 
-        if (!child_table_->exists(klass)) {
-            child = create(R);
-            child_table_->insert_if_absent(R, klass, child);
-        } else {
-            child = child_table_->find(klass);
+        switch (func_body->get_info()->disp_kinds()[index]) {
+            case FunctionInfo::ArgDispatchKind::Class:
+                if (!class_table_->exists(klass)) {
+                    child = create(R);
+                    class_table_->insert_if_absent(R, klass, child);
+                } else {
+                    child = class_table_->find(klass);
+                }
+            case FunctionInfo::ArgDispatchKind::Instance:
+                if (!child_table_->exists(klass)) {
+                    child = create(R);
+                    child_table_->insert_if_absent(R, klass, child);
+                } else {
+                    child = child_table_->find(klass);
+                }
+                break;
         }
 
         return child->addFunction(R, func, func_body, index + 1);
@@ -204,12 +257,14 @@ public:
 private:
     Value entry_;
     Value variable_entry_;
+    SysTable<const Class*, DispatcherNode*>* class_table_;
     SysTable<const Class*, DispatcherNode*>* child_table_;
 
     static void* operator new (size_t /* size */, void* p) { return p; }
 
     DispatcherNode(State* R)
         : entry_(Value::k_nil()), variable_entry_(Value::k_nil()),
+          class_table_(SysTable<const Class*, DispatcherNode*>::create(R)),
           child_table_(SysTable<const Class*, DispatcherNode*>::create(R)) { }
 };
 

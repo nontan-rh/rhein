@@ -85,6 +85,10 @@
                        (write-string v)) (cdr slots))))
 
 (define (assemble-func jasm)
+  (define (write-arg _ t)
+    (let1 kind (string->symbol (cdr (assoc "kind" t)))
+      (write-byte (case kind [(class) 0] [(instance) 1])))
+    (write-string (cdr (assoc "value" t))))
   (write-byte *func-sign*)
   (let ([name (assoc "name" jasm)]
         [variable-arg (assoc "varg" jasm)]
@@ -98,7 +102,7 @@
     (write-string (cdr name))
     (write-byte (case (cdr variable-arg) [(true) 1] [(false) 0] [else (error "Boolean required")]))
     (write-ber (vector-length (cdr arg-type)))
-    (vector-for-each (^(_ t) (write-string t)) (cdr arg-type))
+    (vector-for-each write-arg (cdr arg-type))
     (write-ber (cdr func-size))
     (write-ber (cdr var-size))
     (write-ber (cdr stack-size))

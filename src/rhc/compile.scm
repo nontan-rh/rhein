@@ -404,11 +404,16 @@
       (error "&rest argument must be in the last of arguments"))
     (values varg ps)))
 
+(define (format-class x)
+  (list
+    (cons "kind" (symbol->string (list-ref (~ x 'type) 0)))
+    (cons "value" (symbol->string (list-ref (~ x 'type) 1)))))
+
 (define-method generate-code ((a <rh-function>))
   (let ([i (generate-object-name)]
         [e (~ a 'id)])
     (receive [varg ps] (analyse-parameter (~ a 'parameters))
-      (let1 classes (list->vector (map (^x (symbol->string (~ x 'type))) ps))
+      (let1 classes (list->vector (map format-class ps))
             (add-object (make <compiled-function>
                               :internal-id i
                               :external-id (symbol->string e)
@@ -634,7 +639,7 @@
                       :variable-arguments 'false
                       :function-slot-count (~ a 'function-slot-count)
                       :variable-slot-count (~ a 'variable-slot-count)
-                      :parameter-class (list->vector (map (lambda (x) (symbol->string (~ x 'type))) (~ a 'parameters)))))
+                      :parameter-class (list->vector (map format-class (~ a 'parameters)))))
       (x->lseq
         (list (vector "enclose" i)))))
 

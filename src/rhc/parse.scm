@@ -128,9 +128,17 @@
                             (make <rh-parameter> :id id :attr 'rest))
                           ($do ([id <- 'IDENT])
                             (make <rh-parameter> :id id :attr '() ))))
+    (parameter-type . ,($/ ($do ('LT
+                                 [type <- 'IDENT])
+                             (list 'instance type))
+                           ($do ('LE
+                                 [type <- 'IDENT])
+                             (list 'class type))))
     (parameter . ,($do ([p <- 'parameter-opt]
-                        [type <- ($? ($seq 'LT 'IDENT))])
-                    (set! (~ p 'type) (if (null? type) 'any (cadr type)))
+                        [type <- ($? 'parameter-type)])
+                    (set! (~ p 'type) (if (null? type)
+                                        (list 'instance 'any)
+                                        type))
                     p))
     (named-function-parameter-list . ,($do ('LPAREN
                                             [p <- ($sep-end-by 'parameter 'COMMA)]

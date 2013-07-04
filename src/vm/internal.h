@@ -30,15 +30,27 @@ protected:
 
 class FunctionInfo : public PlacementNewObj {
 public:
+    enum class ArgDispatchKind {
+        Class,
+        Instance,
+    };
+
     static FunctionInfo* create(State* R, Symbol* id);
     static FunctionInfo* create(State* R, Symbol* id, bool variadic,
-            unsigned num_args, Symbol** arg_class_ids);
+            unsigned num_args, ArgDispatchKind* disp_kind,
+            Symbol** arg_class_ids);
     static FunctionInfo* create(State* R, Symbol* id, bool variadic,
-            unsigned num_args, std::initializer_list<const char*> arg_class_ids);
+            unsigned num_args,
+            std::initializer_list<const char*> arg_class_ids);
+    static FunctionInfo* create(State* R, Symbol* id, bool variadic,
+            unsigned num_args,
+            std::initializer_list<ArgDispatchKind> disp_kinds,
+            std::initializer_list<const char*> arg_class_ids);
 
     Symbol* name() const { return name_; }
     bool variadic() const { return variadic_; }
     unsigned num_args() const { return num_args_; }
+    ArgDispatchKind* disp_kinds() const { return disp_kinds_; }
     Symbol** arg_class_ids() const { return arg_class_ids_; }
     Class** arg_classes() const { return arg_classes_; }
 
@@ -50,14 +62,16 @@ private:
     Symbol* name_;
     bool variadic_;
     unsigned num_args_;
+    ArgDispatchKind* disp_kinds_;
     Symbol** arg_class_ids_;
     Class** arg_classes_;
     bool resolved_;
 
     FunctionInfo(Symbol* name, bool variadic, unsigned num_args,
-            Symbol** arg_class_ids) : name_(name), variadic_(variadic),
-            num_args_(num_args), arg_class_ids_(arg_class_ids),
-            arg_classes_(nullptr), resolved_(false) { }
+            ArgDispatchKind* disp_kinds, Symbol** arg_class_ids)
+        : name_(name), variadic_(variadic), num_args_(num_args),
+          disp_kinds_(disp_kinds), arg_class_ids_(arg_class_ids),
+          arg_classes_(nullptr), resolved_(false) { }
 };
 
 class RecordInfo {
@@ -67,7 +81,7 @@ class RecordInfo {
     static void* operator new(size_t /* size */, void *p) { return p; }
 
     RecordInfo(State* R, RecordInfo* parent, unsigned slot_num_,
-        Symbol** slot_ids);
+            Symbol** slot_ids);
 
 public:
     static RecordInfo* create(State* R, RecordInfo* parent, unsigned slot_num,

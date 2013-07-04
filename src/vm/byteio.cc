@@ -136,6 +136,7 @@ State::read_function(FILE* fp) {
     Symbol* function_name;
     unsigned char variable_arg;
     unsigned long argument_num;
+    FunctionInfo::ArgDispatchKind* argument_dispatch_kinds;
     Symbol** argument_type_ids;
     unsigned long function_slot_num;
     unsigned long variable_slot_num;
@@ -143,8 +144,23 @@ State::read_function(FILE* fp) {
     BinaryReader::readSymbol(fp, this, function_name);
     BinaryReader::readByte(fp, variable_arg);
     BinaryReader::readBER(fp, argument_num);
+    argument_dispatch_kinds = new FunctionInfo::ArgDispatchKind[argument_num];
     argument_type_ids = new Symbol*[argument_num];
     for (unsigned long i = 0; i < argument_num; i++) {
+        unsigned char kind;
+        BinaryReader::readByte(fp, kind);
+        switch (kind) {
+            case 0:
+                argument_dispatch_kinds[i] =
+                    FunctionInfo::ArgDispatchKind::Class;
+                break;
+            case 1:
+                argument_dispatch_kinds[i] =
+                    FunctionInfo::ArgDispatchKind::Instance;
+                break;
+            default:
+                throw "";
+        }
         BinaryReader::readSymbol(fp, this, argument_type_ids[i]);
     }
     BinaryReader::readBER(fp, function_slot_num);
@@ -199,7 +215,8 @@ State::read_function(FILE* fp) {
     }
     add_function(BytecodeFunction::create(
         this,
-        FunctionInfo::create(this, function_name, (bool)variable_arg, argument_num, argument_type_ids),
+        FunctionInfo::create(this, function_name, (bool)variable_arg,
+            argument_num, argument_dispatch_kinds, argument_type_ids),
         function_slot_num,
         variable_slot_num,
         stack_size,
