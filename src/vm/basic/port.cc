@@ -50,6 +50,11 @@ File::read_char() {
     return fgetc(fp);
 }
 
+size_t
+File::read_bytes_as_possible_to_buffer(char* buf, size_t size) {
+    return fread(buf, 1, size, fp);
+}
+
 bool
 File::eof() {
     return feof(fp);

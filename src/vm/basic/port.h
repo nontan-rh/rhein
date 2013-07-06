@@ -18,6 +18,7 @@ public:
     Port(Class* klass) : Object(klass) {}
     virtual Byte read_byte() = 0;
     virtual Char read_char() = 0;
+    virtual size_t read_bytes_as_possible_to_buffer(char* buf, size_t size) = 0;
     virtual bool eof() = 0;
 };
 
@@ -36,6 +37,7 @@ public:
     static File* create(State* R, String* name, RWFlags rw, PosFlags pos);
     Byte read_byte();
     Char read_char();
+    size_t read_bytes_as_possible_to_buffer(char* buf, size_t size);
     bool eof();
 
 private:

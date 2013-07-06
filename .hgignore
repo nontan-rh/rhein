@@ -7,3 +7,4 @@ syntax:glob
 .cproject
 .project
 .settings/*
+lex.re.cc
