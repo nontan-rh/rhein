@@ -28,11 +28,14 @@ int main(int argc, char** argv) {
     R->load_module(BasicModule::create(R));
     R->load_module(BuiltinModule::create(R));
     R->load_module(FileModule::create(R));
+    R->load_module(ScannerModule::create(R));
 
-    File* f = File::create(R, String::create(R, argv[1]), File::RWFlags::Read, File::PosFlags::Head);
+    File* f = File::create(R, String::create(R, argv[1]),
+            File::RWFlags::Read,
+            File::PosFlags::Head);
     Scanner* s = Scanner::create(R, f);
     for ( ;!s->eof() ;) {
-        cout << s->get_token() << endl;
+        cout << to_str(s->get_token(R)->get_kind()) << endl;
     }
     return 0;
 }

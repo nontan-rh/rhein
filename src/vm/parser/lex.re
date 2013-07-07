@@ -8,12 +8,12 @@
 namespace rhein {
 
 Token*
-Scanner::get_token() {
-re2c_token = re2c_cursor;
-
+Scanner::get_token(State* R) {
 int space_kind = 0;
 
 std:
+re2c_token = re2c_cursor;
+
 /*!re2c
 re2c:define:YYCTYPE  = "char";
 re2c:define:YYCURSOR = re2c_cursor;
@@ -22,7 +22,7 @@ re2c:define:YYCTXMARKER = re2c_ctx_marker;
 re2c:define:YYLIMIT = re2c_limit;
 re2c:define:YYFILL:naked = 1;
 re2c:define:YYFILL@len = #;
-re2c:define:YYFILL = "if (!fill(#)) { return 100; }";
+re2c:define:YYFILL = "if (!fill(#)) { return Token::create(R, Token::Kind::Eof); }";
 re2c:yyfill:enable = 1;
 
 SPACE       = [ ];
@@ -30,11 +30,13 @@ NEWLINE     = [\n\r];
 TERM        = ";";
 ID          = [a-zA-Z_][a-zA-Z0-9_]*;
 DIGIT       = [1-9][0-9]*;
-OPERATOR    = [!$&-=|+-*/?<>]+;
+OPERATOR    = [\!\$\&\-\=\|\+\-\*\/\?\<\>]+;
 
 SPACE       { goto std; }
 NEWLINE     { space_kind = 1; goto space_mode; }
 TERM        { space_kind = 2; goto space_mode; }
+"?"         { goto character_mode; }
+"\""        { goto string_mode; }
 "("         { return Token::create(R, Token::Kind::LParen); }
 ")"         { return Token::create(R, Token::Kind::RParen); }
 "{"         { return Token::create(R, Token::Kind::LBrace); }
@@ -42,16 +44,14 @@ TERM        { space_kind = 2; goto space_mode; }
 "["         { return Token::create(R, Token::Kind::LBracket); }
 "]"         { return Token::create(R, Token::Kind::RBracket); }
 ":"         { return Token::create(R, Token::Kind::Colon); }
-"\""        { return Token::create(R, Token::Kind::DQuote); }
-"?"         { return Token::create(R, Token::Kind::Question); }
 "^"         { return Token::create(R, Token::Kind::Hat); }
 "~"         { return Token::create(R, Token::Kind::Tilde); }
 "."         { return Token::create(R, Token::Kind::Dot); }
 ","         { return Token::create(R, Token::Kind::Comma); }
-"eq"        { return Token::operator(R, "eq"); }
-"ne"        { return Token::operator(R, "ne"); }
-"neg"       { return Token::operator(R, "neg"); }
-"not"       { return Token::operator(R, "not"); }
+"eq"        { return Token::op(R, "eq", 2); }
+"ne"        { return Token::op(R, "ne", 2); }
+"neg"       { return Token::op(R, "neg", 3); }
+"not"       { return Token::op(R, "not", 3); }
 "while"     { return Token::create(R, Token::Kind::While); }
 "if"        { return Token::create(R, Token::Kind::If); }
 "elif"      { return Token::create(R, Token::Kind::Elif); }
@@ -69,8 +69,8 @@ TERM        { space_kind = 2; goto space_mode; }
 ID          { return Token::id(R, token(), length()); }
 "0"         { return Token::int_literal(R, 0); }
 DIGIT       { return Token::int_literal(R, str2int(token(), length())); }
-OPERATOR    { return Token::operator(R, token(), length()); }
-[^]         { return 101; }
+OPERATOR    { return Token::op(R, token(), length()); }
+[^]         { fprintf(stderr, "%10s\n", token()); throw ""; }
 */
 
 space_mode:
@@ -78,7 +78,24 @@ space_mode:
 SPACE       { goto space_mode; }
 NEWLINE     { space_kind = std::max(space_kind, 1); goto space_mode; }
 TERM        { space_kind = 2; goto space_mode; }
-[^]         { re2c_cursor--; return space_kind; }
+[^]         { re2c_cursor--; return Token::space(R, space_kind); }
+*/
+
+string_mode:
+re2c_token = re2c_cursor;
+string_mode_cont:
+
+/*!re2c
+"\\"[^]     { goto string_mode_cont; }
+"\""        { return Token::str_literal(R, token(), length() - 1); }
+*/
+
+character_mode:
+re2c_token = re2c_cursor;
+
+/*!re2c
+"\\"[^]     { return Token::char_literal(R, token(), length() - 1); }
+[^]         { return Token::char_literal(R, token(), length() - 1); }
 */
 }
 
