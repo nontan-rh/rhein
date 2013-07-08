@@ -66,7 +66,7 @@ public:
 
     static Token* str_literal(State* R, const char* ch, size_t length) {
         Token* t = create(R, Kind::StrLiteral);
-        t->u_.v_sym_ = R->get_symbol(ch, length);
+        t->u_.v_str_ = String::create(R, ch, length);
         return t;
     }
 
@@ -114,7 +114,7 @@ public:
     }
 
     Token* get_token(State* R);
-    bool eof() const { return p_->eof() && re2c_cursor == re2c_limit; };
+    bool eof() const { return p_->eof() && re2c_cursor >= re2c_limit; };
 private:
     static const size_t kBufferSize = 1024;
 

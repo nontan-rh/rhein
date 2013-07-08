@@ -27,16 +27,16 @@ re2c:yyfill:enable = 1;
 
 SPACE       = [ ];
 NEWLINE     = [\n\r];
-TERM        = ";";
+TERM        = [;];
 ID          = [a-zA-Z_][a-zA-Z0-9_]*;
 DIGIT       = [1-9][0-9]*;
-OPERATOR    = [\!\$\&\-\=\|\+\-\*\/\?\<\>]+;
+OPERATOR    = [!$&-=|+-*/<>]+;
 
+["]         { goto string_mode; }
 SPACE       { goto std; }
 NEWLINE     { space_kind = 1; goto space_mode; }
 TERM        { space_kind = 2; goto space_mode; }
 "?"         { goto character_mode; }
-"\""        { goto string_mode; }
 "("         { return Token::create(R, Token::Kind::LParen); }
 ")"         { return Token::create(R, Token::Kind::RParen); }
 "{"         { return Token::create(R, Token::Kind::LBrace); }
@@ -75,19 +75,17 @@ OPERATOR    { return Token::op(R, token(), length()); }
 
 space_mode:
 /*!re2c
-SPACE       { goto space_mode; }
-NEWLINE     { space_kind = std::max(space_kind, 1); goto space_mode; }
-TERM        { space_kind = 2; goto space_mode; }
-[^]         { re2c_cursor--; return Token::space(R, space_kind); }
+SPACE              { goto space_mode; }
+NEWLINE            { space_kind = std::max(space_kind, 1); goto space_mode; }
+TERM               { space_kind = 2; goto space_mode; }
+[^]                { re2c_cursor--; return Token::space(R, space_kind); }
 */
 
 string_mode:
-re2c_token = re2c_cursor;
-string_mode_cont:
-
 /*!re2c
-"\\"[^]     { goto string_mode_cont; }
-"\""        { return Token::str_literal(R, token(), length() - 1); }
+"\\"[^]    { goto string_mode; }
+["]        { return Token::str_literal(R, token() + 1, length() - 2); }
+[^]        { goto string_mode; }
 */
 
 character_mode:
@@ -97,6 +95,7 @@ re2c_token = re2c_cursor;
 "\\"[^]     { return Token::char_literal(R, token(), length() - 1); }
 [^]         { return Token::char_literal(R, token(), length() - 1); }
 */
+
 }
 
 }

@@ -1,6 +1,6 @@
 
 class list {
-	car, cdr
+    car, cdr
 }
 
 def cons(x, y) {
