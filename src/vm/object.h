@@ -127,7 +127,7 @@ public:
 
     // Bytecode level object interface
     // Always fails by default
-    virtual bool index_ref(State* /* R */, Value /* index */, Value& /* dest */) const {
+    virtual bool index_ref(State* /* R */, Value /* index */, Value& /* dest */) {
         return false;
     }
 
@@ -135,7 +135,7 @@ public:
         return false;
     }
 
-    virtual bool slot_ref(State* /* R */, Symbol* /* id */, Value& /* dest */) const {
+    virtual bool slot_ref(State* /* R */, Symbol* /* id */, Value& /* dest */) {
         return false;
     }
 
@@ -354,7 +354,7 @@ class Record : public PlacementNewObj {
 public:
     static Record* create(State* R, Class* klass);
 
-    bool slot_ref(Symbol* slot_id, Value& value) const;
+    bool slot_ref(Symbol* slot_id, Value& value);
     bool slot_set(Symbol* slot_id, Value value);
 
     Class* get_class() const { return klass_; }

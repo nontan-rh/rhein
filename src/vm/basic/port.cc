@@ -82,6 +82,13 @@ fn_eof(State* /* R */, unsigned /* argc */, Value* args) {
     return Value::by_bool(args[0].get_obj<Port>()->eof());
 }
 
+Value
+fn_make_portseq(State* R, unsigned /* argc */, Value* args) {
+    PortSeq* p = PortSeq::create(R, args[0].get_obj<Port>());
+    if (p == nullptr) { return Value::k_nil(); }
+    return Value::by_object(p);
+}
+
 FileModule*
 FileModule::create(State* R) {
     void* p = R->allocate_struct<FileModule>();
@@ -91,10 +98,12 @@ FileModule::create(State* R) {
 bool
 FileModule::initialize(State* R) {
     R->add_class("File", "any");
+    R->add_class("PortSeq", "any");
     R->add_native_function("open", false, 1, {"string"}, fn_open);
     R->add_native_function("read_char", false, 1, {"File"}, fn_read_char);
     R->add_native_function("read_byte", false, 1, {"File"}, fn_read_byte);
     R->add_native_function("eof", false, 1, {"File"}, fn_eof);
+    R->add_native_function("make_portseq", false, 1, {"File"}, fn_make_portseq);
     return false;
 }
 

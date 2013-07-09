@@ -60,7 +60,7 @@ Record::create(State* R, Class* klass) {
 }
 
 bool
-Record::slot_ref(Symbol* slot_id, Value& value) const {
+Record::slot_ref(Symbol* slot_id, Value& value) {
     unsigned index;
     if (!klass_->get_record_info()->get_slot_index(slot_id, index)) {
         return false;

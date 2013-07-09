@@ -1,9 +1,9 @@
 
 def main() {
-    local x
-    x = open("../rhein/demo/calc.rh")
-    print(x.read_byte())
-    print(x.read_byte())
-    print(x.read_byte())
-    print(x.read_byte())
+    local x = make_portseq(open("../rhein/demo/calc.rh"))
+    while x ne nil {
+        print(x.head)
+        x = x.tail
+    }
 }
+
