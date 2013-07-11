@@ -132,6 +132,7 @@ public:
     // Stack info
     Value* get_stack_begin() const { return stack_begin_; }
     Value* get_stack_end() const { return stack_end_; }
+    Value*& get_stack_top() { return stack_top_; }
 
     // For debugging
     void dump_functions();
@@ -164,6 +165,7 @@ private:
     const unsigned kStackSize = 1 << 24;
     Value* stack_begin_;
     Value* stack_end_;
+    Value* stack_top_;
 
     bool read_object(FILE* fp);
     bool read_function(FILE* fp);

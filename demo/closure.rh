@@ -3,6 +3,10 @@ def extfun(a) {
     print(a)
 }
 
+def extfun2() {
+    print("hello world")
+}
+
 def main() {
     local x, varf, flit, vare
     def fun(b) { x = b }
@@ -23,5 +27,9 @@ def main() {
 
     vare = ^extfun
     vare^(4)
+
+    callback(^extfun2)
+
+    print (1+2+3+4)
 }
 

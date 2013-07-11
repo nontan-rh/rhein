@@ -263,6 +263,11 @@ fn_load(State* R, unsigned /* argc */, Value* args) {
     return Value::k_true();
 }
 
+Value
+fn_callback(State* R, unsigned, Value* args) {
+    return execute(R, args[0].get_obj<BytecodeFunction>(), 0, nullptr);
+}
+
 BasicModule*
 BasicModule::create(State* R) {
     void* p = R->allocate_struct<BasicModule>();
@@ -287,6 +292,7 @@ BasicModule::initialize(State* R) {
     R->add_native_function("die", true, 0, {}, fn_die);
     R->add_native_function("is_a", false, 2, {"any", "class"}, fn_is_a);
     R->add_native_function("load", false, 1, {"string"}, fn_load);
+    R->add_native_function("callback", false, 1, {"bytecode_function"}, fn_callback);
     return false;
 }
 

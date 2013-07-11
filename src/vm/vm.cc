@@ -211,7 +211,7 @@ State::State() : symbol_provider_(nullptr) {
     //var_slots->dump();
     //klass_slots->dump();
 
-    stack_begin_ = allocate_raw_array(kStackSize);
+    stack_top_ = stack_begin_ = allocate_raw_array(kStackSize);
     stack_end_ = stack_begin_ + kStackSize;
 }
 
@@ -507,8 +507,8 @@ get_insn_arg_uu2(uint32_t insn) {
 
 Value
 execute(State* R, BytecodeFunction* entry_fn, unsigned argc_, Value* args_) {
-    Value* next_stack_ptr;
-    Frame* fr = Frame::create(R, R->get_stack_begin(), entry_fn, nullptr,
+    Value*& next_stack_ptr = R->get_stack_top();
+    Frame* fr = Frame::create(R, next_stack_ptr, entry_fn, nullptr,
             nullptr, argc_, args_, next_stack_ptr);
     BytecodeFunction* fn = entry_fn;
     Value* sp = fr->stack;
