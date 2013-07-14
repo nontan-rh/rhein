@@ -196,15 +196,14 @@ Value::get_hash() const {
 
 class Symbol : public Object {
     friend class SymbolProvider;
-    friend class SymbolHashTable;
 
-    Symbol(State* R, const char* body, size_t length);
+    Symbol(State* R, unsigned long hash_value, const char* body, size_t length);
 
     const char* body_;
     size_t length_;
     unsigned long hash_value_;
 
-    static Symbol* create(State* R, const char* body, size_t length);
+    static Symbol* create(State* R, unsigned long hash_value, const char* body, size_t length);
 public:
     unsigned long get_hash() { return hash_value_; }
 

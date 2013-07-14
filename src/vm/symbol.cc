@@ -43,11 +43,11 @@ public:
         return new (p) SymbolHashTable(R);
     }
 
-    bool find(const char* key, size_t length, Symbol*& result) {
-        unsigned long hash_value = calc_string_hash(key, length);
+    bool find(unsigned long hash_value, const char* key, size_t length,
+            Symbol*& result) {
         auto node = table_[hash_value % table_size_].next;
 
-        for(; node != nullptr; node = node->next) {
+        for(; node; node = node->next) {
             if (hash_value == node->key_hash && length == node->length) {
                 if (key == node->key || memcmp(key, node->key, length) == 0) {
                     result = node->value;
@@ -55,44 +55,21 @@ public:
                 }
             }
         }
+
         result = nullptr;
         return false;
     }
 
-    void insert(State* R, Symbol* value) {
-        // Check if there is no collision
-        Symbol* dummy; assert(!find(value->body_, value->length_, dummy));
-        unsigned long hash_value = calc_string_hash(value->body_, value->length_);
-        value->hash_value_ = hash_value;
-        auto n = table_[hash_value % table_size_].next;
-        table_[hash_value % table_size_].next = SymbolHashTableNode::create(
-            R, n, hash_value, value->length_, value->body_, value);
+    void insert(State* R, unsigned long hash_value,
+            const char* body, size_t length, Symbol* value) {
+        auto node = table_[hash_value % table_size_].next;
+        table_[hash_value % table_size_].next =
+            SymbolHashTableNode::create(R, node, hash_value, length, body, value);
 
         num_items_++;
         if (num_items_ > kRehashRatio * table_size_) {
             rehash(R);
         }
-    }
-
-    void remove(State* R, Symbol* value) {
-        // Check if there is
-        Symbol* dummy; assert(find(value->body_, value->length_, dummy));
-        auto prev = &table_[value->hash_value_ % table_size_];
-        auto curr = prev->next;
-        for(; /* curr != nullptr */; ) {
-            if (value->hash_value_ == curr->key_hash && value->length_ == curr->length) {
-                if (value->body_ == curr->key
-                    || memcmp(value->body_, curr->key, value->length_) == 0) {
-
-                    prev->next = curr->next;
-                    R->release_struct(curr);
-                    return;
-                }
-            }
-            prev = curr;
-            curr = curr->next;
-        }
-        // NOTREACHED
     }
 
     void rehash(State* R) {
@@ -115,7 +92,7 @@ public:
 
 private:
     const double kRehashRatio = 0.75;
-    const unsigned kDefaultTableSize = 16;
+    const unsigned kDefaultTableSize = 17;
     SymbolHashTableNode* table_;
     unsigned table_size_;
     unsigned num_items_;
@@ -130,7 +107,7 @@ private:
 
 SymbolProvider::SymbolProvider(State* R)
     : owner(R) {
-    assert(!owner->has_symbol_provider());
+    assert(!owner->has_symbol_provider()); // Not to duplicate
     string_hash_table = SymbolHashTable::create(R);
     owner->set_symbol_provider(this);
 }
@@ -141,28 +118,32 @@ SymbolProvider::create(State* R) {
     return new (p) SymbolProvider(R);
 }
 
-Symbol::Symbol(State* R, const char* body_, size_t length_)
-    : Object(R->get_symbol_class()), body_(body_), length_(length_),
-      hash_value_(0) { }
+Symbol::Symbol(State* R, unsigned long hash_value, const char* body, size_t length)
+    : Object(R->get_symbol_class()), body_(body), length_(length),
+      hash_value_(hash_value) { }
 
 Symbol*
-Symbol::create(State* R, const char* body, size_t length) {
+Symbol::create(State* R, unsigned long hash_value, const char* body, size_t length) {
     void* p = R->allocate_object<Symbol>();
-    return new (p) Symbol(R, body, length);
+    return new (p) Symbol(R, hash_value, body, length);
 }
 
 Symbol*
 SymbolProvider::get_symbol(const char* buffer, size_t length) {
+    unsigned long hash_value = calc_string_hash(buffer, length);
     Symbol *registered;
-    if (string_hash_table->find(buffer, length, registered)) {
+
+    if (string_hash_table->find(hash_value, buffer, length, registered)) {
         return registered;
     }
 
     char* copybuffer = owner->allocate_block<char>(length + 1);
     memcpy(copybuffer, buffer, length + 1);
-    Symbol* new_string = Symbol::create(owner, copybuffer, length);
-    string_hash_table->insert(owner, new_string);
-    return new_string;
+
+    Symbol* new_symbol = Symbol::create(owner, hash_value, copybuffer, length);
+
+    string_hash_table->insert(owner, hash_value, copybuffer, length, new_symbol);
+    return new_symbol;
 }
 
 Symbol*
@@ -210,3 +191,4 @@ Symbol::dump() const {
 }
 
 }
+
