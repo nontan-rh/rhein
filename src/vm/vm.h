@@ -182,6 +182,34 @@ public:
     virtual bool initialize(State* R) = 0;
 };
 
+class Closure : public PlacementNewObj {
+public:
+    static Closure* create(State* R, Closure* parent,
+            unsigned arg_count, Value* args, Value* func_slots, Value* var_slots) {
+        return new (R->allocate_struct<Closure>()) Closure(parent,
+                arg_count, args, func_slots, var_slots);
+    }
+
+    unsigned get_arg_count() const { return arg_count_; }
+    Value* get_args() const { return args; }
+    Value* get_func_slots() const { return func_slots_; }
+    Value* get_var_slots() const { return var_slots_; }
+
+    void copy_slots(State* R, BytecodeFunction* fn);
+
+private:
+    Closure(Closure* parent, unsigned arg_count, Value* args, Value* func_slots,
+            Value* var_slots)
+        : parent_(parent), arg_count_(arg_count), args_(args), func_slots_(func_slots),
+          var_slots_(var_slots) { }
+
+    Closure* parent_;
+    unsigned arg_count_;
+    Value* args_;
+    Value* func_slots_;
+    Value* var_slots_;
+};
+
 // Frame must be a POD
 struct Frame : public PlacementNewObj {
     Frame(State* R, Value* stack_ptr, BytecodeFunction* fn_, Frame* parent_,

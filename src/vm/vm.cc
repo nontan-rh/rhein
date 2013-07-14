@@ -70,6 +70,29 @@ struct Insn {
     };
 };
 
+void
+Closure::copy_slots(State* R, BytecodeFunction* fn) {
+    // Arguments
+    Value* new_args = R->allocate_raw_array(arg_count_);
+    for (unsigned i = 0; i < arg_count_, i++) { new_args[i] = args[i]; }
+
+    // Function slots
+    Value* new_func_slots = R->allocate_raw_array(arg_count_);
+    for (unsigned i = 0; i < fn->get_function_slot_num(), i++) {
+        new_func_slots[i] = func_slots_[i];
+    }
+
+    // Variable slots
+    Value* new_var_slots = R->allocate_raw_array(arg_count_);
+    for (unsigned i = 0; i < fn->get_variable_slot_num(), i++) {
+        new_var_slots[i] = var_slots_[i];
+    }
+
+    args_ = new_args;
+    func_slots_ = new_func_slots;
+    var_slots_ = new_var_slots;
+}
+
 Frame::Frame(State* R, Value* stack_ptr, BytecodeFunction* fn_, Frame* parent_,
         Frame* closure_, unsigned argc_, Value* args_, Value*& next_stack_ptr)
     : fn(fn_), closure(closure_), parent(parent_),
