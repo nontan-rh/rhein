@@ -190,8 +190,9 @@ public:
                 arg_count, args, func_slots, var_slots);
     }
 
+    Closure* get_parent() const { return parent_; }
     unsigned get_arg_count() const { return arg_count_; }
-    Value* get_args() const { return args; }
+    Value* get_args() const { return args_; }
     Value* get_func_slots() const { return func_slots_; }
     Value* get_var_slots() const { return var_slots_; }
 
@@ -213,24 +214,21 @@ private:
 // Frame must be a POD
 struct Frame : public PlacementNewObj {
     Frame(State* R, Value* stack_ptr, BytecodeFunction* fn_, Frame* parent_,
-            Frame* closure_, unsigned argc_, Value* args_,
+            Closure* closure_, unsigned argc_, Value* args_,
             Value*& next_stack_ptr);
 
     BytecodeFunction* fn;
-    Frame* closure;
     Frame* parent;
     Value* stack;
-    unsigned argc;
-    Value* args;
-    Value* func_slots;
-    Value* var_slots;
+    Closure* closure;
+    bool should_save_closure;
     const uint32_t* pc;
     Value* restore_stack_ptr;
     Value* sp;
     Value slots[1];
 
     static Frame* create(State* R, Value* stack_ptr, BytecodeFunction* fn,
-            Frame* parent, Frame* closure, unsigned argc, Value* args,
+            Frame* parent, Closure* closure, unsigned argc, Value* args,
             Value*& next_stack_ptr) {
         return new (stack_ptr) Frame(R, stack_ptr, fn, parent,
                 closure, argc, args, next_stack_ptr);

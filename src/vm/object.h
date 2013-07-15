@@ -370,14 +370,14 @@ typedef Value (*NativeFunctionBody)(State*, unsigned, Value*);
 class Function : public Object {
 protected:
     FunctionInfo *info_;
-    Frame* closure_;
+    Closure* closure_;
 
     Function(Class* klass, FunctionInfo *info)
         : Object(klass), info_(info), closure_(nullptr) { }
 
 public:
     FunctionInfo* get_info() const { return info_; }
-    Frame* get_closure() const { return closure_; }
+    Closure* get_closure() const { return closure_; }
 
     bool resolve(State* R) { return info_->resolve(R); }
 };
@@ -390,7 +390,7 @@ public:
     NativeFunctionBody get_body() const { return body_; }
 
     NativeFunction* copy(State* R);
-    NativeFunction* enclose(State* R, Frame* closure);
+    NativeFunction* enclose(State* R, Closure* closure);
 
 private:
     NativeFunctionBody body_;
@@ -413,7 +413,7 @@ public:
     const Value* get_constant_table() const { return constant_table_; }
 
     BytecodeFunction* copy(State* R);
-    BytecodeFunction* enclose(State* R, Frame* closure);
+    BytecodeFunction* enclose(State* R, Closure* closure);
 
 private:
     bool copied_;
@@ -434,7 +434,7 @@ private:
 class Method : public Object {
     bool copied_;
     DispatcherNode* node_;
-    Frame* closure_;
+    Closure* closure_;
 
     Method(State* R);
 
@@ -442,13 +442,13 @@ public:
     static Method* create(State* R);
 
     bool has_closure() const { return (closure_ != nullptr); }
-    Frame* get_closure() const { return closure_; }
+    Closure* get_closure() const { return closure_; }
 
     bool dispatch(State* R, unsigned argc, Value* args, Value& result);
     bool add_function(State* R, Function* func);
 
     Method* copy(State* R);
-    Method* enclose(State* R, Frame* closure);
+    Method* enclose(State* R, Closure* closure);
 };
 
 }

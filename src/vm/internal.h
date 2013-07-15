@@ -17,6 +17,7 @@ class Symbol;
 class String;
 class Class;
 struct Frame;
+class Closure;
 class Array;
 class State;
 class HashTable;

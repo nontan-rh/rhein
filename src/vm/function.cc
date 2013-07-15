@@ -116,7 +116,7 @@ NativeFunction::copy(State* R) {
 }
 
 NativeFunction*
-NativeFunction::enclose(State* R, Frame* closure) {
+NativeFunction::enclose(State* R, Closure* closure) {
     NativeFunction* closure_func = copy(R);
     closure_func->closure_ = closure;
     return closure_func;
@@ -156,7 +156,7 @@ BytecodeFunction::copy(State* R) {
 }
 
 BytecodeFunction*
-BytecodeFunction::enclose(State* R, Frame* closure) {
+BytecodeFunction::enclose(State* R, Closure* closure) {
     BytecodeFunction* closure_func = copy(R);
     closure_func->closure_ = closure;
     return closure_func;
@@ -304,7 +304,7 @@ Method::copy(State* R) {
 }
 
 Method*
-Method::enclose(State* R, Frame* closure) {
+Method::enclose(State* R, Closure* closure) {
     Method* closure_method = copy(R);
     closure_method->closure_ = closure;
     return closure_method;

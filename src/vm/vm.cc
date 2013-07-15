@@ -74,17 +74,17 @@ void
 Closure::copy_slots(State* R, BytecodeFunction* fn) {
     // Arguments
     Value* new_args = R->allocate_raw_array(arg_count_);
-    for (unsigned i = 0; i < arg_count_, i++) { new_args[i] = args[i]; }
+    for (unsigned i = 0; i < arg_count_; i++) { new_args[i] = args_[i]; }
 
     // Function slots
     Value* new_func_slots = R->allocate_raw_array(arg_count_);
-    for (unsigned i = 0; i < fn->get_function_slot_num(), i++) {
+    for (unsigned i = 0; i < fn->get_function_slot_num(); i++) {
         new_func_slots[i] = func_slots_[i];
     }
 
     // Variable slots
     Value* new_var_slots = R->allocate_raw_array(arg_count_);
-    for (unsigned i = 0; i < fn->get_variable_slot_num(), i++) {
+    for (unsigned i = 0; i < fn->get_variable_slot_num(); i++) {
         new_var_slots[i] = var_slots_[i];
     }
 
@@ -94,17 +94,17 @@ Closure::copy_slots(State* R, BytecodeFunction* fn) {
 }
 
 Frame::Frame(State* R, Value* stack_ptr, BytecodeFunction* fn_, Frame* parent_,
-        Frame* closure_, unsigned argc_, Value* args_, Value*& next_stack_ptr)
-    : fn(fn_), closure(closure_), parent(parent_),
-      argc(argc_), args(args_),
+        Closure* closure_, unsigned argc_, Value* args_, Value*& next_stack_ptr)
+    : fn(fn_), parent(parent_), should_save_closure(false),
       pc(nullptr), restore_stack_ptr(stack_ptr), sp(nullptr) {
     const size_t frame_size = sizeof(Frame) - sizeof(Value);
     unsigned required_value_slots = fn->get_function_slot_num()
             + fn->get_variable_slot_num() + fn->get_stack_size();
     uintptr_t istack_ptr = reinterpret_cast<uintptr_t>(stack_ptr);
     Value* local_area_begin = reinterpret_cast<Value*>(istack_ptr + frame_size);
-    func_slots = local_area_begin;
-    var_slots = local_area_begin + fn->get_function_slot_num();
+    Value* func_slots = local_area_begin;
+    Value* var_slots = local_area_begin + fn->get_function_slot_num();
+    closure = Closure::create(R, closure_, argc_, args_, func_slots, var_slots);
     stack = local_area_begin + required_value_slots;
     uintptr_t istack = reinterpret_cast<uintptr_t>(stack);
     size_t align = alignment_of<Frame>::value;
@@ -122,97 +122,67 @@ Frame::Frame(State* R, Value* stack_ptr, BytecodeFunction* fn_, Frame* parent_,
 
 bool
 Frame::local_func_ref(unsigned depth, unsigned offset, Value& value) {
-    Frame* frame = this;
-    for (; depth > 0; depth--, frame = frame->closure) {
-        if (frame == nullptr) {
-            return false;
-        }
+    Closure* clos = closure;
+    for (; depth > 0; depth--, clos = clos->get_parent()) {
+        if (clos == nullptr) { return false; }
     }
 
-    if (frame->fn->get_function_slot_num() <= offset) {
-        return false;
-    }
-    value = frame->func_slots[offset];
+    value = clos->get_func_slots()[offset];
     return true;
 }
 
 bool
 Frame::local_func_set(unsigned depth, unsigned offset, Value value) {
-    Frame* frame = this;
-    for (; depth > 0; depth--, frame = frame->closure) {
-        if (frame == nullptr) {
-            return false;
-        }
+    Closure* clos = closure;
+    for (; depth > 0; depth--, clos = clos->get_parent()) {
+        if (clos == nullptr) { return false; }
     }
 
-    if (frame->fn->get_function_slot_num() <= offset) {
-        return false;
-    }
-    frame->func_slots[offset] = value;
+    clos->get_func_slots()[offset] = value;
     return true;
 }
 
 bool
 Frame::local_var_ref(unsigned depth, unsigned offset, Value& value) {
-    Frame* frame = this;
-    for (; depth > 0; depth--, frame = frame->closure) {
-        if (frame == nullptr) {
-            return false;
-        }
+    Closure* clos = closure;
+    for (; depth > 0; depth--, clos = clos->get_parent()) {
+        if (clos == nullptr) { return false; }
     }
 
-    if (frame->fn->get_variable_slot_num() <= offset) {
-        return false;
-    }
-    value = frame->var_slots[offset];
+    value = clos->get_var_slots()[offset];
     return true;
 }
 
 bool
 Frame::local_var_set(unsigned depth, unsigned offset, Value value) {
-    Frame* frame = this;
-    for (; depth > 0; depth--, frame = frame->closure) {
-        if (frame == nullptr) {
-            return false;
-        }
+    Closure* clos = closure;
+    for (; depth > 0; depth--, clos = clos->get_parent()) {
+        if (clos == nullptr) { return false; }
     }
 
-    if (frame->fn->get_variable_slot_num() <= offset) {
-        return false;
-    }
-    frame->var_slots[offset] = value;
+    clos->get_var_slots()[offset] = value;
     return true;
 }
 
 bool
 Frame::local_arg_ref(unsigned depth, unsigned offset, Value& value) {
-    Frame* frame = this;
-    for (; depth > 0; depth--, frame = frame->closure) {
-        if (frame == nullptr) {
-            return false;
-        }
+    Closure* clos = closure;
+    for (; depth > 0; depth--, clos = clos->get_parent()) {
+        if (clos == nullptr) { return false; }
     }
 
-    if (frame->argc <= offset) {
-        return false;
-    }
-    value = frame->args[offset];
+    value = clos->get_args()[offset];
     return true;
 }
 
 bool
 Frame::local_arg_set(unsigned depth, unsigned offset, Value value) {
-    Frame* frame = this;
-    for (; depth > 0; depth--, frame = frame->closure) {
-        if (frame == nullptr) {
-            return false;
-        }
+    Closure* clos = closure;
+    for (; depth > 0; depth--, clos = clos->get_parent()) {
+        if (clos == nullptr) { return false; }
     }
 
-    if (frame->argc <= offset) {
-        return false;
-    }
-    frame->args[offset] = value;
+    clos->get_args()[offset] = value;
     return true;
 }
 
@@ -587,7 +557,7 @@ execute(State* R, BytecodeFunction* entry_fn, unsigned argc_, Value* args_) {
                     fatal("Not callable object");
                 }
 
-                Frame* closure = nullptr;
+                Closure* closure = nullptr;
                 if (func.get_obj<Object>()->get_class() == R->get_method_class()) {
                     if (!func.get_obj<Method>()->dispatch(R, argc, stack_args, func)) {
                         fatal("Could not dispatch");
@@ -634,6 +604,9 @@ execute(State* R, BytecodeFunction* entry_fn, unsigned argc_, Value* args_) {
                 break;
             case Insn::Ret: {
                 Frame* parent = fr->parent;
+                if (fr->should_save_closure) {
+                    fr->closure->copy_slots(R, fr->fn);
+                }
                 if (parent == nullptr) { // if top level
                     goto VMExit;
                 }
@@ -814,14 +787,15 @@ execute(State* R, BytecodeFunction* entry_fn, unsigned argc_, Value* args_) {
                 }
 
                 if (func.get_obj<Object>()->get_class() == R->get_native_function_class()) {
-                    *(--sp) = Value::by_object(func.get_obj<NativeFunction>()->enclose(R, fr));
+                    *(--sp) = Value::by_object(func.get_obj<NativeFunction>()->enclose(R, fr->closure));
                 } else if (func.get_obj<Object>()->get_class() == R->get_bytecode_function_class()) {
-                    *(--sp) = Value::by_object(func.get_obj<BytecodeFunction>()->enclose(R, fr));
+                    *(--sp) = Value::by_object(func.get_obj<BytecodeFunction>()->enclose(R, fr->closure));
                 } else if (func.get_obj<Object>()->get_class() == R->get_method_class()) {
-                    *(--sp) = Value::by_object(func.get_obj<Method>()->enclose(R, fr));
+                    *(--sp) = Value::by_object(func.get_obj<Method>()->enclose(R, fr->closure));
                 } else {
                     fatal("Cannot enclose");
                 }
+                fr->should_save_closure = true;
                 pc++;
             }
                 break;
