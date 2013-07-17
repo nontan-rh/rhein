@@ -227,6 +227,7 @@ State::initialize_class1() {
     method_class_ = Class::create(this, nullptr, any_class_);
     bytecode_function_class_ = Class::create(this, nullptr, any_class_);
     native_function_class_ = Class::create(this, nullptr, any_class_);
+    rest_arguments_class_ = Class::create(this, nullptr, any_class_);
 }
 
 void
@@ -244,6 +245,7 @@ State::initialize_class2() {
     method_class_->set_id(get_symbol("method"));
     bytecode_function_class_->set_id(get_symbol("bytecode_function"));
     native_function_class_->set_id(get_symbol("native_function"));
+    rest_arguments_class_->set_id(get_symbol("rest_arguments"));
 }
 
 void
@@ -266,6 +268,7 @@ State::initialize_class3() {
     set_class_hash(method_class_);
     set_class_hash(bytecode_function_class_);
     set_class_hash(native_function_class_);
+    set_class_hash(rest_arguments_class_);
 }
 
 void
@@ -575,11 +578,10 @@ execute(State* R, BytecodeFunction* entry_fn, unsigned argc_, Value* args_) {
                     fn = (BytecodeFunction*)ofunc;
 
                     if (fn->get_info()->variadic()) {
-                        fatal("Not implemented");
                         unsigned vargs_count = argc - fn->get_info()->num_args();
-                        Array* vargs = Array::create(R, vargs_count);
+                        RestArguments* vargs = RestArguments::create(R, vargs_count);
                         for (unsigned i = 0; i < vargs_count; i++) {
-                            vargs->elt_set(i, sp[i + fn->get_info()->num_args()]);
+                            vargs->elt_set(i, stack_args[i + fn->get_info()->num_args()]);
                         }
                         stack_args[fn->get_info()->num_args()] = Value::by_object(vargs);
                     }

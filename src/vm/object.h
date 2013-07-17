@@ -9,6 +9,7 @@
 #include <cstdint>
 #include <cassert>
 #include <cstddef>
+#include <cstdio>
 
 #include "internal.h"
 
@@ -275,7 +276,7 @@ public:
 
     Int get_length() const { return size_; }
 
-    bool elt_ref(Int index, Value& dest) const {
+    bool elt_ref(Int index, Value& dest) {
         if (0 <= index && index < size_) {
             dest = body_[index];
             return true;
@@ -292,7 +293,7 @@ public:
     }
 
     // Override
-    bool index_ref(State* /* R */, Value index, Value& dest) const {
+    bool index_ref(State* /* R */, Value index, Value& dest) {
         if (!index.is(Value::Type::Int)) { return false; }
         return elt_ref(index.get_int(), dest);
     }
@@ -310,6 +311,51 @@ private:
     Int allocated_size_;
 
     Array(State* R, Int size_);
+};
+
+class RestArguments : public Object {
+public:
+    unsigned long get_hash() { return reinterpret_cast<unsigned long>(this); }
+
+    static RestArguments* create(State* R, Int size);
+
+    Int get_length() const { return size_; }
+
+    bool elt_ref(Int index, Value& dest) {
+        if (0 <= index && index < size_) {
+            dest = body_[index];
+            return true;
+        }
+        return false;
+    }
+
+    bool elt_set(Int index, Value value) {
+        if (0 <= index && index < size_) {
+            body_[index] = value;
+            return true;
+        }
+        return false;
+    }
+
+    // Override
+    bool index_ref(State* /* R */, Value index, Value& dest) {
+        if (!index.is(Value::Type::Int)) { return false; }
+        return elt_ref(index.get_int(), dest);
+    }
+
+    // Override
+    bool index_set(State* /* R */, Value index, Value value) {
+        if (!index.is(Value::Type::Int)) { return false; }
+        return elt_set(index.get_int(), value);
+    }
+
+    bool to_array(State* R, Array*& dest) const;
+private:
+    Value* body_;
+    Int size_;
+    Int allocated_size_;
+
+    RestArguments(State* R, Int size_);
 };
 
 struct HashTableNode;

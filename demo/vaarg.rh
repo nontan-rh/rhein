@@ -4,6 +4,6 @@ def fn(a, c, &rest b) {
 }
 
 def main() {
-    print(fn(1,2,3,4)[2])
+    print(fn(1,2,3,4)[0])
 }
 

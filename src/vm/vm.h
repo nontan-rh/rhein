@@ -58,6 +58,9 @@ public:
     }
     Class* get_string_class() const { return string_class_; }
     Class* get_symbol_class() const { return symbol_class_; }
+    Class* get_rest_arguments_class() const {
+        return rest_arguments_class_;
+    }
 
     Symbol* get_symbol(const char* cstr) const {
         return symbol_provider_->get_symbol(cstr);
@@ -157,6 +160,7 @@ private:
     Class* hashtable_class_;
     Class* string_class_;
     Class* symbol_class_;
+    Class* rest_arguments_class_;
 
     SymbolProvider* symbol_provider_;
 
