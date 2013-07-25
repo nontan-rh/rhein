@@ -205,6 +205,136 @@ PegTry::parse(List* src, Value& obj, List*& next) {
     return true;
 }
 
+Value
+fn_parse(State* /* R */, unsigned /* argc */, Value* /* args */) {
+    return Value::k_nil();
+}
+
+Value
+fn_pstr(State* R, unsigned /* argc */, Value* args) {
+    return Value::by_object(PegString::create(R, args[0].get_obj<String>()));
+}
+
+Value
+fn_pchar(State* R, unsigned /* argc */, Value* /* args */) {
+    return Value::by_object(PegCharClass::create(R));
+}
+
+Value
+fn_pchar_add(State* /* R */, unsigned /* argc */, Value* args) {
+    args[0].get_obj<PegCharClass>()->add(args[1].get_char(),
+            args[2].get_char());
+    return args[0];
+}
+
+Value
+fn_pchar_inv(State* /* R */, unsigned /* argc */, Value* args) {
+    args[0].get_obj<PegCharClass>()->invert();
+    return args[0];
+}
+
+Value
+fn_star(State* R, unsigned /* argc */, Value* args) {
+    return Value::by_object(PegTimes::create(R, 0, -1,
+                args[0].get_obj<PegSyntax>()));
+}
+
+Value
+fn_plus(State* R, unsigned /* argc */, Value* args) {
+    return Value::by_object(PegTimes::create(R, 1, -1,
+                args[0].get_obj<PegSyntax>()));
+}
+
+Value
+fn_times(State* R, unsigned /* argc */, Value* args) {
+    return Value::by_object(
+            PegTimes::create(R,
+                args[1].get_int(), args[2].get_int(),
+                args[0].get_obj<PegSyntax>()));
+}
+
+Value
+fn_andp(State* R, unsigned /* argc */, Value* args) {
+    return Value::by_object(
+            PegPred::create(R, true, args[0].get_obj<PegSyntax>()));
+}
+
+Value
+fn_notp(State* R, unsigned /* argc */, Value* args) {
+    return Value::by_object(
+            PegPred::create(R, false, args[0].get_obj<PegSyntax>()));
+}
+
+Value
+fn_pseq(State* R, unsigned argc, Value* args) {
+    PegSyntax** syns = R->allocate_block<PegSyntax*>(argc);
+    for (unsigned i = 0; i < argc; i++) {
+        syns[i] = args[i].get_obj<PegSyntax>();
+    }
+    return Value::by_object(PegSequence::create(R, argc, syns));
+}
+
+Value
+fn_pchoice(State* R, unsigned argc, Value* args) {
+    PegSyntax** syns = R->allocate_block<PegSyntax*>(argc);
+    for (unsigned i = 0; i < argc; i++) {
+        syns[i] = args[i].get_obj<PegSyntax>();
+    }
+    return Value::by_object(PegChoice::create(R, argc, syns));
+}
+
+Value
+fn_paction(State* R, unsigned /* argc */, Value* args) {
+    return Value::by_object(PegAction::create(R, args[1],
+                args[0].get_obj<PegSyntax>()));
+}
+
+Value
+fn_pany(State* R, unsigned /* argc */, Value* /* args */) {
+    return Value::by_object(PegAny::create(R));
+}
+
+Value
+fn_ptry(State* R, unsigned /* argc */, Value* args) {
+    return Value::by_object(PegTry::create(R, args[0].get_obj<PegSyntax>()));
+}
+
+PegModule*
+PegModule::create(State* R) {
+    void* p = R->allocate_struct<PegModule>();
+    return new (p) PegModule;
+}
+
+bool
+PegModule::initialize(State* R) {
+    R->add_class("PegSyntax", "any");
+    R->add_class("PegString", "PegSyntax");
+    R->add_class("PegCharClass", "PegSyntax");
+    R->add_class("PegTimes", "PegSyntax");
+    R->add_class("PegPred", "PegSyntax");
+    R->add_class("PegSequence", "PegSyntax");
+    R->add_class("PegChoice", "PegSyntax");
+    R->add_class("PegAction", "PegSyntax");
+    R->add_class("PegAny", "PegSyntax");
+    R->add_class("PegTry", "PegSyntax");
+    R->add_native_function("parse", false, 1, {"string", "PortSeq"}, fn_parse);
+    R->add_native_function("pstr", false, 1, {"string"}, fn_pstr);
+    R->add_native_function("pchar", false, 0, { }, fn_pchar);
+    R->add_native_function("add", false, 3, {"PegCharClass", "char", "char"}, fn_pchar_add);
+    R->add_native_function("inv", false, 1, {"PegCharClass"}, fn_pchar_inv);
+    R->add_native_function("star", false, 1, {"PegSyntax"}, fn_star);
+    R->add_native_function("plus", false, 1, {"PegSyntax"}, fn_plus);
+    R->add_native_function("times", false, 2, {"PegSyntax", "int", "int"}, fn_times);
+    R->add_native_function("andp", false, 1, {"PegSyntax"}, fn_andp);
+    R->add_native_function("notp", false, 1, {"PegSyntax"}, fn_notp);
+    R->add_native_function("pseq", true, 0, {}, fn_pseq);
+    R->add_native_function("pchoice", true, 0, {}, fn_pchoice);
+    R->add_native_function("paction", false, 2, {"PegSyntax", "any"}, fn_paction);
+    R->add_native_function("pany", false, 0, {}, fn_pany);
+    R->add_native_function("ptry", false, 1, {"PegSyntax"}, fn_ptry);
+    return false;
+}
+
 }
 }
 

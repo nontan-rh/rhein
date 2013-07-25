@@ -1,0 +1,5 @@
+
+def main() {
+    pseq(pstr("hello").plus(), pchar().add(?a, ?z))
+}
+

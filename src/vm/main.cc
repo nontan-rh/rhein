@@ -10,11 +10,13 @@
 #include "basic/basic.h"
 #include "basic/builtin.h"
 #include "basic/port.h"
+#include "parser/peg.h"
 
 using namespace rhein;
 using namespace rhein::basic;
 using namespace rhein::builtin;
 using namespace rhein::port;
+using namespace rhein::peg;
 
 int main(int argc, char** argv) {
     GC_init();
@@ -25,9 +27,11 @@ int main(int argc, char** argv) {
     }
 
     State *R = new (GC_malloc(sizeof(State))) State();
+    current_state_ = R;
     R->load_module(BasicModule::create(R));
     R->load_module(BuiltinModule::create(R));
     R->load_module(FileModule::create(R));
+    R->load_module(PegModule::create(R));
 
     load_script(R, argv[1]);
 
