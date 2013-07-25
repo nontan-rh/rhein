@@ -16,7 +16,7 @@ add_executable(
     rhein
     main.cc vm.cc operate.cc byteio.cc loader.cc basic/basic.cc
     object.cc array.cc function.cc string.cc symbol.cc
-    record.cc hashtable.cc basic/builtin.cc basic/port.cc)
+    record.cc hashtable.cc basic/builtin.cc basic/port.cc parser/peg.cc)
 
 add_custom_command(
     OUTPUT "${parser_odir}lex.re.cc"
@@ -24,19 +24,19 @@ add_custom_command(
     DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/parser/lex.re"
     )
 
-add_executable(
-    test
-    test.cc vm.cc operate.cc byteio.cc loader.cc basic/basic.cc
-    object.cc array.cc function.cc string.cc symbol.cc parser/scanner.cc
-    parser/lex.re.cc record.cc hashtable.cc basic/builtin.cc basic/port.cc)
+#add_executable(
+    #test
+    #test.cc vm.cc operate.cc byteio.cc loader.cc basic/basic.cc
+    #object.cc array.cc function.cc string.cc symbol.cc parser/scanner.cc
+    #parser/lex.re.cc record.cc hashtable.cc basic/builtin.cc basic/port.cc)
 
 target_link_libraries(
     rhein
     gc)
 
-target_link_libraries(
-    test
-    gc)
+#target_link_libraries(
+    #test
+    #gc)
 
 install(TARGETS rhein RUNTIME DESTINATION bin)
 

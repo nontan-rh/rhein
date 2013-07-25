@@ -26,6 +26,20 @@ Array::Array(State* R, Int size) : Object(R->get_array_class()), size_(size) {
     body_ = R->allocate_raw_array(allocated_size_);
 }
 
+void
+Array::append(State* R, Value value) {
+    ++size_;
+    if (size_ > allocated_size_) {
+        unsigned newallocated_size = allocated_size_ * 2;
+        Value* newbody = R->allocate_raw_array(newallocated_size);
+        for (Int i = 0; i < allocated_size_; i++) {
+            newbody[i] = body_[i];
+        }
+        body_ = newbody;
+    }
+    body_[size_ - 1] = value;
+}
+
 bool
 Array::to_string(State* R, String*& dest) const {
     char* buf = R->allocate_block<char>(size_);

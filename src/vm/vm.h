@@ -178,6 +178,12 @@ private:
     void set_class_hash(Class* klass);
 };
 
+extern State* current_state_;
+
+inline State* get_current_state() {
+    return current_state_;
+}
+
 class Module {
 protected:
     virtual ~Module() = default;
@@ -247,7 +253,8 @@ struct Frame : public PlacementNewObj {
     bool local_arg_set(unsigned depth, unsigned offset, Value value);
 };
 
-Value execute(State* R, Symbol* entry_point, unsigned argc, Value* argv);
+Value execute(State* R, Symbol* entry_point, unsigned argc, Value* args);
+Value execute(State* R, Value fn, unsigned argc, Value* args);
 Value execute(State* R, BytecodeFunction* bfn, unsigned argc, Value* args);
 
 }

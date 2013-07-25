@@ -18,6 +18,8 @@ using namespace std;
 
 namespace rhein {
 
+State* current_state_;
+
 struct Insn {
     enum {
         Add,
@@ -392,18 +394,21 @@ State::dump_variables() {
 }
 
 Value
-execute(State* R, Symbol* entry_point, unsigned argc, Value* argv) {
+execute(State* R, Symbol* entry_point, unsigned argc, Value* args) {
     Value fn;
     if (!R->global_func_ref(entry_point, fn)) {
         fatal("No such function");
     }
+    return execute(R, fn, argc, args);
+}
 
+Value execute(State* R, Value fn, unsigned argc, Value* args) {
     if (!fn.is(Value::Type::Object)) {
         fatal("Not excutable object");
     }
 
     if (fn.get_obj<Object>()->get_class() == R->get_method_class()) {
-        fn.get_obj<Method>()->dispatch(R, argc, argv, fn);
+        fn.get_obj<Method>()->dispatch(R, argc, args, fn);
     }
 
     if (!fn.is(Value::Type::Object)) {
@@ -412,9 +417,9 @@ execute(State* R, Symbol* entry_point, unsigned argc, Value* argv) {
 
     Object* ofn = fn.get_obj<Object>();
     if (ofn->get_class() == R->get_bytecode_function_class()) {
-        return execute(R, (BytecodeFunction*)ofn, argc, argv);
+        return execute(R, (BytecodeFunction*)ofn, argc, args);
     } else if (ofn->get_class() == R->get_native_function_class()) {
-        return ((NativeFunction*)ofn)->get_body()(R, argc, argv);
+        return ((NativeFunction*)ofn)->get_body()(R, argc, args);
     } else {
         fatal("Not excutable object");
     }

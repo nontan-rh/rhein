@@ -247,6 +247,12 @@ public:
     String* get_string_representation(State* R);
     void get_cstr(const char*& body, size_t& length) const;
 
+    char elt_ref(Int index) {
+        if (index >= 0
+                && static_cast<unsigned>(index) >= length_) { throw ""; }
+        return body_[index];
+    }
+
     // Override
     bool index_ref(State* R, Value index, Value& value) const;
 
@@ -303,6 +309,8 @@ public:
         if (!index.is(Value::Type::Int)) { return false; }
         return elt_set(index.get_int(), value);
     }
+
+    void append(State* R, Value value);
 
     bool to_string(State* R, String*& dest) const;
 private:
