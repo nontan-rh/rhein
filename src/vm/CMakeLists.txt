@@ -1,9 +1,9 @@
 
-set(CMAKE_CXX_COMPILER "g++-4.8")
+set(CMAKE_CXX_COMPILER "clang++")
 
 set(CMAKE_C_FLAGS "-g -W -Wall -Wextra -O0")
 if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-    set(CMAKE_CXX_FLAGS "-g -W -Wall -Wextra -O0 -std=c++11")
+    set(CMAKE_CXX_FLAGS "-g -W -Wall -Wextra -O0 -std=c++11 -stdlib=libc++")
 else()
     set(CMAKE_CXX_FLAGS "-g -W -Wall -Wextra -O0 -std=c++11")
 endif()

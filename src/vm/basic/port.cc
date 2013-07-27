@@ -15,8 +15,8 @@ using namespace std;
 namespace rhein {
 namespace port {
 
-File::File(State* R, String* name, RWFlags rw, PosFlags pos)
-    : Port(R->get_class("File")) {
+File::File(String* name, RWFlags rw, PosFlags pos)
+    : Port(get_current_state()->get_class("File")) {
 
     if (rw == RWFlags::Read) {
         if (pos == PosFlags::Head) {
@@ -36,8 +36,9 @@ File::File(State* R, String* name, RWFlags rw, PosFlags pos)
 }
 
 File*
-File::create(State* R, String* name, RWFlags rw, PosFlags pos) {
-    return new (R->allocate_object<File>()) File(R, name, rw, pos);
+File::create(String* name, RWFlags rw, PosFlags pos) {
+    State* R = get_current_state();
+    return new (R->allocate_object<File>()) File(name, rw, pos);
 }
 
 Byte
@@ -61,42 +62,44 @@ File::eof() {
 }
 
 Value
-fn_open(State* R, unsigned /* argc */, Value* args) {
+fn_open(unsigned /* argc */, Value* args) {
     return Value::by_object(
-            File::create(R, args[0].get_obj<String>(),
+            File::create(args[0].get_obj<String>(),
                     File::RWFlags::Read, File::PosFlags::Head));
 }
 
 Value
-fn_read_char(State* /* R */, unsigned /* argc */, Value* args) {
+fn_read_char(unsigned /* argc */, Value* args) {
     return Value::by_char(args[0].get_obj<Port>()->read_char());
 }
 
 Value
-fn_read_byte(State* /* R */, unsigned /* argc */, Value* args) {
+fn_read_byte(unsigned /* argc */, Value* args) {
     return Value::by_int(args[0].get_obj<Port>()->read_byte());
 }
 
 Value
-fn_eof(State* /* R */, unsigned /* argc */, Value* args) {
+fn_eof(unsigned /* argc */, Value* args) {
     return Value::by_bool(args[0].get_obj<Port>()->eof());
 }
 
 Value
-fn_make_portseq(State* R, unsigned /* argc */, Value* args) {
-    PortSeq* p = PortSeq::create(R, args[0].get_obj<Port>());
+fn_make_portseq(unsigned /* argc */, Value* args) {
+    PortSeq* p = PortSeq::create(args[0].get_obj<Port>());
     if (p == nullptr) { return Value::k_nil(); }
     return Value::by_object(p);
 }
 
 FileModule*
-FileModule::create(State* R) {
+FileModule::create() {
+    State* R = get_current_state();
     void* p = R->allocate_struct<FileModule>();
     return new (p) FileModule;
 }
 
 bool
-FileModule::initialize(State* R) {
+FileModule::initialize() {
+    State* R = get_current_state();
     R->add_class("File", "any");
     R->add_class("PortSeq", "any");
     R->add_native_function("open", false, 1, {"string"}, fn_open);

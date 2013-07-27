@@ -9,29 +9,29 @@
 namespace rhein {
 
 Array*
-Array::create(State* R, Int size) {
+Array::create(Int size) {
     if (size < 0) {
         return nullptr;
     }
-    void* p = R->allocate_object<Array>();
-    return new (p) Array(R, size);
+    void* p = get_current_state()->allocate_object<Array>();
+    return new (p) Array(size);
 }
 
-Array::Array(State* R, Int size) : Object(R->get_array_class()), size_(size) {
+Array::Array(Int size) : Object(get_current_state()->get_array_class()), size_(size) {
     allocated_size_ = 1;
     while (size_ > allocated_size_) {
         allocated_size_ *= 2;
     }
 
-    body_ = R->allocate_raw_array(allocated_size_);
+    body_ = get_current_state()->allocate_raw_array(allocated_size_);
 }
 
 void
-Array::append(State* R, Value value) {
+Array::append(Value value) {
     ++size_;
     if (size_ > allocated_size_) {
         unsigned newallocated_size = allocated_size_ * 2;
-        Value* newbody = R->allocate_raw_array(newallocated_size);
+        Value* newbody = get_current_state()->allocate_raw_array(newallocated_size);
         for (Int i = 0; i < allocated_size_; i++) {
             newbody[i] = body_[i];
         }
@@ -41,7 +41,8 @@ Array::append(State* R, Value value) {
 }
 
 bool
-Array::to_string(State* R, String*& dest) const {
+Array::to_string(String*& dest) const {
+    State* R = get_current_state();
     char* buf = R->allocate_block<char>(size_);
     
     for (Int i = 0; i < size_; i++) {
@@ -53,34 +54,34 @@ Array::to_string(State* R, String*& dest) const {
         buf[i] = body_[i].get_char();
     }
 
-    dest = String::create(R, buf, size_);
+    dest = String::create(buf, size_);
     R->release_block(buf);
     return true;
 }
 
 RestArguments*
-RestArguments::create(State* R, Int size) {
+RestArguments::create(Int size) {
     if (size < 0) {
         return nullptr;
     }
-    void* p = R->allocate_object<RestArguments>();
-    return new (p) RestArguments(R, size);
+    void* p = get_current_state()->allocate_object<RestArguments>();
+    return new (p) RestArguments(size);
 }
 
-RestArguments::RestArguments(State* R, Int size)
-    : Object(R->get_rest_arguments_class()), size_(size) {
+RestArguments::RestArguments(Int size)
+    : Object(get_current_state()->get_rest_arguments_class()), size_(size) {
 
     allocated_size_ = 1;
     while (size_ > allocated_size_) {
         allocated_size_ *= 2;
     }
 
-    body_ = R->allocate_raw_array(allocated_size_);
+    body_ = get_current_state()->allocate_raw_array(allocated_size_);
 }
 
 bool
-RestArguments::to_array(State* R, Array*& dest) const {
-    dest = Array::create(R, size_);
+RestArguments::to_array(Array*& dest) const {
+    dest = Array::create(size_);
 
     for (Int i = 0; i < size_; i++) {
         dest->elt_set(i, body_[i]);

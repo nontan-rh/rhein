@@ -13,7 +13,7 @@
 
 namespace rhein {
 
-bool load_script(State *R, const char* fn) {
+bool load_script(const char* fn) {
     // Create pipe
     int pipes[2];
     if (EXIT_SUCCESS != pipe(pipes)) {
@@ -40,7 +40,7 @@ bool load_script(State *R, const char* fn) {
     if (fp == nullptr) {
         fatal("Cannot fdopen pipe\n");
     }
-    R->load_file(fp);
+    get_current_state()->load_file(fp);
 
     fclose(fp);
     return false;

@@ -13,21 +13,22 @@ namespace basic {
 
 class BasicModule : public Module, public PlacementNewObj {
 public:
-    static BasicModule* create(State* R);
-    bool initialize(State* R);
+    static BasicModule* create();
+    bool initialize();
 };
 
 class List : public Object {
 public:
-    virtual Value get_head(State* R) = 0;
-    virtual Value get_tail(State* R) = 0;
+    virtual Value get_head() = 0;
+    virtual Value get_tail() = 0;
 
-    bool slot_ref(State* R, Symbol* id, Value& dest) {
+    bool slot_ref(Symbol* id, Value& dest) {
+        State* R = get_current_state();
         if (id == R->get_symbol("head")) {
-            dest = get_head(R);
+            dest = get_head();
             return true;
         } else if (id == R->get_symbol("tail")) {
-            dest = get_tail(R);
+            dest = get_tail();
             return true;
         }
         return false;

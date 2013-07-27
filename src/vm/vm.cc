@@ -73,7 +73,8 @@ struct Insn {
 };
 
 void
-Closure::copy_slots(State* R, BytecodeFunction* fn) {
+Closure::copy_slots(BytecodeFunction* fn) {
+    State* R = get_current_state();
     // Arguments
     Value* new_args = R->allocate_raw_array(arg_count_);
     for (unsigned i = 0; i < arg_count_; i++) { new_args[i] = args_[i]; }
@@ -95,10 +96,11 @@ Closure::copy_slots(State* R, BytecodeFunction* fn) {
     var_slots_ = new_var_slots;
 }
 
-Frame::Frame(State* R, Value* stack_ptr, BytecodeFunction* fn_, Frame* parent_,
+Frame::Frame(Value* stack_ptr, BytecodeFunction* fn_, Frame* parent_,
         Closure* closure_, unsigned argc_, Value* args_, Value*& next_stack_ptr)
     : fn(fn_), parent(parent_), should_save_closure(false),
       pc(nullptr), restore_stack_ptr(stack_ptr), sp(nullptr) {
+    State* R = get_current_state();
     const size_t frame_size = sizeof(Frame) - sizeof(Value);
     unsigned required_value_slots = fn->get_function_slot_num()
             + fn->get_variable_slot_num() + fn->get_stack_size();
@@ -106,7 +108,7 @@ Frame::Frame(State* R, Value* stack_ptr, BytecodeFunction* fn_, Frame* parent_,
     Value* local_area_begin = reinterpret_cast<Value*>(istack_ptr + frame_size);
     Value* func_slots = local_area_begin;
     Value* var_slots = local_area_begin + fn->get_function_slot_num();
-    closure = Closure::create(R, closure_, argc_, args_, func_slots, var_slots);
+    closure = Closure::create(closure_, argc_, args_, func_slots, var_slots);
     stack = local_area_begin + required_value_slots;
     uintptr_t istack = reinterpret_cast<uintptr_t>(stack);
     size_t align = alignment_of<Frame>::value;
@@ -189,6 +191,8 @@ Frame::local_arg_set(unsigned depth, unsigned offset, Value value) {
 }
 
 State::State() : symbol_provider_(nullptr) {
+    SwitchState ss(this); // Hack
+
     // Bootstrap type system
     allocator_ = new (GC_malloc(sizeof(Allocator))) Allocator();
 
@@ -196,9 +200,9 @@ State::State() : symbol_provider_(nullptr) {
     initialize_symbol();
     initialize_class2();
 
-    func_slots_ = SysTable<const Symbol*, Object*>::create(this);
-    var_slots_ = SysTable<const Symbol*, Value>::create(this);
-    klass_slots_ = SysTable<const Symbol*, Class*>::create(this);
+    func_slots_ = SysTable<const Symbol*, Object*>::create();
+    var_slots_ = SysTable<const Symbol*, Value>::create();
+    klass_slots_ = SysTable<const Symbol*, Class*>::create();
 
     initialize_class3();
 
@@ -215,21 +219,21 @@ State::~State() {
 
 void
 State::initialize_class1() {
-    any_class_ = Class::create(this, nullptr, nullptr);
-    class_class_ = Class::create(this, nullptr, any_class_);
+    any_class_ = Class::create(nullptr, nullptr);
+    class_class_ = Class::create(nullptr, any_class_);
     any_class_->klass_ = class_class_;
-    nil_class_ = Class::create(this, nullptr, any_class_);
-    bool_class_ = Class::create(this, nullptr, any_class_);
-    int_class_ = Class::create(this, nullptr, any_class_);
-    char_class_ = Class::create(this, nullptr, any_class_);
-    symbol_class_ = Class::create(this, nullptr, any_class_);
-    string_class_ = Class::create(this, nullptr, any_class_);
-    array_class_ = Class::create(this, nullptr, any_class_);
-    hashtable_class_ = Class::create(this, nullptr, any_class_);
-    method_class_ = Class::create(this, nullptr, any_class_);
-    bytecode_function_class_ = Class::create(this, nullptr, any_class_);
-    native_function_class_ = Class::create(this, nullptr, any_class_);
-    rest_arguments_class_ = Class::create(this, nullptr, any_class_);
+    nil_class_ = Class::create(nullptr, any_class_);
+    bool_class_ = Class::create(nullptr, any_class_);
+    int_class_ = Class::create(nullptr, any_class_);
+    char_class_ = Class::create(nullptr, any_class_);
+    symbol_class_ = Class::create(nullptr, any_class_);
+    string_class_ = Class::create(nullptr, any_class_);
+    array_class_ = Class::create(nullptr, any_class_);
+    hashtable_class_ = Class::create(nullptr, any_class_);
+    method_class_ = Class::create(nullptr, any_class_);
+    bytecode_function_class_ = Class::create(nullptr, any_class_);
+    native_function_class_ = Class::create(nullptr, any_class_);
+    rest_arguments_class_ = Class::create(nullptr, any_class_);
 }
 
 void
@@ -252,7 +256,7 @@ State::initialize_class2() {
 
 void
 State::set_class_hash(Class* klass){
-    klass_slots_->insert(this, klass->get_id(), klass);
+    klass_slots_->insert(klass->get_id(), klass);
 }
 
 void
@@ -275,7 +279,7 @@ State::initialize_class3() {
 
 void
 State::initialize_symbol() {
-    symbol_provider_ = SymbolProvider::create(this);
+    symbol_provider_ = SymbolProvider::create();
 }
 
 bool
@@ -303,7 +307,7 @@ State::global_var_ref(Symbol* id, Value& value) const {
 
 bool
 State::global_var_set(Symbol* id, Value value) {
-    var_slots_->insert(this, id, value);
+    var_slots_->insert(id, value);
     return true;
 }
 
@@ -312,9 +316,7 @@ State::add_native_function(const char* id, bool variadic,
         unsigned num_args, std::initializer_list<const char*> arg_class_ids,
         NativeFunctionBody body) {
     return this->add_function(NativeFunction::create(
-                this,
                 FunctionInfo::create(
-                    this,
                     this->get_symbol(id),
                     variadic,
                     num_args,
@@ -333,25 +335,25 @@ State::add_function(Function* func, const Symbol* name) {
         Object* old = func_slots_->find(name);
         if (old->get_class() == native_function_class_
                 || old->get_class() == bytecode_function_class_) {
-            Method* method = Method::create(this);
-            method->add_function(this, static_cast<Function*>(old));
-            method->add_function(this, func);
-            func_slots_->assign(this, name, method);
+            Method* method = Method::create();
+            method->add_function(static_cast<Function*>(old));
+            method->add_function(func);
+            func_slots_->assign(name, method);
             return true;
         } else if (old->get_class() == method_class_) {
-            return static_cast<Method*>(old)->add_function(this, func);
+            return static_cast<Method*>(old)->add_function(func);
         } else {
             throw "";
         }
     }
 
-    func_slots_->insert_if_absent(this, name, func);
+    func_slots_->insert_if_absent(name, func);
     return true;
 }
 
 Class*
 State::add_class(const char* name, const char* parent) {
-    Class* klass = Class::create(this, get_symbol(name), get_class(parent));
+    Class* klass = Class::create(get_symbol(name), get_class(parent));
     this->add_class(klass);
     return klass;
 }
@@ -363,19 +365,19 @@ State::add_class(Class* klass) {
 
 bool
 State::add_class(Class* klass, const Symbol* name) {
-    klass_slots_->insert_if_absent(this, name, klass);
+    klass_slots_->insert_if_absent(name, klass);
     return true;
 }
 
 bool
 State::add_variable(Symbol* id, Value val) {
-    var_slots_->insert_if_absent(this, id, val);
+    var_slots_->insert_if_absent(id, val);
     return true;
 }
 
 bool
 State::load_module(Module* module) {
-    return module->initialize(this);
+    return module->initialize();
 }
 
 void
@@ -394,21 +396,22 @@ State::dump_variables() {
 }
 
 Value
-execute(State* R, Symbol* entry_point, unsigned argc, Value* args) {
+execute(Symbol* entry_point, unsigned argc, Value* args) {
     Value fn;
-    if (!R->global_func_ref(entry_point, fn)) {
+    if (!get_current_state()->global_func_ref(entry_point, fn)) {
         fatal("No such function");
     }
-    return execute(R, fn, argc, args);
+    return execute(fn, argc, args);
 }
 
-Value execute(State* R, Value fn, unsigned argc, Value* args) {
+Value execute(Value fn, unsigned argc, Value* args) {
+    State* R = get_current_state();
     if (!fn.is(Value::Type::Object)) {
         fatal("Not excutable object");
     }
 
     if (fn.get_obj<Object>()->get_class() == R->get_method_class()) {
-        fn.get_obj<Method>()->dispatch(R, argc, args, fn);
+        fn.get_obj<Method>()->dispatch(argc, args, fn);
     }
 
     if (!fn.is(Value::Type::Object)) {
@@ -417,9 +420,9 @@ Value execute(State* R, Value fn, unsigned argc, Value* args) {
 
     Object* ofn = fn.get_obj<Object>();
     if (ofn->get_class() == R->get_bytecode_function_class()) {
-        return execute(R, (BytecodeFunction*)ofn, argc, args);
+        return execute((BytecodeFunction*)ofn, argc, args);
     } else if (ofn->get_class() == R->get_native_function_class()) {
-        return ((NativeFunction*)ofn)->get_body()(R, argc, args);
+        return ((NativeFunction*)ofn)->get_body()(argc, args);
     } else {
         fatal("Not excutable object");
     }
@@ -507,9 +510,10 @@ get_insn_arg_uu2(uint32_t insn) {
     break;
 
 Value
-execute(State* R, BytecodeFunction* entry_fn, unsigned argc_, Value* args_) {
+execute(BytecodeFunction* entry_fn, unsigned argc_, Value* args_) {
+    State* R = get_current_state();
     Value*& next_stack_ptr = R->get_stack_top();
-    Frame* fr = Frame::create(R, next_stack_ptr, entry_fn, nullptr,
+    Frame* fr = Frame::create(next_stack_ptr, entry_fn, nullptr,
             nullptr, argc_, args_, next_stack_ptr);
     BytecodeFunction* fn = entry_fn;
     Value* sp = fr->stack;
@@ -567,14 +571,14 @@ execute(State* R, BytecodeFunction* entry_fn, unsigned argc_, Value* args_) {
 
                 Closure* closure = nullptr;
                 if (func.get_obj<Object>()->get_class() == R->get_method_class()) {
-                    if (!func.get_obj<Method>()->dispatch(R, argc, stack_args, func)) {
+                    if (!func.get_obj<Method>()->dispatch(argc, stack_args, func)) {
                         fatal("Could not dispatch");
                     }
                     closure = func.get_obj<Method>()->get_closure();
                 }
 
                 Function* ofunc = func.get_obj<Function>();
-                if (!ofunc->get_info()->check_type(R, argc, stack_args)) {
+                if (!ofunc->get_info()->check_type(argc, stack_args)) {
                     ofunc->get_info()->name()->dump();
                     fatal("Type error");
                 }
@@ -584,7 +588,7 @@ execute(State* R, BytecodeFunction* entry_fn, unsigned argc_, Value* args_) {
 
                     if (fn->get_info()->variadic()) {
                         unsigned vargs_count = argc - fn->get_info()->num_args();
-                        RestArguments* vargs = RestArguments::create(R, vargs_count);
+                        RestArguments* vargs = RestArguments::create(vargs_count);
                         for (unsigned i = 0; i < vargs_count; i++) {
                             vargs->elt_set(i, stack_args[i + fn->get_info()->num_args()]);
                         }
@@ -597,12 +601,12 @@ execute(State* R, BytecodeFunction* entry_fn, unsigned argc_, Value* args_) {
 
                     fr->pc = pc + 1;
                     fr->sp = sp + argc;
-                    fr = Frame::create(R, next_stack_ptr, fn, fr, closure, argc,
+                    fr = Frame::create(next_stack_ptr, fn, fr, closure, argc,
                             stack_args, next_stack_ptr);
                     pc = fn->get_bytecode();
                     sp = fr->stack;
                 } else if (ofunc->get_class() == R->get_native_function_class()) {
-                    Value ret = (*func.get_obj<NativeFunction>()->get_body())(R, argc, sp);
+                    Value ret = (*func.get_obj<NativeFunction>()->get_body())(argc, sp);
                     sp += argc;
                     *(--sp) = ret;
                     pc++;
@@ -612,7 +616,7 @@ execute(State* R, BytecodeFunction* entry_fn, unsigned argc_, Value* args_) {
             case Insn::Ret: {
                 Frame* parent = fr->parent;
                 if (fr->should_save_closure) {
-                    fr->closure->copy_slots(R, fr->fn);
+                    fr->closure->copy_slots(fr->fn);
                 }
                 if (parent == nullptr) { // if top level
                     goto VMExit;
@@ -631,7 +635,7 @@ execute(State* R, BytecodeFunction* entry_fn, unsigned argc_, Value* args_) {
                     fatal("Invalid size");
                 }
 
-                *(--sp) = Value::by_object(Array::create(R, size.get_int()));
+                *(--sp) = Value::by_object(Array::create(size.get_int()));
                 pc++;
             }
                 break;
@@ -643,7 +647,7 @@ execute(State* R, BytecodeFunction* entry_fn, unsigned argc_, Value* args_) {
                     fatal("Invalid type");
                 }
 
-                if (!array.get_obj<Array>()->index_ref(R, index, *(--sp))) {
+                if (!array.get_obj<Array>()->index_ref(index, *(--sp))) {
                     fatal("Cannot refer");
                 }
                 pc++;
@@ -658,7 +662,7 @@ execute(State* R, BytecodeFunction* entry_fn, unsigned argc_, Value* args_) {
                     fatal("Invalid type");
                 }
 
-                if (!array.get_obj<Array>()->index_set(R, index, value)) {
+                if (!array.get_obj<Array>()->index_set(index, value)) {
                     fatal("Cannot set");
                 }
                 pc++;
@@ -670,7 +674,7 @@ execute(State* R, BytecodeFunction* entry_fn, unsigned argc_, Value* args_) {
                     fatal("Cannot refer");
                 }
 
-                if (!sp[0].get_obj<Object>()->index_ref(R, index, sp[0])) {
+                if (!sp[0].get_obj<Object>()->index_ref(index, sp[0])) {
                     fatal("Cannot refer");
                 }
                 pc++;
@@ -685,7 +689,7 @@ execute(State* R, BytecodeFunction* entry_fn, unsigned argc_, Value* args_) {
                     fatal("Cannot set");
                 }
 
-                if (!obj.get_obj<Object>()->index_set(R, index, value)) {
+                if (!obj.get_obj<Object>()->index_set(index, value)) {
                     fatal("Cannot set");
                 }
                 pc++;
@@ -697,13 +701,13 @@ execute(State* R, BytecodeFunction* entry_fn, unsigned argc_, Value* args_) {
 
                 if (!(id.is(Value::Type::Object)
                     && id.get_obj<Object>()->get_class() == R->get_symbol_class())) { 
-                    obj.get_class(R)->get_id()->dump();
+                    obj.get_class()->get_id()->dump();
                     fatal("Cannot refer");
                 }
                 Symbol* id_sym = id.get_obj<Symbol>();
 
                 if (obj.is(Value::Type::Object)
-                        && !obj.get_obj<Object>()->slot_ref(R, id_sym, sp[0])) {
+                        && !obj.get_obj<Object>()->slot_ref(id_sym, sp[0])) {
                     id.get_obj<Symbol>()->dump();
                     fatal("Cannot refer");
                 } else if (obj.is(Value::Type::Record)
@@ -726,7 +730,7 @@ execute(State* R, BytecodeFunction* entry_fn, unsigned argc_, Value* args_) {
                 Symbol* id_sym = id.get_obj<Symbol>();
 
                 if (obj.is(Value::Type::Object)
-                        && !obj.get_obj<Object>()->slot_set(R, id_sym, sp[0])) {
+                        && !obj.get_obj<Object>()->slot_set(id_sym, sp[0])) {
                     fatal("Cannot set");
                 } else if (obj.is(Value::Type::Record)
                         && !obj.get_rec()->slot_set(id_sym, sp[0])) {
@@ -794,11 +798,11 @@ execute(State* R, BytecodeFunction* entry_fn, unsigned argc_, Value* args_) {
                 }
 
                 if (func.get_obj<Object>()->get_class() == R->get_native_function_class()) {
-                    *(--sp) = Value::by_object(func.get_obj<NativeFunction>()->enclose(R, fr->closure));
+                    *(--sp) = Value::by_object(func.get_obj<NativeFunction>()->enclose(fr->closure));
                 } else if (func.get_obj<Object>()->get_class() == R->get_bytecode_function_class()) {
-                    *(--sp) = Value::by_object(func.get_obj<BytecodeFunction>()->enclose(R, fr->closure));
+                    *(--sp) = Value::by_object(func.get_obj<BytecodeFunction>()->enclose(fr->closure));
                 } else if (func.get_obj<Object>()->get_class() == R->get_method_class()) {
-                    *(--sp) = Value::by_object(func.get_obj<Method>()->enclose(R, fr->closure));
+                    *(--sp) = Value::by_object(func.get_obj<Method>()->enclose(fr->closure));
                 } else {
                     fatal("Cannot enclose");
                 }

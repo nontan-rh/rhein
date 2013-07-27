@@ -52,37 +52,37 @@ public:
         Eof,
     };
 
-    static Token* int_literal(State* R, Int i) {
+    static Token* int_literal(Int i) {
         Token* t = create(R, Kind::IntLiteral);
         t->u_.v_int_ = i;
         return t;
     }
 
-    static Token* id(State* R, const char* ch, size_t length) {
+    static Token* id(const char* ch, size_t length) {
         Token* t = create(R, Kind::Id);
         t->u_.v_sym_ = R->get_symbol(ch, length);
         return t;
     }
 
-    static Token* str_literal(State* R, const char* ch, size_t length) {
+    static Token* str_literal(const char* ch, size_t length) {
         Token* t = create(R, Kind::StrLiteral);
         t->u_.v_str_ = String::create(R, ch, length);
         return t;
     }
 
-    static Token* char_literal(State* R, const char* ch, size_t length) {
+    static Token* char_literal(const char* ch, size_t length) {
         Token* t = create(R, Kind::CharLiteral);
         t->u_.v_sym_ = R->get_symbol(ch, length);
         return t;
     }
 
-    static Token* op(State* R, const char* ch, size_t length) {
+    static Token* op(const char* ch, size_t length) {
         Token* t = create(R, Kind::Operator);
         t->u_.v_sym_ = R->get_symbol(ch, length);
         return t;
     }
 
-    static Token* space(State* R, int i) {
+    static Token* space(int i) {
         if (i == 1) {
             return create(R, Kind::MaybeTerm);
         } else if (i == 2) {
@@ -91,13 +91,13 @@ public:
         throw "";
     }
 
-    static Token* create(State* R, Kind k) {
+    static Token* create(Kind k) {
         return new (R->allocate_object<Token>()) Token(R, k);
     }
 
     Kind get_kind() const { return kind_; }
 private:
-    Token(State* R, Kind k) : Object(R->get_class("Token")), kind_(k) { }
+    Token(Kind k) : Object(R->get_class("Token")), kind_(k) { }
 
     Kind kind_;
     union {
@@ -109,11 +109,11 @@ private:
 
 class Scanner : public PlacementNewObj {
 public:
-    static Scanner* create(State* R, Port* p) {
+    static Scanner* create(Port* p) {
         return new (R->allocate_struct<Scanner>()) Scanner(R, p);
     }
 
-    Token* get_token(State* R);
+    Token* get_token();
     bool eof() const { return p_->eof() && re2c_cursor >= re2c_limit; };
 private:
     static const size_t kBufferSize = 1024;
@@ -124,7 +124,7 @@ private:
     size_t length() const { return re2c_cursor - re2c_token; }
 
     Scanner() { }
-    Scanner(State* R, Port* p) : R_(R), p_(p), re2c_buffer_size(kBufferSize) {
+    Scanner(Port* p) : R_(R), p_(p), re2c_buffer_size(kBufferSize) {
         re2c_buffer = new char[kBufferSize];
         re2c_cursor =
             re2c_limit =
@@ -135,7 +135,7 @@ private:
 
     ~Scanner();
 
-    State* R_;
+    _;
     Port* p_;
 
     char* re2c_buffer;
@@ -159,8 +159,8 @@ Int str2int(const char *p, size_t length) {
 
 class ScannerModule : public Module, public PlacementNewObj {
 public:
-    static ScannerModule* create(State* R);
-    bool initialize(State* R);
+    static ScannerModule* create();
+    bool initialize();
 };
 
 static inline const char*

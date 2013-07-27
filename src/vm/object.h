@@ -60,7 +60,7 @@ public:
 
     unsigned long get_hash() const;
 
-    Class* get_class(State* R) const;
+    Class* get_class() const;
 
     bool eq(const Value& rht) const {
         if (type_id_ != rht.type_id_) {
@@ -124,37 +124,37 @@ public:
 
     virtual Class* get_class() { return klass_; }
 
-    virtual String* get_string_representation(State* R);
+    virtual String* get_string_representation();
 
     // Bytecode level object interface
     // Always fails by default
-    virtual bool index_ref(State* /* R */, Value /* index */, Value& /* dest */) {
+    virtual bool index_ref(Value /* index */, Value& /* dest */) {
         return false;
     }
 
-    virtual bool index_set(State* /* R */, Value /* index */, Value /* value */) {
+    virtual bool index_set(Value /* index */, Value /* value */) {
         return false;
     }
 
-    virtual bool slot_ref(State* /* R */, Symbol* /* id */, Value& /* dest */) {
+    virtual bool slot_ref(Symbol* /* id */, Value& /* dest */) {
         return false;
     }
 
-    virtual bool slot_set(State* /* R */, Symbol* /* id */, Value /* value */) {
+    virtual bool slot_set(Symbol* /* id */, Value /* value */) {
         return false;
     }
 };
 
 class Class : public Object {
 protected:
-    Class(State* R, Symbol* name, Class* parent, RecordInfo* record_info);
+    Class(Symbol* name, Class* parent, RecordInfo* record_info);
 
 public:
-    static Class* create(State* R, Symbol* name, Class* parent) {
-        return create(R, name, parent, 0, nullptr);
+    static Class* create(Symbol* name, Class* parent) {
+        return create(name, parent, 0, nullptr);
     }
 
-    static Class* create(State* R, Symbol* name, Class* parent,
+    static Class* create(Symbol* name, Class* parent,
             unsigned slot_num, Symbol** slot_ids);
 
     Symbol* get_id() const { return id_; }
@@ -198,25 +198,25 @@ Value::get_hash() const {
 class Symbol : public Object {
     friend class SymbolProvider;
 
-    Symbol(State* R, unsigned long hash_value, const char* body, size_t length);
+    Symbol(unsigned long hash_value, const char* body, size_t length);
 
     const char* body_;
     size_t length_;
     unsigned long hash_value_;
 
-    static Symbol* create(State* R, unsigned long hash_value, const char* body, size_t length);
+    static Symbol* create(unsigned long hash_value, const char* body, size_t length);
 public:
     unsigned long get_hash() { return hash_value_; }
 
-    String* get_string_representation(State* R);
+    String* get_string_representation();
     void get_cstr(const char*& body, size_t& length) const;
 
     // Override
-    bool index_ref(State* R, Value index, Value& value) const;
+    bool index_ref(Value index, Value& value);
 
     Int get_length() const { return length_; }
 
-    String* to_string(State* R) const;
+    String* to_string() const;
 
     // For debugging
     void dump() const;
@@ -230,21 +230,21 @@ class SymbolProvider {
     State* owner;
     SymbolHashTable* string_hash_table;
 
-    SymbolProvider(State* R);
+    SymbolProvider();
 
 public:
-    static SymbolProvider* create(State* R);
+    static SymbolProvider* create();
     Symbol* get_symbol(const char* buffer, size_t length);
     Symbol* get_symbol(const char* cstr);
 };
 
 class String : public Object {
 public:
-    static String* create(State* R, const char* str);
-    static String* create(State* R, const char* cstr, size_t len);
+    static String* create(const char* str);
+    static String* create(const char* cstr, size_t len);
 
     unsigned long get_hash() { return hash_value_; }
-    String* get_string_representation(State* R);
+    String* get_string_representation();
     void get_cstr(const char*& body, size_t& length) const;
 
     char elt_ref(Int index) {
@@ -254,31 +254,31 @@ public:
     }
 
     // Override
-    bool index_ref(State* R, Value index, Value& value) const;
+    bool index_ref(Value index, Value& value);
 
     Int get_length() const { return length_; }
 
-    String* append(State* R, String* rht) const;
-    String* head(State* R, size_t end) const;
-    String* tail(State* R, size_t begin) const;
-    String* sub(State* R, size_t begin, size_t end) const;
+    String* append(String* rht) const;
+    String* head(size_t end) const;
+    String* tail(size_t begin) const;
+    String* sub(size_t begin, size_t end) const;
 
-    bool to_array(State* R, Array*& array) const;
-    Symbol* to_symbol(State* R) const;
+    bool to_array(Array*& array) const;
+    Symbol* to_symbol() const;
 private:
     const char* body_;
     size_t length_;
     unsigned long hash_value_;
 
-    String(State* R, const char* str, size_t length);
+    String(const char* str, size_t length);
 };
 
 class Array : public Object {
 public:
     unsigned long get_hash() { return reinterpret_cast<unsigned long>(this); }
 
-    static Array* create(State* R, Int size);
-    static Array* literal(State* /* R */, Array* array) { return array; }
+    static Array* create(Int size);
+    static Array* literal(Array* array) { return array; }
 
     Int get_length() const { return size_; }
 
@@ -299,33 +299,33 @@ public:
     }
 
     // Override
-    bool index_ref(State* /* R */, Value index, Value& dest) {
+    bool index_ref(Value index, Value& dest) {
         if (!index.is(Value::Type::Int)) { return false; }
         return elt_ref(index.get_int(), dest);
     }
 
     // Override
-    bool index_set(State* /* R */, Value index, Value value) {
+    bool index_set(Value index, Value value) {
         if (!index.is(Value::Type::Int)) { return false; }
         return elt_set(index.get_int(), value);
     }
 
-    void append(State* R, Value value);
+    void append(Value value);
 
-    bool to_string(State* R, String*& dest) const;
+    bool to_string(String*& dest) const;
 private:
     Value* body_;
     Int size_;
     Int allocated_size_;
 
-    Array(State* R, Int size_);
+    Array(Int size_);
 };
 
 class RestArguments : public Object {
 public:
     unsigned long get_hash() { return reinterpret_cast<unsigned long>(this); }
 
-    static RestArguments* create(State* R, Int size);
+    static RestArguments* create(Int size);
 
     Int get_length() const { return size_; }
 
@@ -346,46 +346,46 @@ public:
     }
 
     // Override
-    bool index_ref(State* /* R */, Value index, Value& dest) {
+    bool index_ref(Value index, Value& dest) {
         if (!index.is(Value::Type::Int)) { return false; }
         return elt_ref(index.get_int(), dest);
     }
 
     // Override
-    bool index_set(State* /* R */, Value index, Value value) {
+    bool index_set(Value index, Value value) {
         if (!index.is(Value::Type::Int)) { return false; }
         return elt_set(index.get_int(), value);
     }
 
-    bool to_array(State* R, Array*& dest) const;
+    bool to_array(Array*& dest) const;
 private:
     Value* body_;
     Int size_;
     Int allocated_size_;
 
-    RestArguments(State* R, Int size_);
+    RestArguments(Int size_);
 };
 
 struct HashTableNode;
 
 class HashTable : public Object {
 public:
-    static HashTable* create(State* R);
-    static HashTable* literal(State* R, Array* key, Array* value);
+    static HashTable* create();
+    static HashTable* literal(Array* key, Array* value);
 
     unsigned get_num_entries() const { return num_entries_; }
 
     bool find(Value key, Value& result) const;
-    bool insert_if_absent(State* R, Value key, Value value);
-    bool insert(State* R, Value key, Value value);
+    bool insert_if_absent(Value key, Value value);
+    bool insert(Value key, Value value);
     bool assign(Value key, Value value);
-    bool remove(State* R, Value key);
-    bool import(State* R, HashTable *table);
+    bool remove(Value key);
+    bool import(HashTable *table);
 
     // Override
-    bool index_ref(State* R, Value index, Value& dest) const;
+    bool index_ref(Value index, Value& dest);
     // Override
-    bool index_set(State* R, Value index, Value value);
+    bool index_set(Value index, Value value);
 
     // For debugging
     void dump();
@@ -398,14 +398,14 @@ private:
     unsigned table_size_;
     unsigned num_entries_;
 
-    HashTable(State* R);
+    HashTable();
 
-    void rehash(State* R);
+    void rehash();
 };
 
 class Record : public PlacementNewObj {
 public:
-    static Record* create(State* R, Class* klass);
+    static Record* create(Class* klass);
 
     bool slot_ref(Symbol* slot_id, Value& value);
     bool slot_set(Symbol* slot_id, Value value);
@@ -416,10 +416,10 @@ private:
     Value inherit_instance_;
     Value* member_slots_;
 
-    Record(State* R, Class* klass);
+    Record(Class* klass);
 };
 
-typedef Value (*NativeFunctionBody)(State*, unsigned, Value*);
+typedef Value (*NativeFunctionBody)(unsigned, Value*);
 
 class Function : public Object {
 protected:
@@ -433,29 +433,29 @@ public:
     FunctionInfo* get_info() const { return info_; }
     Closure* get_closure() const { return closure_; }
 
-    bool resolve(State* R) { return info_->resolve(R); }
+    bool resolve() { return info_->resolve(); }
 };
 
 class NativeFunction : public Function {
 public:
-    static NativeFunction* create(State* R, FunctionInfo* name,
+    static NativeFunction* create(FunctionInfo* name,
             NativeFunctionBody body);
 
     NativeFunctionBody get_body() const { return body_; }
 
-    NativeFunction* copy(State* R);
-    NativeFunction* enclose(State* R, Closure* closure);
+    NativeFunction* copy();
+    NativeFunction* enclose(Closure* closure);
 
 private:
     NativeFunctionBody body_;
     bool copied_;
 
-    NativeFunction(State* R, FunctionInfo* info, NativeFunctionBody body);
+    NativeFunction(FunctionInfo* info, NativeFunctionBody body);
 };
 
 class BytecodeFunction : public Function {
 public:
-    static BytecodeFunction* create(State* R, FunctionInfo *info,
+    static BytecodeFunction* create(FunctionInfo *info,
         unsigned func_slot_size, unsigned var_slot_size, unsigned stack_size,
         unsigned constant_table_size, Value* constant_table,
         unsigned bytecode_size, uint32_t* bytecode);
@@ -466,8 +466,8 @@ public:
     const uint32_t* get_bytecode() const { return bytecode_; }
     const Value* get_constant_table() const { return constant_table_; }
 
-    BytecodeFunction* copy(State* R);
-    BytecodeFunction* enclose(State* R, Closure* closure);
+    BytecodeFunction* copy();
+    BytecodeFunction* enclose(Closure* closure);
 
 private:
     bool copied_;
@@ -479,7 +479,7 @@ private:
     unsigned bytecode_size_;
     uint32_t* bytecode_;
 
-    BytecodeFunction(State* R, FunctionInfo* info,
+    BytecodeFunction(FunctionInfo* info,
         unsigned func_slot_size, unsigned var_slot_size, unsigned stack_size,
         unsigned constant_table_size, Value* constant_table,
         unsigned bytecode_size, uint32_t* bytecode);
@@ -490,19 +490,19 @@ class Method : public Object {
     DispatcherNode* node_;
     Closure* closure_;
 
-    Method(State* R);
+    Method();
 
 public:
-    static Method* create(State* R);
+    static Method* create();
 
     bool has_closure() const { return (closure_ != nullptr); }
     Closure* get_closure() const { return closure_; }
 
-    bool dispatch(State* R, unsigned argc, Value* args, Value& result);
-    bool add_function(State* R, Function* func);
+    bool dispatch(unsigned argc, Value* args, Value& result);
+    bool add_function(Function* func);
 
-    Method* copy(State* R);
-    Method* enclose(State* R, Closure* closure);
+    Method* copy();
+    Method* enclose(Closure* closure);
 };
 
 }

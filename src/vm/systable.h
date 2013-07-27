@@ -31,12 +31,12 @@ get_sys_hash(int i) {
 template <typename K, typename V>
 class SysTable : public PlacementNewObj {
 public:
-    static SysTable* create(State* R) {
-        return create(R, kDefaultInitialSize);
+    static SysTable* create() {
+        return create(kDefaultInitialSize);
     }
 
-    static SysTable* create(State* R, unsigned initial_size) {
-        return new (R->allocate_struct<SysTable<K,V>>()) SysTable(R, initial_size);
+    static SysTable* create(unsigned initial_size) {
+        return new (get_current_state()->allocate_struct<SysTable<K,V>>()) SysTable(initial_size);
     }
 
     unsigned get_num_entries() const { return num_entries_; }
@@ -76,7 +76,7 @@ public:
         throw "";
     }
 
-    void insert(State* R, const K& key, const V& value) {
+    void insert(const K& key, const V& value) {
         unsigned hash_value = get_sys_hash(key);
         unsigned index_begin = hash_value % table_size_;
 
@@ -84,7 +84,7 @@ public:
             set_entry(index_begin, key, value);
             table_used_++;
             num_entries_++;
-            rebuild_if_required(R);
+            rebuild_if_required();
             return;
         } else if (entry_is(index_begin, key)) {
             table_[index_begin].value = value;
@@ -97,7 +97,7 @@ public:
                 set_entry(i, key, value);
                 table_used_++;
                 num_entries_++;
-                rebuild_if_required(R);
+                rebuild_if_required();
                 return;
             } else if (entry_is(i, key)) {
                 table_[i].value = value;
@@ -108,14 +108,14 @@ public:
         assert(false);
     }
 
-    void insert_if_absent(State* R, const K& key, const V& value) {
+    void insert_if_absent(const K& key, const V& value) {
         if (exists(key)) { throw ""; }
-        else { insert(R, key, value); }
+        else { insert(key, value); }
     }
 
-    void assign(State* R, const K& key, const V& value) {
+    void assign(const K& key, const V& value) {
         if (!exists(key)) { throw ""; }
-        else { insert(R, key, value); }
+        else { insert(key, value); }
     }
 
     void remove(const K& key) {
@@ -145,9 +145,9 @@ public:
         throw "";
     }
 
-    void import(State* R, const SysTable<K,V>* other) {
+    void import(const SysTable<K,V>* other) {
         for (unsigned i = 0; i < other->table_size_; i++) {
-            insert(R, other->table_[i].key, other->table_[i].value);
+            insert(other->table_[i].key, other->table_[i].value);
         }
     }
 
@@ -155,10 +155,10 @@ private:
     const static unsigned kDefaultInitialSize = 17;
     const double kRebuildRatio = 0.60;
 
-    SysTable(State* R, unsigned initial_size)
+    SysTable(unsigned initial_size)
         : table_size_(initial_size), table_used_(0) {
 
-        table_ = R->allocate_block<SysTableEntry>(initial_size);
+        table_ = get_current_state()->allocate_block<SysTableEntry>(initial_size);
     }
 
     bool entry_is(unsigned index, const K& key) const {
@@ -172,15 +172,15 @@ private:
         table_[index].value = value;
     }
 
-    void rebuild_if_required(State* R) {
+    void rebuild_if_required() {
         if (static_cast<double>(table_used_) / table_size_ > kRebuildRatio) {
-            rebuild(R);
+            rebuild();
         }
     }
 
-    void rebuild(State* R) {
+    void rebuild() {
         unsigned newtable_size = table_size_ * 2 + 1;
-        SysTableEntry* newtable = R->allocate_block<SysTableEntry>(newtable_size);
+        SysTableEntry* newtable = get_current_state()->allocate_block<SysTableEntry>(newtable_size);
 
         for (unsigned i = 0; i < table_size_; i++) {
             if (table_[i].status == EntryStatus::Exist) {

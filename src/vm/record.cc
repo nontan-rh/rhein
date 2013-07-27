@@ -11,32 +11,32 @@
 
 namespace rhein {
 
-RecordInfo::RecordInfo(State* R, RecordInfo* parent, unsigned slot_num_,
+RecordInfo::RecordInfo(RecordInfo* parent, unsigned slot_num_,
     Symbol** slot_ids) : num_slots_(slot_num_) {
 
     if (!(parent == nullptr || parent->id_index_table_ == nullptr)) {
-        id_index_table_ = SysTable<const Symbol*, unsigned>::create(R);
-        id_index_table_->import(R, parent->id_index_table_);
+        id_index_table_ = SysTable<const Symbol*, unsigned>::create();
+        id_index_table_->import(parent->id_index_table_);
     }
 
     if (num_slots_ == 0) { return; }
 
     if (id_index_table_ == nullptr) {
-        id_index_table_ = SysTable<const Symbol*, unsigned>::create(R);
+        id_index_table_ = SysTable<const Symbol*, unsigned>::create();
     }
 
     unsigned base = id_index_table_->get_num_entries();
     for (unsigned i = 0; i < num_slots_; i++) {
-        id_index_table_->insert_if_absent(R, slot_ids[i], base + i);
+        id_index_table_->insert_if_absent(slot_ids[i], base + i);
     }
 }
 
 RecordInfo*
-RecordInfo::create(State* R, RecordInfo* parent, unsigned slot_num,
+RecordInfo::create(RecordInfo* parent, unsigned slot_num,
     Symbol** slot_ids) {
 
-    void* p = R->allocate_struct<RecordInfo>();
-    return new (p) RecordInfo(R, parent, slot_num, slot_ids);
+    void* p = get_current_state()->allocate_struct<RecordInfo>();
+    return new (p) RecordInfo(parent, slot_num, slot_ids);
 }
 
 bool
@@ -46,17 +46,17 @@ RecordInfo::get_slot_index(Symbol* slot_id, unsigned& index) const {
     return true;
 }
 
-Record::Record(State* R, Class* klass)
+Record::Record(Class* klass)
     : klass_(klass),
       inherit_instance_(Value::k_undef()),
-      member_slots_(R->allocate_raw_array(klass->get_record_info()->num_slots())) { }
+      member_slots_(get_current_state()->allocate_raw_array(klass->get_record_info()->num_slots())) { }
 
 Record*
-Record::create(State* R, Class* klass) {
+Record::create(Class* klass) {
     assert(klass->has_record_info());
-    void* p = R->allocate_object<Record>();
+    void* p = get_current_state()->allocate_object<Record>();
 
-    return new(p) Record(R, klass);
+    return new(p) Record(klass);
 }
 
 bool

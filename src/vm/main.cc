@@ -26,16 +26,16 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    State *R = new (GC_malloc(sizeof(State))) State();
-    current_state_ = R;
-    R->load_module(BasicModule::create(R));
-    R->load_module(BuiltinModule::create(R));
-    R->load_module(FileModule::create(R));
-    R->load_module(PegModule::create(R));
+    State* R = new (GC_malloc(sizeof(State))) State();
+    SwitchState ss(R);
+    R->load_module(BasicModule::create());
+    R->load_module(BuiltinModule::create());
+    R->load_module(FileModule::create());
+    R->load_module(PegModule::create());
 
-    load_script(R, argv[1]);
+    load_script(argv[1]);
 
-    execute(R, R->get_symbol("main"), 0, nullptr);
+    execute(R->get_symbol("main"), 0, nullptr);
     return 0;
 }
 

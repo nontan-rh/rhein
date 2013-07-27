@@ -189,14 +189,14 @@ protected:
     virtual ~Module() = default;
 
 public:
-    virtual bool initialize(State* R) = 0;
+    virtual bool initialize() = 0;
 };
 
 class Closure : public PlacementNewObj {
 public:
-    static Closure* create(State* R, Closure* parent,
+    static Closure* create(Closure* parent,
             unsigned arg_count, Value* args, Value* func_slots, Value* var_slots) {
-        return new (R->allocate_struct<Closure>()) Closure(parent,
+        return new (get_current_state()->allocate_struct<Closure>()) Closure(parent,
                 arg_count, args, func_slots, var_slots);
     }
 
@@ -206,7 +206,7 @@ public:
     Value* get_func_slots() const { return func_slots_; }
     Value* get_var_slots() const { return var_slots_; }
 
-    void copy_slots(State* R, BytecodeFunction* fn);
+    void copy_slots(BytecodeFunction* fn);
 
 private:
     Closure(Closure* parent, unsigned arg_count, Value* args, Value* func_slots,
@@ -223,7 +223,7 @@ private:
 
 // Frame must be a POD
 struct Frame : public PlacementNewObj {
-    Frame(State* R, Value* stack_ptr, BytecodeFunction* fn_, Frame* parent_,
+    Frame(Value* stack_ptr, BytecodeFunction* fn_, Frame* parent_,
             Closure* closure_, unsigned argc_, Value* args_,
             Value*& next_stack_ptr);
 
@@ -237,10 +237,10 @@ struct Frame : public PlacementNewObj {
     Value* sp;
     Value slots[1];
 
-    static Frame* create(State* R, Value* stack_ptr, BytecodeFunction* fn,
+    static Frame* create(Value* stack_ptr, BytecodeFunction* fn,
             Frame* parent, Closure* closure, unsigned argc, Value* args,
             Value*& next_stack_ptr) {
-        return new (stack_ptr) Frame(R, stack_ptr, fn, parent,
+        return new (stack_ptr) Frame(stack_ptr, fn, parent,
                 closure, argc, args, next_stack_ptr);
     }
 
@@ -253,9 +253,25 @@ struct Frame : public PlacementNewObj {
     bool local_arg_set(unsigned depth, unsigned offset, Value value);
 };
 
-Value execute(State* R, Symbol* entry_point, unsigned argc, Value* args);
-Value execute(State* R, Value fn, unsigned argc, Value* args);
-Value execute(State* R, BytecodeFunction* bfn, unsigned argc, Value* args);
+Value execute(Symbol* entry_point, unsigned argc, Value* args);
+Value execute(Value fn, unsigned argc, Value* args);
+Value execute(BytecodeFunction* bfn, unsigned argc, Value* args);
+
+class SwitchState {
+public:
+    SwitchState(State* R) {
+        old_state_ = current_state_;
+        current_state_ = R;
+    }
+
+    ~SwitchState() {
+        current_state_ = old_state_;
+    }
+
+private:
+    void* operator new(size_t /* size */) { return nullptr; }
+    State* old_state_;
+};
 
 }
 

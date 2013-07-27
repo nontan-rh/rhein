@@ -7,7 +7,7 @@
 
 namespace rhein {
 
-bool load_script(State *R, const char* fn);
+bool load_script(const char* fn);
 
 }
 

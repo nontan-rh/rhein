@@ -28,19 +28,19 @@ struct SymbolHashTableNode : public PlacementNewObj {
           value(value_) { }
     
     static SymbolHashTableNode* create(
-        State* R, SymbolHashTableNode* next, unsigned long key_hash,
+        SymbolHashTableNode* next, unsigned long key_hash,
         size_t length, const char* key, Symbol* value) {
 
-        void *p = R->allocate_struct<SymbolHashTableNode>();
+        void *p = get_current_state()->allocate_struct<SymbolHashTableNode>();
         return new (p) SymbolHashTableNode(next, key_hash, length, key, value);
     }
 };
 
 class SymbolHashTable : public PlacementNewObj {
 public:
-    static SymbolHashTable* create(State* R) {
-        void* p = R->allocate_struct<SymbolHashTable>();
-        return new (p) SymbolHashTable(R);
+    static SymbolHashTable* create() {
+        void* p = get_current_state()->allocate_struct<SymbolHashTable>();
+        return new (p) SymbolHashTable();
     }
 
     bool find(unsigned long hash_value, const char* key, size_t length,
@@ -60,19 +60,20 @@ public:
         return false;
     }
 
-    void insert(State* R, unsigned long hash_value,
+    void insert(unsigned long hash_value,
             const char* body, size_t length, Symbol* value) {
         auto node = table_[hash_value % table_size_].next;
         table_[hash_value % table_size_].next =
-            SymbolHashTableNode::create(R, node, hash_value, length, body, value);
+            SymbolHashTableNode::create(node, hash_value, length, body, value);
 
         num_items_++;
         if (num_items_ > kRehashRatio * table_size_) {
-            rehash(R);
+            rehash();
         }
     }
 
-    void rehash(State* R) {
+    void rehash() {
+        State* R = get_current_state();
         unsigned newtable_size = table_size_ * 2 + 1;
         SymbolHashTableNode* newtable = R->allocate_block<SymbolHashTableNode>(newtable_size);
         for(unsigned i = 0; i < table_size_; i++) {
@@ -97,35 +98,35 @@ private:
     unsigned table_size_;
     unsigned num_items_;
 
-    SymbolHashTable(State* R) : table_size_(kDefaultTableSize), num_items_(0) {
-        table_ = R->allocate_block<SymbolHashTableNode>(kDefaultTableSize);
+    SymbolHashTable() : table_size_(kDefaultTableSize), num_items_(0) {
+        table_ = get_current_state()->allocate_block<SymbolHashTableNode>(kDefaultTableSize);
         for (unsigned i = 0; i < kDefaultTableSize ; i++) {
             table_[i].next = nullptr;
         }
     }
 };
 
-SymbolProvider::SymbolProvider(State* R)
-    : owner(R) {
+SymbolProvider::SymbolProvider()
+    : owner(get_current_state()) {
     assert(!owner->has_symbol_provider()); // Not to duplicate
-    string_hash_table = SymbolHashTable::create(R);
+    string_hash_table = SymbolHashTable::create();
     owner->set_symbol_provider(this);
 }
 
 SymbolProvider*
-SymbolProvider::create(State* R) {
-    void *p = R->allocate_struct<SymbolProvider>();
-    return new (p) SymbolProvider(R);
+SymbolProvider::create() {
+    void *p = get_current_state()->allocate_struct<SymbolProvider>();
+    return new (p) SymbolProvider();
 }
 
-Symbol::Symbol(State* R, unsigned long hash_value, const char* body, size_t length)
-    : Object(R->get_symbol_class()), body_(body), length_(length),
+Symbol::Symbol(unsigned long hash_value, const char* body, size_t length)
+    : Object(get_current_state()->get_symbol_class()), body_(body), length_(length),
       hash_value_(hash_value) { }
 
 Symbol*
-Symbol::create(State* R, unsigned long hash_value, const char* body, size_t length) {
-    void* p = R->allocate_object<Symbol>();
-    return new (p) Symbol(R, hash_value, body, length);
+Symbol::create(unsigned long hash_value, const char* body, size_t length) {
+    void* p = get_current_state()->allocate_object<Symbol>();
+    return new (p) Symbol(hash_value, body, length);
 }
 
 Symbol*
@@ -140,9 +141,9 @@ SymbolProvider::get_symbol(const char* buffer, size_t length) {
     char* copybuffer = owner->allocate_block<char>(length + 1);
     memcpy(copybuffer, buffer, length + 1);
 
-    Symbol* new_symbol = Symbol::create(owner, hash_value, copybuffer, length);
+    Symbol* new_symbol = Symbol::create(hash_value, copybuffer, length);
 
-    string_hash_table->insert(owner, hash_value, copybuffer, length, new_symbol);
+    string_hash_table->insert(hash_value, copybuffer, length, new_symbol);
     return new_symbol;
 }
 
@@ -158,7 +159,7 @@ Symbol::get_cstr(const char*& b, size_t& l) const {
 }
 
 bool
-Symbol::index_ref(State* /* R */, Value vindex, Value& dest) const {
+Symbol::index_ref(Value vindex, Value& dest) {
     if (!vindex.is(Value::Type::Int)) {
         return false;
     }
@@ -173,13 +174,13 @@ Symbol::index_ref(State* /* R */, Value vindex, Value& dest) const {
 }
 
 String*
-Symbol::get_string_representation(State* R) {
-    return String::create(R, body_, length_);
+Symbol::get_string_representation() {
+    return String::create(body_, length_);
 }
 
 String*
-Symbol::to_string(State* R) const {
-    return String::create(R, body_, length_);
+Symbol::to_string() const {
+    return String::create(body_, length_);
 }
 
 void

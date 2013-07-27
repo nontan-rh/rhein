@@ -68,13 +68,13 @@ Scanner::fill(size_t additional_required_size) {
 }
 
 ScannerModule*
-ScannerModule::create(State* R) {
+ScannerModule::create() {
     void* p = R->allocate_struct<ScannerModule>();
     return new (p) ScannerModule;
 }
 
 bool
-ScannerModule::initialize(State* R) {
+ScannerModule::initialize() {
     R->add_class("Token", "any");
     return false;
 }

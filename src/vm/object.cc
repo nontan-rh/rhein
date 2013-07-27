@@ -8,28 +8,29 @@
 namespace rhein {
 
 String*
-Object::get_string_representation(State* R) {
-    return String::create(R, "#<obj>");
+Object::get_string_representation() {
+    return String::create("#<obj>");
 }
-Class::Class(State* R, Symbol* name_, Class* parent_, RecordInfo* record_info_)
-    : Object(R->get_class_class()), id_(name_), parent_(parent_), record_info_(record_info_) { }
+Class::Class(Symbol* name_, Class* parent_, RecordInfo* record_info_)
+    : Object(get_current_state()->get_class_class()), id_(name_), parent_(parent_), record_info_(record_info_) { }
 
 Class*
-Class::create(State* R, Symbol* name, Class* parent, unsigned slot_num, Symbol** slot_ids) {
-    void* p = R->allocate_object<Class>();
+Class::create(Symbol* name, Class* parent, unsigned slot_num, Symbol** slot_ids) {
+    void* p = get_current_state()->allocate_object<Class>();
     RecordInfo* record_info;
 
     if (parent != nullptr) {
-        record_info = RecordInfo::create(R, parent->record_info_, slot_num, slot_ids);
+        record_info = RecordInfo::create(parent->record_info_, slot_num, slot_ids);
     } else {
-        record_info = RecordInfo::create(R, nullptr, slot_num, slot_ids);
+        record_info = RecordInfo::create(nullptr, slot_num, slot_ids);
     }
 
-    return new (p) Class(R, name, parent, record_info);
+    return new (p) Class(name, parent, record_info);
 }
 
 Class*
-Value::get_class(State *R) const {
+Value::get_class() const {
+    State* R = get_current_state();
     switch (type_id_) {
     case Type::Nil:
         return R->get_nil_class();

@@ -32,7 +32,7 @@ BinaryReader::read32Bit(FILE* fp, uint32_t& word) {
 }
 
 bool
-BinaryReader::readString(FILE* fp, State* R, String*& result) {
+BinaryReader::readString(FILE* fp, String*& result) {
     unsigned long length;
     if (!BinaryReader::readBER(fp, length)) {
         result = nullptr;
@@ -47,13 +47,13 @@ BinaryReader::readString(FILE* fp, State* R, String*& result) {
         }
         buffer[i] = (char)fgetc(fp);
     }
-    result = String::create(R, buffer, length);
+    result = String::create(buffer, length);
     delete[] buffer;
     return true;
 }
 
 bool
-BinaryReader::readSymbol(FILE* fp, State* R, Symbol*& result) {
+BinaryReader::readSymbol(FILE* fp, Symbol*& result) {
     unsigned long length;
     if(!BinaryReader::readBER(fp, length)) {
         result = nullptr;
@@ -68,7 +68,7 @@ BinaryReader::readSymbol(FILE* fp, State* R, Symbol*& result) {
         }
         buffer[i] = (char)fgetc(fp);
     }
-    result = R->get_symbol(buffer, length);
+    result = get_current_state()->get_symbol(buffer, length);
     delete[] buffer;
     return true;
 }
@@ -114,13 +114,13 @@ State::read_class(FILE* fp) {
     Symbol* parent_name;
     unsigned long slot_num;
 
-    BinaryReader::readSymbol(fp, this, klass_name);
-    BinaryReader::readSymbol(fp, this, parent_name);
+    BinaryReader::readSymbol(fp, klass_name);
+    BinaryReader::readSymbol(fp, parent_name);
     BinaryReader::readBER(fp, slot_num);
 
     auto slots = new Symbol*[slot_num];
     for (unsigned long i = 0; i < slot_num; i++) {
-        BinaryReader::readSymbol(fp, this, slots[i]);
+        BinaryReader::readSymbol(fp, slots[i]);
     }
 
     Value parent;
@@ -128,7 +128,7 @@ State::read_class(FILE* fp) {
         return false;
     }
 
-    add_class(Class::create(this, klass_name, parent.get_obj<Class>(),
+    add_class(Class::create(klass_name, parent.get_obj<Class>(),
             slot_num, slots));
     return true;
 }
@@ -143,7 +143,7 @@ State::read_function(FILE* fp) {
     unsigned long function_slot_num;
     unsigned long variable_slot_num;
     unsigned long stack_size;
-    BinaryReader::readSymbol(fp, this, function_name);
+    BinaryReader::readSymbol(fp, function_name);
     BinaryReader::readByte(fp, variable_arg);
     BinaryReader::readBER(fp, argument_num);
     argument_dispatch_kinds = new FunctionInfo::ArgDispatchKind[argument_num];
@@ -163,7 +163,7 @@ State::read_function(FILE* fp) {
             default:
                 throw "";
         }
-        BinaryReader::readSymbol(fp, this, argument_type_ids[i]);
+        BinaryReader::readSymbol(fp, argument_type_ids[i]);
     }
     BinaryReader::readBER(fp, function_slot_num);
     BinaryReader::readBER(fp, variable_slot_num);
@@ -193,14 +193,14 @@ State::read_function(FILE* fp) {
             case LiteralSigniture::Symbol:
                 {
                     Symbol* string_value;
-                    BinaryReader::readSymbol(fp, this, string_value);
+                    BinaryReader::readSymbol(fp, string_value);
                     constant_table[i] = Value::by_object(string_value);
                 }
                 break;
             case LiteralSigniture::String:
                 {
                     String* string_value;
-                    BinaryReader::readString(fp, this, string_value);
+                    BinaryReader::readString(fp, string_value);
                     constant_table[i] = Value::by_object(string_value);
                 }
                 break;
@@ -216,8 +216,7 @@ State::read_function(FILE* fp) {
         BinaryReader::read32Bit(fp, bytecode[i]);
     }
     add_function(BytecodeFunction::create(
-        this,
-        FunctionInfo::create(this, function_name, (bool)variable_arg,
+        FunctionInfo::create(function_name, (bool)variable_arg,
             argument_num, argument_dispatch_kinds, argument_type_ids),
         function_slot_num,
         variable_slot_num,
@@ -249,13 +248,13 @@ State::read_object(FILE* fp) {
 bool
 State::load_file(FILE* fp) {
     Symbol* init_name;
-    BinaryReader::readSymbol(fp, this, init_name);
+    BinaryReader::readSymbol(fp, init_name);
     unsigned long item_num;
     if (!BinaryReader::readBER(fp, item_num)) { return false; }
     for (unsigned i = 0; i < item_num; i++) {
         read_object(fp);
     }
-    execute(this, init_name, 0, nullptr);
+    execute(init_name, 0, nullptr);
     return true;
 }
 

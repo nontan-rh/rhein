@@ -36,14 +36,14 @@ public:
         Instance,
     };
 
-    static FunctionInfo* create(State* R, Symbol* id);
-    static FunctionInfo* create(State* R, Symbol* id, bool variadic,
+    static FunctionInfo* create(Symbol* id);
+    static FunctionInfo* create(Symbol* id, bool variadic,
             unsigned num_args, ArgDispatchKind* disp_kind,
             Symbol** arg_class_ids);
-    static FunctionInfo* create(State* R, Symbol* id, bool variadic,
+    static FunctionInfo* create(Symbol* id, bool variadic,
             unsigned num_args,
             std::initializer_list<const char*> arg_class_ids);
-    static FunctionInfo* create(State* R, Symbol* id, bool variadic,
+    static FunctionInfo* create(Symbol* id, bool variadic,
             unsigned num_args,
             std::initializer_list<ArgDispatchKind> disp_kinds,
             std::initializer_list<const char*> arg_class_ids);
@@ -56,9 +56,9 @@ public:
     Class** arg_classes() const { return arg_classes_; }
 
     bool is_resolved() const { return resolved_; }
-    bool resolve(State* R);
+    bool resolve();
 
-    bool check_type(State* R, unsigned argc, Value* args);
+    bool check_type(unsigned argc, Value* args);
 private:
     Symbol* name_;
     bool variadic_;
@@ -81,11 +81,11 @@ class RecordInfo {
 
     static void* operator new(size_t /* size */, void *p) { return p; }
 
-    RecordInfo(State* R, RecordInfo* parent, unsigned slot_num_,
+    RecordInfo(RecordInfo* parent, unsigned slot_num_,
             Symbol** slot_ids);
 
 public:
-    static RecordInfo* create(State* R, RecordInfo* parent, unsigned slot_num,
+    static RecordInfo* create(RecordInfo* parent, unsigned slot_num,
         Symbol** slot_ids);
 
     unsigned num_slots() const { return num_slots_; }

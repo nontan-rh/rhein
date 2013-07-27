@@ -8,7 +8,7 @@
 namespace rhein {
 
 Token*
-Scanner::get_token(State* R) {
+Scanner::get_token() {
 int space_kind = 0;
 
 std:

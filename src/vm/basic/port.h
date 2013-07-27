@@ -37,57 +37,58 @@ public:
         Tail,
     };
 
-    static File* create(State* R, String* name, RWFlags rw, PosFlags pos);
+    static File* create(String* name, RWFlags rw, PosFlags pos);
     Byte read_byte();
     Char read_char();
     size_t read_bytes_as_possible_to_buffer(char* buf, size_t size);
     bool eof();
 
 private:
-    File(State* R, String* name, RWFlags rw, PosFlags pos);
+    File(String* name, RWFlags rw, PosFlags pos);
     FILE* fp;
 };
 
 class FileModule : public Module, public PlacementNewObj {
 public:
-    static FileModule* create(State* R);
-    bool initialize(State* R);
+    static FileModule* create();
+    bool initialize();
 };
 
 class PortSeq : public List {
 public:
-    static PortSeq* create(State* R, Port* p) {
+    static PortSeq* create(Port* p) {
+        State* R = get_current_state();
         if (p->eof()) { return nullptr; }
-        return new (R->allocate_object<PortSeq>()) PortSeq(R, p);
+        return new (R->allocate_object<PortSeq>()) PortSeq(p);
     }
 
-    Value get_head(State* R) { return Value::by_char(get_head_char(R)); }
-    Value get_tail(State* R) {
-        PortSeq* t = get_tail_native(R);
+    Value get_head() { return Value::by_char(get_head_char()); }
+    Value get_tail() {
+        PortSeq* t = get_tail_native();
         if (!t) { return Value::k_nil(); }
-        return Value::by_object(get_tail_native(R));
+        return Value::by_object(get_tail_native());
     }
 
-    Char get_head_char(State* R) {
-        if (!already_read_) { read_next(R); }
+    Char get_head_char() {
+        if (!already_read_) { read_next(); }
         return head_;
     }
 
-    PortSeq* get_tail_native(State* R) {
-        if (!already_read_) { read_next(R); }
+    PortSeq* get_tail_native() {
+        if (!already_read_) { read_next(); }
         return u_.tail_;
     }
 
-    void read_next(State* R) {
+    void read_next() {
         assert(!already_read_);
         head_ = u_.port_->read_char();
-        u_.tail_ = create(R, u_.port_);
+        u_.tail_ = create(u_.port_);
         already_read_ = true;
     }
 
 private:
-    PortSeq(State* R, Port* port)
-        : List(R->get_class("PortSeq")),
+    PortSeq(Port* port)
+        : List(get_current_state()->get_class("PortSeq")),
           already_read_(false), head_(0) {
         u_.port_ = port;
     }

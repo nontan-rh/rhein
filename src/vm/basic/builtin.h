@@ -10,8 +10,8 @@ namespace builtin {
 
 class BuiltinModule : public Module, public PlacementNewObj {
 public:
-    static BuiltinModule* create(State* R);
-    bool initialize(State* R);
+    static BuiltinModule* create();
+    bool initialize();
 };
 
 }

@@ -13,20 +13,21 @@
 namespace rhein {
 
 FunctionInfo*
-FunctionInfo::create(State* R, Symbol* id) {
-    return create(R, id, true, 0, nullptr, nullptr);
+FunctionInfo::create(Symbol* id) {
+    return create(id, true, 0, nullptr, nullptr);
 }
 
 FunctionInfo*
-FunctionInfo::create(State* R, Symbol* id, bool variadic, unsigned num_args,
+FunctionInfo::create(Symbol* id, bool variadic, unsigned num_args,
         ArgDispatchKind* disp_kinds, Symbol** arg_class_ids) {
-    void* p = R->allocate_struct<FunctionInfo>();
+    void* p = get_current_state()->allocate_struct<FunctionInfo>();
     return new (p) FunctionInfo(id, variadic, num_args, disp_kinds, arg_class_ids);
 }
 
 FunctionInfo*
-FunctionInfo::create(State* R, Symbol* id, bool variadic, unsigned num_args,
+FunctionInfo::create(Symbol* id, bool variadic, unsigned num_args,
         std::initializer_list<const char*> ids) {
+    State* R = get_current_state();
     Symbol** s = R->allocate_block<Symbol*>(ids.size());
     ArgDispatchKind* d = R->allocate_block<ArgDispatchKind>(ids.size());
     unsigned c = 0;
@@ -35,15 +36,16 @@ FunctionInfo::create(State* R, Symbol* id, bool variadic, unsigned num_args,
         d[c] = ArgDispatchKind::Instance;
         c++;
     }
-    return create(R, id, variadic, num_args, d, s);
+    return create(id, variadic, num_args, d, s);
 }
 
 FunctionInfo*
-FunctionInfo::create(State* R, Symbol* id, bool variadic, unsigned num_args,
+FunctionInfo::create(Symbol* id, bool variadic, unsigned num_args,
         std::initializer_list<ArgDispatchKind> kinds,
         std::initializer_list<const char*> ids) {
     if (ids.size() != kinds.size()) { throw ""; }
 
+    State* R = get_current_state();
     Symbol** s = R->allocate_block<Symbol*>(ids.size());
     ArgDispatchKind* d = R->allocate_block<ArgDispatchKind>(ids.size());
 
@@ -54,11 +56,12 @@ FunctionInfo::create(State* R, Symbol* id, bool variadic, unsigned num_args,
         s[c] = R->get_symbol(*i);
         d[c] = *k;
     }
-    return create(R, id, variadic, num_args, d, s);
+    return create(id, variadic, num_args, d, s);
 }
 
 bool
-FunctionInfo::resolve(State* R) {
+FunctionInfo::resolve() {
+    State* R = get_current_state();
     arg_classes_ = R->allocate_block<Class*>(num_args_);
 
     for (unsigned i = 0; i < num_args_; i++) {
@@ -75,19 +78,20 @@ FunctionInfo::resolve(State* R) {
 }
 
 bool
-FunctionInfo::check_type(State* R, unsigned argc, Value* args) {
-    if (!resolved_) { resolve(R); }
+FunctionInfo::check_type(unsigned argc, Value* args) {
+    State* R = get_current_state();
+    if (!resolved_) { resolve(); }
     if (argc == num_args_ || (variadic_ && argc >= num_args_)) {
         for (unsigned i = 0; i < num_args_; i++) {
             switch (disp_kinds_[i]) {
                 case ArgDispatchKind::Class:
-                    if (!(args[i].get_class(R) == R->get_class_class()
+                    if (!(args[i].get_class() == R->get_class_class()
                                 && args[i].get_obj<Class>() == arg_classes_[i])) {
                         return false;
                     }
                     break;
                 case ArgDispatchKind::Instance:
-                    if (!args[i].get_class(R)->is_subclass_of(arg_classes_[i])) {
+                    if (!args[i].get_class()->is_subclass_of(arg_classes_[i])) {
                         return false;
                     }
                     break;
@@ -98,35 +102,35 @@ FunctionInfo::check_type(State* R, unsigned argc, Value* args) {
     return false;
 }
 
-NativeFunction::NativeFunction(State* R, FunctionInfo* info, NativeFunctionBody body_)
-    : Function(R->get_native_function_class(), info), body_(body_), copied_(false) { }
+NativeFunction::NativeFunction(FunctionInfo* info, NativeFunctionBody body_)
+    : Function(get_current_state()->get_native_function_class(), info), body_(body_), copied_(false) { }
 
 NativeFunction*
-NativeFunction::create(State* R, FunctionInfo* info, NativeFunctionBody body) {
-    void* p = R->allocate_object<NativeFunction>();
-    return new (p) NativeFunction(R, info, body);
+NativeFunction::create(FunctionInfo* info, NativeFunctionBody body) {
+    void* p = get_current_state()->allocate_object<NativeFunction>();
+    return new (p) NativeFunction(info, body);
 }
 
 NativeFunction*
-NativeFunction::copy(State* R) {
-    void* p = R->allocate_object<NativeFunction>();
+NativeFunction::copy() {
+    void* p = get_current_state()->allocate_object<NativeFunction>();
     NativeFunction* copy_func = new (p) NativeFunction(*this);
     copy_func->copied_ = true;
     return copy_func;
 }
 
 NativeFunction*
-NativeFunction::enclose(State* R, Closure* closure) {
-    NativeFunction* closure_func = copy(R);
+NativeFunction::enclose(Closure* closure) {
+    NativeFunction* closure_func = copy();
     closure_func->closure_ = closure;
     return closure_func;
 }
 
-BytecodeFunction::BytecodeFunction(State* R, FunctionInfo* info,
+BytecodeFunction::BytecodeFunction(FunctionInfo* info,
     unsigned func_slot_size, unsigned var_slot_size,
     unsigned stack_size, unsigned constant_table_size,
     Value* constant_table, unsigned bytecode_size, uint32_t* bytecode)
-    : Function(R->get_bytecode_function_class(), info),
+    : Function(get_current_state()->get_bytecode_function_class(), info),
       copied_(false),
       stack_size_(stack_size), func_slot_size_(func_slot_size),
       var_slot_size_(var_slot_size),
@@ -136,41 +140,42 @@ BytecodeFunction::BytecodeFunction(State* R, FunctionInfo* info,
       bytecode_(bytecode) { }
 
 BytecodeFunction*
-BytecodeFunction::create(State* R, FunctionInfo* info,
+BytecodeFunction::create(FunctionInfo* info,
     unsigned func_slot_size, unsigned var_slot_size, unsigned stack_size,
     unsigned constant_table_size, Value* constant_table,
     unsigned bytecode_size, uint32_t* bytecode) {
 
-    void* p = R->allocate_object<BytecodeFunction>();
-    return new (p) BytecodeFunction(R, info,
+    void* p = get_current_state()->allocate_object<BytecodeFunction>();
+    return new (p) BytecodeFunction(info,
         func_slot_size, var_slot_size, stack_size, constant_table_size,
         constant_table, bytecode_size, bytecode);
 }
 
 BytecodeFunction*
-BytecodeFunction::copy(State* R) {
-    void* p = R->allocate_object<BytecodeFunction>();
+BytecodeFunction::copy() {
+    void* p = get_current_state()->allocate_object<BytecodeFunction>();
     BytecodeFunction* copy_func = new (p) BytecodeFunction(*this);
     copy_func->copied_ = true;
     return copy_func;
 }
 
 BytecodeFunction*
-BytecodeFunction::enclose(State* R, Closure* closure) {
-    BytecodeFunction* closure_func = copy(R);
+BytecodeFunction::enclose(Closure* closure) {
+    BytecodeFunction* closure_func = copy();
     closure_func->closure_ = closure;
     return closure_func;
 }
 
 class DispatcherNode {
 public:
-    static DispatcherNode* create(State* R) {
-        void* p = R->allocate_struct<DispatcherNode>();
-        return new (p) DispatcherNode(R);
+    static DispatcherNode* create() {
+        void* p = get_current_state()->allocate_struct<DispatcherNode>();
+        return new (p) DispatcherNode();
     }
 
-    bool dispatch(State* R, unsigned argc, Value* args, unsigned index,
+    bool dispatch(unsigned argc, Value* args, unsigned index,
             Value& func) {
+        State* R = get_current_state();
         if (argc == index) {
             if (!entry_.is(Value::Type::Nil)) {
                 func = entry_;
@@ -183,12 +188,12 @@ public:
             }
         }
 
-        if (args[index].get_class(R) == R->get_class_class()) {
+        if (args[index].get_class() == R->get_class_class()) {
             Class* klass = args[index].get_obj<Class>();
             while (klass) {
                 if (class_table_->exists(klass)) {
                     DispatcherNode* child = class_table_->find(klass);
-                    if (child->dispatch(R, argc, args, index + 1, func)) {
+                    if (child->dispatch(argc, args, index + 1, func)) {
                         return true;
                     }
                 }
@@ -196,11 +201,11 @@ public:
             }
         }
 
-        Class* klass = args[index].get_class(R);
+        Class* klass = args[index].get_class();
         while (klass) {
             if (child_table_->exists(klass)) {
                 DispatcherNode* child = child_table_->find(klass);
-                if (child->dispatch(R, argc, args, index + 1, func)) {
+                if (child->dispatch(argc, args, index + 1, func)) {
                     return true;
                 }
             }
@@ -213,7 +218,7 @@ public:
         return false;
     }
 
-    bool addFunction(State* R, Value func, Function* func_body,
+    bool addFunction(Value func, Function* func_body,
             unsigned index) {
         if (func_body->get_info()->num_args() == index) {
             if (func_body->get_info()->variadic()) {
@@ -236,23 +241,23 @@ public:
         switch (func_body->get_info()->disp_kinds()[index]) {
             case FunctionInfo::ArgDispatchKind::Class:
                 if (!class_table_->exists(klass)) {
-                    child = create(R);
-                    class_table_->insert_if_absent(R, klass, child);
+                    child = create();
+                    class_table_->insert_if_absent(klass, child);
                 } else {
                     child = class_table_->find(klass);
                 }
                 break;
             case FunctionInfo::ArgDispatchKind::Instance:
                 if (!child_table_->exists(klass)) {
-                    child = create(R);
-                    child_table_->insert_if_absent(R, klass, child);
+                    child = create();
+                    child_table_->insert_if_absent(klass, child);
                 } else {
                     child = child_table_->find(klass);
                 }
                 break;
         }
 
-        return child->addFunction(R, func, func_body, index + 1);
+        return child->addFunction(func, func_body, index + 1);
     }
 
 private:
@@ -263,40 +268,40 @@ private:
 
     static void* operator new (size_t /* size */, void* p) { return p; }
 
-    DispatcherNode(State* R)
+    DispatcherNode()
         : entry_(Value::k_nil()), variable_entry_(Value::k_nil()),
-          class_table_(SysTable<const Class*, DispatcherNode*>::create(R)),
-          child_table_(SysTable<const Class*, DispatcherNode*>::create(R)) { }
+          class_table_(SysTable<const Class*, DispatcherNode*>::create()),
+          child_table_(SysTable<const Class*, DispatcherNode*>::create()) { }
 };
 
-Method::Method(State* R)
-    : Object(R->get_method_class()), copied_(false),
-      node_(DispatcherNode::create(R)),
+Method::Method()
+    : Object(get_current_state()->get_method_class()), copied_(false),
+      node_(DispatcherNode::create()),
       closure_(nullptr) { }
 
 Method*
-Method::create(State* R) {
-    void* p = R->allocate_object<Method>();
-    return new (p) Method(R);
+Method::create() {
+    void* p = get_current_state()->allocate_object<Method>();
+    return new (p) Method();
 }
 
 bool
-Method::dispatch(State* R, unsigned argc, Value* args, Value& result) {
-    if (!node_->dispatch(R, argc, args, 0, result)) {
+Method::dispatch(unsigned argc, Value* args, Value& result) {
+    if (!node_->dispatch(argc, args, 0, result)) {
         return false;
     }
     return true;
 }
 
 bool
-Method::add_function(State* R, Function* func) {
-    if (!func->get_info()->is_resolved()) { func->get_info()->resolve(R); }
-    return node_->addFunction(R, Value::by_object(func), func, 0);
+Method::add_function(Function* func) {
+    if (!func->get_info()->is_resolved()) { func->get_info()->resolve(); }
+    return node_->addFunction(Value::by_object(func), func, 0);
 }
 
 Method*
-Method::copy(State* R) {
-    void* p = R->allocate_object<Method>();
+Method::copy() {
+    void* p = get_current_state()->allocate_object<Method>();
     Method* copy_method = new (p) Method(*this);
 
     copy_method->copied_ = true;
@@ -304,8 +309,8 @@ Method::copy(State* R) {
 }
 
 Method*
-Method::enclose(State* R, Closure* closure) {
-    Method* closure_method = copy(R);
+Method::enclose(Closure* closure) {
+    Method* closure_method = copy();
     closure_method->closure_ = closure;
     return closure_method;
 }
