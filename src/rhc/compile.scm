@@ -647,6 +647,10 @@
   (x->lseq
     (list (vector "load" (constant "char" (string (~ a 'value)))))))
 
+(define-method generate-code ((a <rh-symbol-literal>))
+  (x->lseq
+    (list (vector "load" (constant "symbol" (~ a 'value))))))
+
 (define-method generate-code ((a <rh-string-literal>))
   (x->lseq
     (list (vector "load" (constant "string" (~ a 'value))))))

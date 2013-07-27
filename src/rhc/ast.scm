@@ -116,6 +116,9 @@
 (define-class <rh-character-literal> (<rh-ast>)
   ((value :init-keyword :value)))
 
+(define-class <rh-symbol-literal> (<rh-ast>)
+  ((value :init-keyword :value)))
+
 (define-class <rh-string-literal> (<rh-ast>)
   ((value :init-keyword :value)))
 

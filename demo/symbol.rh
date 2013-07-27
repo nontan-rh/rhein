@@ -1,0 +1,7 @@
+
+def main() {
+    print(":hello               :", :hello)
+    print(":hello.is_a(~symbol) :", :hello.is_a(~symbol))
+    print(":hello.is_a(~string) :", :hello.is_a(~string))
+}
+

@@ -208,6 +208,9 @@
                                     [c <- $.])
                                 c)
                               ($c printable-list)))
+    (symbol-literal . ,($do (($s ":")
+                             [s <- 'IDENT])
+                         (make <rh-symbol-literal> :value (symbol->string s))))
     (string-literal . ,($do ('DQUOTE
                              [s <- ($* 'STRING-CHARACTER)]
                              'DQUOTE
@@ -258,6 +261,7 @@
                                          'character-literal
                                          'array-literal
                                          'hash-literal
+                                         'symbol-literal
                                          'string-literal
                                          'named-function-call
                                          'special-literal
