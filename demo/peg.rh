@@ -1,5 +1,9 @@
 
 def main() {
-    pseq(pstr("hello").plus(), pchar().add(?a, ?z))
+    local x
+
+    x = pstr("hello").parse("hello".to_list())
+    print(x[0], x[1], x[2])
+
 }
 

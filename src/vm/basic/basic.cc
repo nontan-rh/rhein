@@ -273,6 +273,36 @@ fn_callback(unsigned, Value* args) {
     return execute(args[0].get_obj<BytecodeFunction>(), 0, nullptr);
 }
 
+Value
+fn_cons(unsigned, Value* args) {
+    SingleList* tail;
+
+    if (args[1].is(Value::Type::Nil)) {
+        tail = nullptr;
+    } else if (args[1].get_class()
+            == get_current_state()->get_class("List")) {
+        tail = args[1].get_obj<SingleList>();
+    } else {
+        return Value::k_nil();
+    }
+
+    return Value::by_object(SingleList::create(args[0], tail));
+}
+
+Value
+fn_to_list(unsigned, Value* args) {
+    String* s = args[0].get_obj<String>();
+    SingleList* x = nullptr;
+
+    if (s->get_length() == 0) { return Value::k_nil(); }
+
+    for (int i = s->get_length() - 1; i >= 0; i--) {
+        x = SingleList::create(Value::by_char(s->elt_ref(i)), x);
+    }
+
+    return Value::by_object(x);
+}
+
 BasicModule*
 BasicModule::create() {
     State* R = get_current_state();
@@ -283,6 +313,7 @@ BasicModule::create() {
 bool
 BasicModule::initialize() {
     State* R = get_current_state();
+    R->add_class("List", "any");
     R->add_native_function("print", true, 0, {}, fn_print);
     R->add_native_function("write", false, 1, {"any"}, fn_write);
     R->add_native_function("input", false, 0, {}, fn_input_0);
@@ -299,6 +330,8 @@ BasicModule::initialize() {
     R->add_native_function("die", true, 0, {}, fn_die);
     R->add_native_function("is_a", false, 2, {"any", "class"}, fn_is_a);
     R->add_native_function("load", false, 1, {"string"}, fn_load);
+    R->add_native_function("cons", false, 2, {"any", "any"}, fn_cons);
+    R->add_native_function("to_list", false, 1, {"string"}, fn_to_list);
     R->add_native_function("callback", false, 1, {"bytecode_function"}, fn_callback);
     return false;
 }

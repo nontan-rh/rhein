@@ -1,0 +1,14 @@
+
+def is_nil(x) {
+    if x eq nil { true }
+    else { false }
+}
+
+def main() {
+    local list = "hello".to_list()
+    while not list.is_nil() {
+        print(list.head)
+        list = list.tail
+    }
+}
+

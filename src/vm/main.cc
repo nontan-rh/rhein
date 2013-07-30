@@ -27,6 +27,7 @@ int main(int argc, char** argv) {
     }
 
     State* R = new (GC_malloc(sizeof(State))) State();
+    volatile State* Rv = R;
     SwitchState ss(R);
     R->load_module(BasicModule::create());
     R->load_module(BuiltinModule::create());
@@ -36,6 +37,7 @@ int main(int argc, char** argv) {
     load_script(argv[1]);
 
     execute(R->get_symbol("main"), 0, nullptr);
+    Rv = nullptr;
     return 0;
 }
 

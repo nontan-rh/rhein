@@ -39,6 +39,7 @@ public:
     static Value by_int(Int value) { return Value(value); }
     static Value by_char(uint32_t ch) { return Value(ch); }
     static Value by_object(const Object* obj) {
+        if (obj == nullptr) { return k_nil(); }
         return Value(const_cast<Object*>(obj));
     }
     static Value by_record(Record* rec) { return Value(rec); }
@@ -51,8 +52,12 @@ public:
     bool get_bool() const { assert(type_id_ == Type::Bool); return u_.v_bool_; }
     template <class T>
     T *get_obj() const {
-        assert(type_id_ == Type::Object);
-        return reinterpret_cast<T*>(u_.v_obj_);
+        if (type_id_ == Type::Object) {
+            return reinterpret_cast<T*>(u_.v_obj_);
+        } else if (type_id_ == Type::Nil) {
+            return nullptr;
+        }
+        assert(false);
     }
     Record* get_rec() const { assert(type_id_ == Type::Record); return u_.v_rec_; }
 

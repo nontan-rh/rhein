@@ -139,6 +139,7 @@ SymbolProvider::get_symbol(const char* buffer, size_t length) {
     }
 
     char* copybuffer = owner->allocate_block<char>(length + 1);
+    copybuffer[length] = '\0';
     memcpy(copybuffer, buffer, length + 1);
 
     Symbol* new_symbol = Symbol::create(hash_value, copybuffer, length);

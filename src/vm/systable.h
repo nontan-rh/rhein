@@ -159,6 +159,9 @@ private:
         : table_size_(initial_size), table_used_(0) {
 
         table_ = get_current_state()->allocate_block<SysTableEntry>(initial_size);
+        for (unsigned i = 0; i < table_size_; i++) {
+            table_[i].status = EntryStatus::Empty;
+        }
     }
 
     bool entry_is(unsigned index, const K& key) const {
@@ -182,6 +185,10 @@ private:
         unsigned newtable_size = table_size_ * 2 + 1;
         SysTableEntry* newtable = get_current_state()->allocate_block<SysTableEntry>(newtable_size);
 
+        for (unsigned i = 0; i < newtable_size; i++) {
+            newtable[i].status = EntryStatus::Empty;
+        }
+
         for (unsigned i = 0; i < table_size_; i++) {
             if (table_[i].status == EntryStatus::Exist) {
                 unsigned hash_value = get_sys_hash(table_[i].key);
@@ -193,8 +200,8 @@ private:
                     continue;
                 }
 
-                for (unsigned j = (newindex + 1) % table_size_; ;
-                        j = (j + 1) % table_size_) {
+                for (unsigned j = (newindex + 1) % newtable_size; ;
+                        j = (j + 1) % newtable_size) {
                     assert(newindex != j);
                     if (newtable[j].status == EntryStatus::Empty) {
                         newtable[j].status = EntryStatus::Exist;

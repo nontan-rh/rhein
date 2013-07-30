@@ -3,6 +3,7 @@
 //
 
 #include "peg.h"
+#include <iostream>
 
 namespace rhein {
 namespace peg {
@@ -19,6 +20,7 @@ PegString::parse(List* src, Value& obj, List*& next) {
 
         char str_ch = str_->elt_ref(i);
         char src_ch = src->get_head().get_char();
+        std::cout << str_ch << ":" << src_ch << std::endl;
         if (str_ch != src_ch) {
             next = prev;
             obj = Value::k_nil();
@@ -26,10 +28,16 @@ PegString::parse(List* src, Value& obj, List*& next) {
         }
 
         prev = src;
-        src = src->get_tail().get_obj<List>();
+
+        Value tail_v = src->get_tail();
+        if (tail_v.is(Value::Type::Nil)) {
+            src = nullptr;
+        } else {
+            src = tail_v.get_obj<List>();
+        }
     }
 
-    next = prev;
+    next = src;
     obj = Value::by_object(str_);
     return true;
 }
@@ -48,7 +56,7 @@ PegCharClass::add(char begin, char end) {
         for (unsigned i = b_y; i < kIntBits; i++) {
             table_[b_x] |= 1 << i;
         }
-        for (unsigned i = b_x; i < e_x - 1; i++) {
+        for (unsigned i = b_x + 1; i < e_x - 1; i++) {
             table_[i]   =  0xffffffff;
         }
         for (unsigned i = 0; i < e_y; i++) {
@@ -77,6 +85,7 @@ PegCharClass::parse(List* src, Value& obj, List*& next) {
 
     if (static_cast<bool>((table_[x] >> y) & 1) != inverted_) {
         next = src->get_tail().get_obj<List>();
+        obj = Value::by_char(ch);
         return true;
     }
 
@@ -200,8 +209,24 @@ PegTry::parse(List* src, Value& obj, List*& next) {
 }
 
 Value
-fn_parse(unsigned /* argc */, Value* /* args */) {
-    return Value::k_nil();
+fn_parse(unsigned /* argc */, Value* args) {
+    Value res;
+    bool succ;
+    List* rest;
+    PegSyntax* syn = args[0].get_obj<PegSyntax>();
+    List* src = args[1].get_obj<List>();
+    Array* ary = Array::create(3);
+
+    succ = syn->parse(src, res, rest);
+
+    ary->elt_set(0, Value::by_bool(succ));
+    ary->elt_set(1, res);
+    if (rest != nullptr) {
+        ary->elt_set(2, Value::by_object(rest));
+    } else {
+        ary->elt_set(2, Value::k_nil());
+    }
+    return Value::by_object(ary);
 }
 
 Value
@@ -315,7 +340,7 @@ PegModule::initialize() {
     R->add_class("PegAction", "PegSyntax");
     R->add_class("PegAny", "PegSyntax");
     R->add_class("PegTry", "PegSyntax");
-    R->add_native_function("parse", false, 1, {"string", "PortSeq"}, fn_parse);
+    R->add_native_function("parse", false, 2, {"PegSyntax", "List"}, fn_parse);
     R->add_native_function("pstr", false, 1, {"string"}, fn_pstr);
     R->add_native_function("pchar", false, 0, { }, fn_pchar);
     R->add_native_function("add", false, 3, {"PegCharClass", "char", "char"}, fn_pchar_add);
