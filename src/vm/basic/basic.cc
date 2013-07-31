@@ -157,6 +157,34 @@ fn_to_string(unsigned /* argc */, Value* args) {
 }
 
 Value
+fn_list_to_string(unsigned /* argc */, Value* args) {
+    size_t len;
+    List* list = args[0].get_obj<List>();
+
+    List* p = list;
+    for (len = 0; p != nullptr; p = p->get_tail().get_obj<List>()) {
+        if (!p->get_head().is(Value::Type::Char)) { throw ""; }
+        len++;
+    }
+    char* buf = new char[len + 1];
+
+    List* q = list;
+    for (int i = 0; q != nullptr; i++, q = q->get_tail().get_obj<List>()) {
+        buf[i] = q->get_head().get_char();
+    }
+    buf[len] = '\0';
+
+    Value s = Value::by_object(String::create(buf, len));
+    delete[] buf;
+    return s;
+}
+
+Value
+fn_nil_to_string(unsigned /* argc */, Value* /* args */) {
+    return Value::by_object(String::create(""));
+}
+
+Value
 fn_append(unsigned argc, Value* args) {
     State* R = get_current_state();
     String* result = args[0].get_obj<String>();
@@ -322,6 +350,8 @@ BasicModule::initialize() {
     R->add_native_function("literal", true, 0, {}, fn_literal);
     R->add_native_function("to_array", false, 1, {"string"}, fn_to_array);
     R->add_native_function("to_string", false, 1, {"array"}, fn_to_string);
+    R->add_native_function("to_string", false, 1, {"List"}, fn_list_to_string);
+    R->add_native_function("to_string", false, 1, {"nil"}, fn_nil_to_string);
     R->add_native_function("append", true, 1, {"string"}, fn_append);
     R->add_native_function("head", false, 2, {"string", "int"}, fn_head);
     R->add_native_function("tail", false, 2, {"string", "int"}, fn_tail);

@@ -10,5 +10,9 @@ def main() {
         print(list.head)
         list = list.tail
     }
+    print(cons(1, nil).is_a(~List))
+    print(list.is_a(~List))
+
+    print("hello".to_list().to_string())
 }
 

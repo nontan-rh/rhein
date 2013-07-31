@@ -411,7 +411,9 @@ Value execute(Value fn, unsigned argc, Value* args) {
     }
 
     if (fn.get_obj<Object>()->get_class() == R->get_method_class()) {
-        fn.get_obj<Method>()->dispatch(argc, args, fn);
+        if (!fn.get_obj<Method>()->dispatch(argc, args, fn)) {
+            fatal("Could not dispatch");
+        }
     }
 
     if (!fn.is(Value::Type::Object)) {

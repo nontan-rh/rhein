@@ -20,7 +20,6 @@ PegString::parse(List* src, Value& obj, List*& next) {
 
         char str_ch = str_->elt_ref(i);
         char src_ch = src->get_head().get_char();
-        std::cout << str_ch << ":" << src_ch << std::endl;
         if (str_ch != src_ch) {
             next = prev;
             obj = Value::k_nil();
@@ -44,6 +43,7 @@ PegString::parse(List* src, Value& obj, List*& next) {
 
 void
 PegCharClass::add(char begin, char end) {
+    end++;
     unsigned b_x = begin / kIntBits;
     unsigned b_y = begin % kIntBits;
     unsigned e_x = end / kIntBits;
@@ -106,6 +106,7 @@ PegTimes::parse(List* src, Value& obj, List*& next) {
     for (; i < lower_; i++) {
         if (!syn_->parse(s, buf, s)) {
             next = s;
+            obj = Value::k_nil();
             return false;
         }
         ary->append(buf);
@@ -145,6 +146,7 @@ PegSequence::parse(List* src, Value& obj, List*& next) {
     Array* ary = Array::create(0);
     Value buf;
 
+    next = src;
     for (Int i = 0; i < num_; i++) {
         if (!syns_[i]->parse(s, buf, next)) {
             obj = Value::k_nil();
@@ -160,6 +162,8 @@ PegSequence::parse(List* src, Value& obj, List*& next) {
 bool
 PegChoice::parse(List* src, Value& obj, List*& next) {
     List* s = src;
+    next = src;
+    obj = Value::k_nil();
 
     for (Int i = 0; i < num_; i++) {
         if (syns_[i]->parse(s, obj, next)) {
@@ -172,7 +176,6 @@ PegChoice::parse(List* src, Value& obj, List*& next) {
         }
     }
 
-    obj = Value::k_nil();
     return false;
 }
 
@@ -191,6 +194,7 @@ bool
 PegAny::parse(List* src, Value& obj, List*& next) {
     if (src != nullptr) {
         obj = Value::k_nil();
+        next = nullptr;
         return false;
     }
     obj = src->get_head();
@@ -347,7 +351,7 @@ PegModule::initialize() {
     R->add_native_function("inv", false, 1, {"PegCharClass"}, fn_pchar_inv);
     R->add_native_function("star", false, 1, {"PegSyntax"}, fn_star);
     R->add_native_function("plus", false, 1, {"PegSyntax"}, fn_plus);
-    R->add_native_function("times", false, 2, {"PegSyntax", "int", "int"}, fn_times);
+    R->add_native_function("times", false, 3, {"PegSyntax", "int", "int"}, fn_times);
     R->add_native_function("andp", false, 1, {"PegSyntax"}, fn_andp);
     R->add_native_function("notp", false, 1, {"PegSyntax"}, fn_notp);
     R->add_native_function("pseq", true, 0, {}, fn_pseq);

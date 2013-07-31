@@ -1,9 +1,45 @@
 
+def report(x) {
+    print(x[0], x[1], x[2].to_string())
+}
+
 def main() {
     local x
 
-    x = pstr("hello").parse("hello".to_list())
-    print(x[0], x[1], x[2])
+    pstr("hello").parse("hello".to_list()).report()
 
+    pchar().add(?a, ?z).parse("hello".to_list()).report()
+    pchar().add(?a, ?z).parse("aello".to_list()).report()
+    pchar().add(?a, ?z).parse("zello".to_list()).report()
+    pchar().add(?a, ?z).parse("Hello".to_list()).report()
+
+    pchar().add(?a, ?z).star().parse("hello".to_list()).report()
+    pchar().add(?a, ?z).star().parse("Hello".to_list()).report()
+    pchar().add(?a, ?z).plus().parse("hello".to_list()).report()
+    pchar().add(?a, ?z).plus().parse("Hello".to_list()).report()
+    pchar().add(?a, ?z).times(1, 4).parse("hello".to_list()).report()
+    pchar().add(?a, ?z).times(1, 4).parse("Hello".to_list()).report()
+    pchar().add(?a, ?z).times(1, 4).parse("helLo".to_list()).report()
+    pchar().add(?a, ?z).times(4, 4).parse("hellO".to_list()).report()
+
+    pstr("he").andp().parse("hello".to_list()).report()
+    pstr("he").andp().parse("Hello".to_list()).report()
+    pstr("he").notp().parse("hello".to_list()).report()
+    pstr("he").notp().parse("Hello".to_list()).report()
+
+    pseq(pstr("he"), pstr("l"), pstr("lo")).parse("hello".to_list()).report()
+    pseq(pstr("he"), pstr("L"), pstr("lo")).parse("hello".to_list()).report()
+    pseq(pstr("he")).parse("hello".to_list()).report()
+    pseq().parse("hello".to_list()).report()
+
+    pchoice(pstr("he"), pstr("He"), pstr("hE")).parse("hello".to_list()).report()
+    pchoice(pstr("he"), pstr("He"), pstr("hE")).parse("Hello".to_list()).report()
+    pchoice(pstr("he"), pstr("He"), pstr("hE")).parse("hEllo".to_list()).report()
+    pchoice().parse("hello".to_list()).report()
+
+    pstr("hello").paction(^(x){print(x); x}).parse("hello".to_list()).report()
+
+    pany().parse("hello".to_list()).report()
+    pany().parse("".to_list()).report()
 }
 
