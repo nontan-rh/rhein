@@ -42,7 +42,9 @@ class SingleList : public List {
 public:
     Value get_head() { return head_; }
     Value get_tail() {
-        if (tail_ == nullptr) { return Value::k_nil(); }
+        if (tail_ == nullptr) {
+            return Value::k_nil(get_current_state()->get_class("List"));
+        }
         return Value::by_object(tail_);
     }
 

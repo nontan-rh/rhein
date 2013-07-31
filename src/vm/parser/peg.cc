@@ -29,11 +29,7 @@ PegString::parse(List* src, Value& obj, List*& next) {
         prev = src;
 
         Value tail_v = src->get_tail();
-        if (tail_v.is(Value::Type::Nil)) {
-            src = nullptr;
-        } else {
-            src = tail_v.get_obj<List>();
-        }
+        src = tail_v.get_obj<List>();
     }
 
     next = src;
@@ -192,7 +188,7 @@ PegAction::parse(List* src, Value& obj, List*& next) {
 
 bool
 PegAny::parse(List* src, Value& obj, List*& next) {
-    if (src != nullptr) {
+    if (src == nullptr) {
         obj = Value::k_nil();
         next = nullptr;
         return false;
@@ -228,7 +224,7 @@ fn_parse(unsigned /* argc */, Value* args) {
     if (rest != nullptr) {
         ary->elt_set(2, Value::by_object(rest));
     } else {
-        ary->elt_set(2, Value::k_nil());
+        ary->elt_set(2, Value::k_nil(get_current_state()->get_class("List")));
     }
     return Value::by_object(ary);
 }

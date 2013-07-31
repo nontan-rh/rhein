@@ -19,6 +19,8 @@ typedef int Int;
 typedef uint8_t Byte;
 typedef uint32_t Char;
 
+extern State* current_state_;
+
 class Value {
 public:
     enum class Type {
@@ -31,7 +33,12 @@ public:
         Record,
     };
 
-    static Value k_nil() { return Value(Type::Nil); }
+    static Value k_nil() { return k_nil(nullptr); }
+    static Value k_nil(Class* klass) {
+        Value v = Value(Type::Nil);
+        v.u_.v_class_ = klass;
+        return v;
+    }
     static Value k_true() { return Value(true); }
     static Value k_false() { return Value(false); }
     static Value k_undef() { return Value(Type::Undef); }
@@ -98,6 +105,7 @@ private:
         Record *v_rec_;
         uint32_t v_char_;
         bool v_bool_;
+        Class *v_class_;
 
         Body() : v_obj_(nullptr) { }
         Body(bool value) : v_bool_(value) { }
@@ -105,6 +113,7 @@ private:
         Body(uint32_t ch) : v_char_(ch) { }
         Body(Object* obj) : v_obj_(obj) { }
         Body(Record* rec) : v_rec_(rec) { }
+        Body(Class* klass) : v_class_(klass) { }
     } u_;
 
     Value(Type type) : type_id_(type) { }
