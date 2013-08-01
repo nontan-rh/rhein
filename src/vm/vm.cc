@@ -516,7 +516,7 @@ execute(BytecodeFunction* entry_fn, unsigned argc_, Value* args_) {
     State* R = get_current_state();
     Value*& next_stack_ptr = R->get_stack_top();
     Frame* fr = Frame::create(next_stack_ptr, entry_fn, nullptr,
-            nullptr, argc_, args_, next_stack_ptr);
+            entry_fn->get_closure(), argc_, args_, next_stack_ptr);
     BytecodeFunction* fn = entry_fn;
     Value* sp = fr->stack;
     const uint32_t* pc = fn->get_bytecode();

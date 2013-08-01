@@ -2,6 +2,7 @@
 // function.cc
 //
 
+#include <iostream>
 #include <initializer_list>
 #include <cstring>
 

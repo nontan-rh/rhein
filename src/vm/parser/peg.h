@@ -22,7 +22,7 @@ public:
 
 class PegSyntax : public Object {
 public:
-    virtual bool parse(List* src, Value& obj, List*& next) = 0;
+    virtual bool parse(List* src, Value& ctx, Value& obj, List*& next) = 0;
 
 protected:
     PegSyntax(Class* klass) : Object(klass) { }
@@ -33,7 +33,7 @@ public:
     static PegString* create(String* str) {
         return new (get_current_state()->allocate_object<PegString>()) PegString(str);
     }
-    bool parse(List* src, Value& obj, List*& next);
+    bool parse(List* src, Value& ctx, Value& obj, List*& next);
 
 private:
     String* str_;
@@ -53,7 +53,7 @@ public:
     void add(char begin, char end);
     void invert();
 
-    bool parse(List* src, Value& obj, List*& next);
+    bool parse(List* src, Value& ctx, Value& obj, List*& next);
 
 private:
     static const size_t kCharKinds = 256;
@@ -77,7 +77,7 @@ public:
         return new (get_current_state()->allocate_object<PegTimes>()) PegTimes(lower, upper, syn);
     }
 
-    bool parse(List* src, Value& obj, List*& next);
+    bool parse(List* src, Value& ctx, Value& obj, List*& next);
 
 private:
     Int lower_;
@@ -95,7 +95,7 @@ public:
         return new (get_current_state()->allocate_object<PegPred>()) PegPred(if_success, syn);
     }
 
-    bool parse(List* src, Value& obj, List*& next);
+    bool parse(List* src, Value& ctx, Value& obj, List*& next);
 
 private:
     bool if_success_;
@@ -112,7 +112,7 @@ public:
         return new (get_current_state()->allocate_object<PegSequence>()) PegSequence(num, syns);
     }
 
-    bool parse(List* src, Value& obj, List*& next);
+    bool parse(List* src, Value& ctx, Value& obj, List*& next);
 
 private:
     Int num_;
@@ -129,7 +129,7 @@ public:
         return new (get_current_state()->allocate_object<PegChoice>()) PegChoice(num, syns);
     }
 
-    bool parse(List* src, Value& obj, List*& next);
+    bool parse(List* src, Value& ctx, Value& obj, List*& next);
 
 private:
     Int num_;
@@ -146,7 +146,7 @@ public:
         return new (get_current_state()->allocate_object<PegAction>()) PegAction(action, syn);
     }
 
-    bool parse(List* src, Value& obj, List*& next);
+    bool parse(List* src, Value& ctx, Value& obj, List*& next);
 
 private:
     Value action_;
@@ -163,11 +163,28 @@ public:
         return new (get_current_state()->allocate_object<PegAny>()) PegAny();
     }
 
-    bool parse(List* src, Value& obj, List*& next);
+    bool parse(List* src, Value& ctx, Value& obj, List*& next);
 
 private:
     PegAny()
         : PegSyntax(get_current_state()->get_class("PegAny")) { }
+};
+
+class PegDynamic : public PegSyntax {
+public:
+    static PegDynamic* create(Value fn) {
+        return new (get_current_state()->allocate_object<PegDynamic>())
+            PegDynamic(fn);
+    }
+
+    bool parse(List* src, Value& ctx, Value& obj, List*& next);
+
+private:
+    Value fn_;
+
+    PegDynamic(Value fn)
+        : PegSyntax(get_current_state()->get_class("PegDynamic")),
+          fn_(fn) { }
 };
 
 class PegTry : public PegSyntax {
@@ -176,7 +193,7 @@ public:
         return new (get_current_state()->allocate_object<PegTry>()) PegTry(syn);
     }
 
-    bool parse(List* src, Value& obj, List*& next);
+    bool parse(List* src, Value& ctx, Value& obj, List*& next);
 
 private:
     PegSyntax* syn_;

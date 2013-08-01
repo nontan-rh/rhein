@@ -9,7 +9,7 @@ namespace rhein {
 namespace peg {
 
 bool
-PegString::parse(List* src, Value& obj, List*& next) {
+PegString::parse(List* src, Value&, Value& obj, List*& next) {
     List* prev = src;
     for (Int i = 0; i < str_->get_length(); i++) {
         if (src == nullptr) {
@@ -67,7 +67,7 @@ PegCharClass::invert() {
 }
 
 bool
-PegCharClass::parse(List* src, Value& obj, List*& next) {
+PegCharClass::parse(List* src, Value&, Value& obj, List*& next) {
     if (src == nullptr) {
         obj = Value::k_nil();
         next = nullptr;
@@ -92,7 +92,7 @@ PegCharClass::parse(List* src, Value& obj, List*& next) {
 }
 
 bool
-PegTimes::parse(List* src, Value& obj, List*& next) {
+PegTimes::parse(List* src, Value& ctx, Value& obj, List*& next) {
     Array* ary = Array::create(0);
     Int i = 0;
     List* s = src;
@@ -100,7 +100,7 @@ PegTimes::parse(List* src, Value& obj, List*& next) {
     Value buf;
 
     for (; i < lower_; i++) {
-        if (!syn_->parse(s, buf, s)) {
+        if (!syn_->parse(s, ctx, buf, s)) {
             next = s;
             obj = Value::k_nil();
             return false;
@@ -109,7 +109,7 @@ PegTimes::parse(List* src, Value& obj, List*& next) {
     }
 
     for (; i != upper_; i++) {
-        if (!syn_->parse(s, obj, n)) {
+        if (!syn_->parse(s, ctx, obj, n)) {
             break;
         }
         ary->append(buf);
@@ -122,9 +122,9 @@ PegTimes::parse(List* src, Value& obj, List*& next) {
 }
 
 bool
-PegPred::parse(List* src, Value& obj, List*& next) {
+PegPred::parse(List* src, Value& ctx, Value& obj, List*& next) {
     List* dummy_next;
-    bool res = syn_->parse(src, obj, dummy_next);
+    bool res = syn_->parse(src, ctx, obj, dummy_next);
     next = src;
     if (res == if_success_) {
         obj = Value::k_nil();
@@ -137,14 +137,14 @@ PegPred::parse(List* src, Value& obj, List*& next) {
 }
 
 bool
-PegSequence::parse(List* src, Value& obj, List*& next) {
+PegSequence::parse(List* src, Value& ctx, Value& obj, List*& next) {
     List* s = src;
     Array* ary = Array::create(0);
     Value buf;
 
     next = src;
     for (Int i = 0; i < num_; i++) {
-        if (!syns_[i]->parse(s, buf, next)) {
+        if (!syns_[i]->parse(s, ctx, buf, next)) {
             obj = Value::k_nil();
             return false;
         }
@@ -156,13 +156,13 @@ PegSequence::parse(List* src, Value& obj, List*& next) {
 }
 
 bool
-PegChoice::parse(List* src, Value& obj, List*& next) {
+PegChoice::parse(List* src, Value& ctx, Value& obj, List*& next) {
     List* s = src;
     next = src;
     obj = Value::k_nil();
 
     for (Int i = 0; i < num_; i++) {
-        if (syns_[i]->parse(s, obj, next)) {
+        if (syns_[i]->parse(s, ctx, obj, next)) {
             return true;
         } else {
             // Check if parser head did not go ahead
@@ -176,9 +176,9 @@ PegChoice::parse(List* src, Value& obj, List*& next) {
 }
 
 bool
-PegAction::parse(List* src, Value& obj, List*& next) {
+PegAction::parse(List* src, Value& ctx, Value& obj, List*& next) {
     Value syn_obj[1];
-    if (syn_->parse(src, syn_obj[0], next)) {
+    if (syn_->parse(src, ctx, syn_obj[0], next)) {
         obj = execute(action_, 1, syn_obj);
         return true;
     }
@@ -187,7 +187,7 @@ PegAction::parse(List* src, Value& obj, List*& next) {
 }
 
 bool
-PegAny::parse(List* src, Value& obj, List*& next) {
+PegAny::parse(List* src, Value&, Value& obj, List*& next) {
     if (src == nullptr) {
         obj = Value::k_nil();
         next = nullptr;
@@ -199,8 +199,27 @@ PegAny::parse(List* src, Value& obj, List*& next) {
 }
 
 bool
-PegTry::parse(List* src, Value& obj, List*& next) {
-    if (!syn_->parse(src, obj, next)) {
+PegDynamic::parse(List* src, Value& ctx, Value& obj, List*& next) {
+    Value args[2];
+    args[0] = ctx;
+    args[1] = Value::by_object(src);
+    obj = execute(fn_, 2, args);
+    if (obj.get_class() != get_current_state()->get_array_class()) { throw ""; }
+
+    Array* ary = obj.get_obj<Array>();
+
+    Value v_succ, v_next;
+    ary->elt_ref(0, v_succ);
+    ary->elt_ref(1, obj);
+    ary->elt_ref(2, v_next);
+    next = v_next.get_obj<List>();
+
+    return v_succ.get_bool();
+}
+
+bool
+PegTry::parse(List* src, Value& ctx, Value& obj, List*& next) {
+    if (!syn_->parse(src, ctx, obj, next)) {
         next = src;
         return false;
     }
@@ -214,10 +233,11 @@ fn_parse(unsigned /* argc */, Value* args) {
     bool succ;
     List* rest;
     PegSyntax* syn = args[0].get_obj<PegSyntax>();
-    List* src = args[1].get_obj<List>();
+    Value ctx = args[1];
+    List* src = args[2].get_obj<List>();
     Array* ary = Array::create(3);
 
-    succ = syn->parse(src, res, rest);
+    succ = syn->parse(src, ctx, res, rest);
 
     ary->elt_set(0, Value::by_bool(succ));
     ary->elt_set(1, res);
@@ -316,6 +336,11 @@ fn_pany(unsigned /* argc */, Value* /* args */) {
 }
 
 Value
+fn_pdynamic(unsigned /* argc */, Value* args) {
+    return Value::by_object(PegDynamic::create(args[0]));
+}
+
+Value
 fn_ptry(unsigned /* argc */, Value* args) {
     return Value::by_object(PegTry::create(args[0].get_obj<PegSyntax>()));
 }
@@ -339,8 +364,9 @@ PegModule::initialize() {
     R->add_class("PegChoice", "PegSyntax");
     R->add_class("PegAction", "PegSyntax");
     R->add_class("PegAny", "PegSyntax");
+    R->add_class("PegDynamic", "PegSyntax");
     R->add_class("PegTry", "PegSyntax");
-    R->add_native_function("parse", false, 2, {"PegSyntax", "List"}, fn_parse);
+    R->add_native_function("parse", false, 3, {"PegSyntax", "any", "List"}, fn_parse);
     R->add_native_function("pstr", false, 1, {"string"}, fn_pstr);
     R->add_native_function("pchar", false, 0, { }, fn_pchar);
     R->add_native_function("add", false, 3, {"PegCharClass", "char", "char"}, fn_pchar_add);
@@ -353,6 +379,7 @@ PegModule::initialize() {
     R->add_native_function("pseq", true, 0, {}, fn_pseq);
     R->add_native_function("pchoice", true, 0, {}, fn_pchoice);
     R->add_native_function("paction", false, 2, {"PegSyntax", "any"}, fn_paction);
+    R->add_native_function("pdynamic", false, 1, {"any"}, fn_pdynamic);
     R->add_native_function("pany", false, 0, {}, fn_pany);
     R->add_native_function("ptry", false, 1, {"PegSyntax"}, fn_ptry);
     return false;
