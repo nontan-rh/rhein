@@ -5,6 +5,7 @@
 (define-module parse
   (use tinypeg)
   (use ast)
+  (use gauche.parameter)
   (export-all))
 
 (select-module parse)
@@ -54,6 +55,63 @@
         ($! ($c ident-cont))
         'space)
     (string->symbol str)))
+
+(define *operator-list* (make-parameter #f))
+(define *unary-operator-list* (make-parameter #f))
+(define *binary-operator-list* (make-parameter #f))
+
+(define-class <unary-operator> ()
+  ((syntax :init-keyword :syntax)))
+
+(define-class <binary-operator> ()
+  ((syntax :init-keyword :syntax)))
+
+(define default-operators
+  (list
+    (make <unary-operator> :syntax '(NOT NEG))
+    (make <binary-operator> :syntax '(MUL DIV))
+    (make <binary-operator> :syntax '(ADD SUB))
+    (make <binary-operator> :syntax '(EQ NE GE GT LE LT))))
+
+(define-method gen-syntax (child (ops <unary-operator>))
+  ($do ([o <- ($* (apply $/ (~ ops 'syntax)))]
+        [e <- child])
+    (fold-right (cut make <rh-unary-expression>
+                     :operator <>
+                     :expression <>) e o)))
+
+(define-method gen-syntax (child (ops <binary-operator>))
+  ($chain-left child (apply $/ (~ ops 'syntax))
+               (cut make <rh-binary-expression>
+                    :left-expression <>
+                    :operator <>
+                    :right-expression <>)))
+
+(define (gen-unary-list lst)
+  (let* ([unary-layers (filter (cut is-a? <> <unary-operator>) lst)]
+         [unary-ops (apply append (map (cut ~ <> 'syntax) unary-layers))])
+    (apply $/ unary-ops)))
+
+(define (gen-binary-list lst)
+  (let* ([binary-layers (filter (cut is-a? <> <binary-operator>) lst)]
+         [binary-ops (apply append (map (cut ~ <> 'syntax) binary-layers))])
+    (apply $/ binary-ops)))
+
+(define (set-operator-list-grammar! lst)
+  (*operator-list* (fold-left gen-syntax 'postfix-expression lst))
+  (*unary-operator-list* (gen-unary-list lst))
+  (*binary-operator-list* (gen-binary-list lst)))
+
+(define (parse-expression head)
+  (parse-peg (*operator-list*) head))
+
+(define (parse-unary-op head)
+  (parse-peg (*unary-operator-list*) head))
+
+(define (parse-binary-op head)
+  (parse-peg (*binary-operator-list*) head))
+
+(set-operator-list-grammar! default-operators)
 
 (define-parser rhein-parser
   `((start . ,($seq 'program ($! $.)))
@@ -121,6 +179,8 @@
                                               'COLON 'DOT 'COMMA 'MUL 'DIV
                                               'ADD 'SUB 'EQ 'NE 'GT 'GE 'LT
                                               'LE 'ASSIGN 'ARROW)))
+    (unary-ops . ,($dynamic parse-unary-op))
+    (binary-ops . ,($dynamic parse-binary-op))
     (disabled-keyword . ,($memoize ($/ 'NEG 'NOT 'EQ 'NE 'IF 'ELIF 'ELSE
                                        'WHILE 'AND 'OR 'BREAK 'TRUE 'FALSE
                                        'NIL 'LOCAL 'DEF 'CLASS 'GLOBAL)))
@@ -143,15 +203,15 @@
                     p))
     (parameter-list . ,($sep-end-by 'parameter 'COMMA))
     (named-function-argument-list . ,($do ('LPAREN
-                                           [a <- ($sep-end-by 'relat-expression 'COMMA)]
+                                           [a <- ($sep-end-by 'expression 'COMMA)]
                                            'RPAREN)
                                        a))
     (if-expression . ,($do ([if-clause <- ($seq 'IF 'implicit-delimiter
-                                                'relat-expression 'implicit-delimiter
+                                                'expression 'implicit-delimiter
                                                 'block)]
                             [elif-clauses <- ($* ($seq 'implicit-delimiter
                                                        'ELIF 'implicit-delimiter
-                                                       'relat-expression 'implicit-delimiter
+                                                       'expression 'implicit-delimiter
                                                        'block))]
                             [else-clause <- ($? ($seq 'implicit-delimiter
                                                       'ELSE 'implicit-delimiter
@@ -166,7 +226,7 @@
                                 :conditional-clauses (map extract conditional)
                                 :else-clause else-block))))
     (while-expression . ,($do ('WHILE 'implicit-delimiter
-                               [c <- 'relat-expression] 'implicit-delimiter
+                               [c <- 'expression] 'implicit-delimiter
                                [b <- 'block])
                            (make <rh-while-expression> :condition-expression c :code b)))
     (and-expression . ,($do ('AND 'implicit-delimiter
@@ -213,12 +273,12 @@
                                 'space)
                             (make <rh-character-literal> :value c)))
     (array-literal . ,($do ('LBRACKET
-                            [e <- ($sep-end-by 'relat-expression 'COMMA)]
+                            [e <- ($sep-end-by 'expression 'COMMA)]
                             'RBRACKET)
                         (make <rh-array-literal> :contains e)))
-    (key-value-pair . ,($do ([k <- 'relat-expression]
+    (key-value-pair . ,($do ([k <- 'expression]
                              'ASSIGN
-                             [v <- 'relat-expression])
+                             [v <- 'expression])
                          (make <rh-key-value> :key k :value v)))
     (hash-literal . ,($do ('LBRACE
                            [p <- ($sep-end-by 'key-value-pair 'COMMA)]
@@ -259,11 +319,11 @@
                                          'special-literal
                                          'identifier-reference
                                          ($do ('LPAREN
-                                               [e <- 'relat-expression]
+                                               [e <- 'expression]
                                                'RPAREN)
                                            e))))
     (index-postfix . ,($do ('LBRACKET
-                            [i <- 'relat-expression]
+                            [i <- 'expression]
                             'RBRACKET)
                            (make <rh-index-reference> :index-expression i)))
     (nameless-function-call-postfix . ,($do ('HAT
@@ -286,44 +346,18 @@
                              (if (null? p)
                                e
                                (fold combine-postfix e p))))
-    (prefix-operator . ,($/ 'NOT 'NEG))
-    (prefix-expression . ,($do ([p <- ($* 'prefix-operator)]
-                                [e <- 'postfix-expression])
-                            (fold-right (cut make <rh-unary-expression>
-                                                  :operator <>
-                                                  :expression <>) e p)))
-    ;; Multiplicative
-    (mul-operator . ,($/ 'MUL 'DIV))
-    (mul-expression . ,($chain-left 'prefix-expression 'mul-operator
-                                    (cut make <rh-binary-expression>
-                                              :left-expression <>
-                                              :operator <>
-                                              :right-expression <>)))
-    ;; Additive
-    (add-operator . ,($/ 'ADD 'SUB))
-    (add-expression . ,($chain-left 'mul-expression 'add-operator
-                                    (cut make <rh-binary-expression>
-                                              :left-expression <>
-                                              :operator <>
-                                              :right-expression <>)))
-    ;; Relative
-    (relat-operator . ,($/ 'EQ 'NE 'GE 'GT 'LE 'LT))
-    (relat-expression . ,($chain-left 'add-expression 'relat-operator
-                                      (cut make <rh-binary-expression>
-                                                :left-expression <>
-                                                :operator <>
-                                                :right-expression <>)))
+    (expression . ,($dynamic parse-expression))
     (assign-statement . ,($do ([t <- ($+ 1 ($seq 'postfix-expression 'ASSIGN))]
-                               [f <- 'relat-expression])
+                               [f <- 'expression])
                            (make <rh-assign-statement>
                                  :destinations (map car t)
                                  :expression f)))
     (break-statement . ,($do ('BREAK
-                              [e <- ($? 'relat-expression)])
+                              [e <- ($? 'expression)])
                           (make <rh-break-statement>
                                 :expression e)))
     (variable-declaration . ,($do ([n <- 'IDENT]
-                                   [e <- ($? ($seq 'ASSIGN 'relat-expression))])
+                                   [e <- ($? ($seq 'ASSIGN 'expression))])
                                   (make <rh-variable-declaration>
                                         :id n
                                         :initial-value (if (null? e) '() (cadr e)))))
@@ -338,7 +372,7 @@
                                       :declarations v)))
     (statement . ,($memoize ($/ 'break-statement
                                 'assign-statement
-                                'relat-expression
+                                'expression
                                 'local-declaration
                                 'global-declaration
                                 'function-definition

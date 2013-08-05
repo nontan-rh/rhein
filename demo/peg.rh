@@ -43,7 +43,7 @@ def main() {
     pchoice(pstr("he"), pstr("He"), pstr("hE")).parse(nil, "hEllo".to_list()).report()
     pchoice().parse(nil, "hello".to_list()).report()
 
-    pstr("hello").paction({ x -> print(x); x}).parse(nil, "hello".to_list()).report()
+    pstr("hello").paction(^{ x -> print(x); x}).parse(nil, "hello".to_list()).report()
 
     pany().parse(nil, "hello".to_list()).report()
     pany().parse(nil, "".to_list()).report()

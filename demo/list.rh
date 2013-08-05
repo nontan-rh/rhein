@@ -54,7 +54,7 @@ def concateate(x, y) {
 }
 
 def main() {
-    print(map(^(x){ 2 * x }, list(1, 2, 3)))
+    print(map(^{ x -> 2 * x }, list(1, 2, 3)))
     print(list(1,2,3).concateate(list(?a,?b,?c)))
 }
 

@@ -44,7 +44,7 @@
    (action :init-keyword :action)))
 
 (define-class <grammar-dynamic> (<grammar>)
-  (proc :init-keyword :proc))
+  ((proc :init-keyword :proc)))
 
 (define-class <grammar-any> (<grammar>)
   ())
@@ -128,7 +128,7 @@
       (values #f (apply (~ g 'action) r) h))))
 
 (define-method parse-peg ((g <grammar-dynamic>) head)
-  (proc head))
+  ((~ g 'proc) head))
 
 (define-method parse-peg ((g <grammar-any>) head)
   (if (null? head)
@@ -249,6 +249,11 @@
 
 (define ($memoize gram)
   (make <grammar-memoize> :contains gram))
+
+;; Dynamic
+
+(define ($dynamic proc)
+  (make <grammar-dynamic> :proc proc))
 
 ;; Parser driver
 
