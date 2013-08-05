@@ -12,5 +12,8 @@ def main() {
     print("Hello world".sub(5, 7))
     print("Hello ".append("Rhein ", "world"))
     print("Hello".length())
+
+    print("there is newline character -->\n<--")
+    print("newline character literal -->", ?\n, "<--")
 }
 

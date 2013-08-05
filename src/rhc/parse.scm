@@ -128,6 +128,7 @@
     (LBRACKET . ,($post-concat "["))
     (RBRACKET . ,($skip-space "]"))
     (COLON . ,($post-concat ":"))
+    (COLONEQ . ,($post-concat ":="))
     (DQUOTE . ,($s "\""))
     (QUESTION . ,($s "?"))
     (HAT . ,($s "^"))
@@ -176,7 +177,7 @@
     (CLASS . ,($keyword-concat "class"))
     (GLOBAL . ,($keyword-concat "global"))
     (pre-concatenative-token . ,($memoize ($/ 'RPAREN 'RBRACE 'RBRACKET
-                                              'COLON 'DOT 'COMMA 'MUL 'DIV
+                                              'COLON 'COLONEQ 'DOT 'COMMA 'MUL 'DIV
                                               'ADD 'SUB 'EQ 'NE 'GT 'GE 'LT
                                               'LE 'ASSIGN 'ARROW)))
     (unary-ops . ,($dynamic parse-unary-op))
@@ -189,10 +190,10 @@
                             (make <rh-parameter> :id id :attr 'rest))
                           ($do ([id <- 'IDENT])
                             (make <rh-parameter> :id id :attr '() ))))
-    (parameter-type . ,($/ ($do ('LT
+    (parameter-type . ,($/ ($do ('COLON
                                  [type <- 'IDENT])
                              (list 'instance type))
-                           ($do ('LE
+                           ($do ('COLONEQ
                                  [type <- 'IDENT])
                              (list 'class type))))
     (parameter . ,($do ([p <- 'parameter-opt]
@@ -242,12 +243,20 @@
                                           :code (list-ref l 1))))
     (numeric-literal . ,($do ([n <- 'DIGIT])
                           (make <rh-integer-literal> :value n)))
+    (ESCAPE-CHARACTER . ,($do ([c <- ($c "stnr\"\'\\")])
+                           (case c
+                             [(#\s) #\space]
+                             [(#\t) #\tab]
+                             [(#\n) #\newline]
+                             [(#\r) #\return]
+                             [(#\" #\' #\\) c]
+                             [else (error "error")])))
     (STRING-CHARACTER . ,($/ ($do (($s "\\x")
                                    [h <- ($c hex-list)]
                                    [l <- ($c hex-list)])
                                (integer->char (string->number (string h l) 16)))
                              ($do (($s "\\")
-                                   [c <- $.])
+                                   [c <- 'ESCAPE-CHARACTER])
                                c)
                              ($do (($! ($s "\""))
                                    [c <- $.])
@@ -257,7 +266,7 @@
                                     [l <- ($c hex-list)])
                                 (integer->char (string->number (string h l) 16)))
                               ($do (($s "\\")
-                                    [c <- $.])
+                                    [c <- 'ESCAPE-CHARACTER])
                                 c)
                               ($c printable-list)))
     (symbol-literal . ,($do (($s ":")
@@ -408,7 +417,7 @@
     (class-definition . ,($do ('CLASS
                                [n <- 'IDENT]
                                'implicit-delimiter
-                               [p <- ($? ($seq 'LT 'IDENT))]
+                               [p <- ($? ($seq 'COLON 'IDENT))]
                                'implicit-delimiter
                                [b <- 'class-block])
                            (make <rh-class>
