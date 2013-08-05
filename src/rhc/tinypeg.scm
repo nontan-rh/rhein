@@ -43,6 +43,9 @@
   ((contains :init-keyword :contains)
    (action :init-keyword :action)))
 
+(define-class <grammar-dynamic> (<grammar>)
+  (proc :init-keyword :proc))
+
 (define-class <grammar-any> (<grammar>)
   ())
 
@@ -123,6 +126,9 @@
     (if e
       (values e r h)
       (values #f (apply (~ g 'action) r) h))))
+
+(define-method parse-peg ((g <grammar-dynamic>) head)
+  (proc head))
 
 (define-method parse-peg ((g <grammar-any>) head)
   (if (null? head)
@@ -235,9 +241,9 @@
     (fold-left proc f (map car c) (map cadr c))))
 
 (define ($chain-right operand op proc)
-  ($do ([f <- operand]
-        [c <- ($* ($seq op operand))])
-    (fold-left proc f (reverse (map car c)) (reverse (map cadr c)))))
+  ($do ([c <- ($* ($seq operand op))]
+        [l <- operand])
+    (fold-right proc l (map car c) (map cadr c))))
 
 ;; Memoization
 
