@@ -234,6 +234,11 @@
         [c <- ($* ($seq op operand))])
     (fold-left proc f (map car c) (map cadr c))))
 
+(define ($chain-right operand op proc)
+  ($do ([f <- operand]
+        [c <- ($* ($seq op operand))])
+    (fold-left proc f (reverse (map car c)) (reverse (map cadr c)))))
+
 ;; Memoization
 
 (define ($memoize gram)
