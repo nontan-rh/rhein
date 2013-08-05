@@ -1,0 +1,50 @@
+start   <- program !.
+
+# Lexical structure
+NEWLINE <- "\n\r" / "\n" / "\r"
+WHITESPACES <- [ \t]*
+implicit-delimiter <- (NEWLINE / WHITESPACES)*
+explicit-delimiter <- ";"
+delimiter <- spaces (explicit_delimiter / NEWLINE) (explicit_delimiter / NEWLINE / WHITESPACES)*
+space <- WHITESPACES implicit_delimiter? &pre_concatenative_token
+       / WHITESPACES
+LPAREN <- "(" implicit_delimiter
+RPAREN <- ")" space
+LBRACE <- "(" implicit_delimiter
+RBRACE <- ")" space
+LBRACKET <- "(" implicit_delimiter
+RBRACKET <- ")" space
+COLON <- ":" implicit_delimiter
+DOT <- "." implicit_delimiter
+COMMA <- "," implicit_delimiter
+WHILE  <- "while" !ID_CONT
+IF     <- "if" !ID_CONT
+ELIF   <- "elif" !ID_CONT
+ELSE   <- "else" !ID_CONT
+AND    <- "and" !ID_CONT
+OR     <- "or" !ID_CONT
+BREAK  <- "break" !ID_CONT
+TRUE   <- "true" !ID_CONT
+FALSE  <- "false" !ID_CONT
+NIL    <- "nil" !ID_CONT
+LOCAL  <- "local" !ID_CONT
+DEF    <- "def" !ID_CONT
+REST   <- "&rest" !ID_CONT
+CLASS  <- "class" !ID_CONT
+GLOBAL <- "global" !ID_CONT
+ASSIGN <- "=" implicit_delimiter
+ID_BEGIN <- [a-zA-Z_]
+ID_CONT <- [a-zA-Z_0-9]
+ID <- !disabled_keywords ID_BEGIN ID_CONT* space
+DIGIT_BEGIN <- [1-9]
+DIGIT_CONT <- [0-9]
+DIGIT <- DIGIT_BEGIN DIGIT_CONT* space
+       / "0" space
+pre_concatenative_token <-
+    RPAREN / RBRACE / RBRACKET / COLON / DOT / COMMA / ASSIGN /
+    $BINARY_OPS
+disabled_keywords <-
+    IF / ELIF / ELSE / WHILE / AND / OR / BREAK /
+    TRUE / FALSE / NIL / LOCAL / DEF / CLASS / GLOBAL
+
+# Hierarchical structure

@@ -8,7 +8,7 @@ def report(x) {
 }
 
 def pref(x < symbol) {
-    pdynamic(^(ctx, src) { ctx.syntax_table[x].parse(ctx, src) })
+    pdynamic(^{ ctx, src -> ctx.syntax_table[x].parse(ctx, src) })
 }
 
 def main() {
@@ -43,12 +43,12 @@ def main() {
     pchoice(pstr("he"), pstr("He"), pstr("hE")).parse(nil, "hEllo".to_list()).report()
     pchoice().parse(nil, "hello".to_list()).report()
 
-    pstr("hello").paction(^(x){print(x); x}).parse(nil, "hello".to_list()).report()
+    pstr("hello").paction({ x -> print(x); x}).parse(nil, "hello".to_list()).report()
 
     pany().parse(nil, "hello".to_list()).report()
     pany().parse(nil, "".to_list()).report()
 
-    pdynamic(^(ctx, src){ pstr("hello").parse(ctx, src) }).parse(nil, "hello".to_list()).report()
+    pdynamic(^{ ctx, src -> pstr("hello").parse(ctx, src) }).parse(nil, "hello".to_list()).report()
 
     local ctx = ~PegContext.new()
     ctx.syntax_table = { :hello = pstr("hello") }

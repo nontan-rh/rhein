@@ -76,6 +76,7 @@
     (TILDE . ,($s "~"))
     (DOT . ,($post-concat "."))
     (COMMA . ,($post-concat ","))
+    (ARROW . ,($post-concat "->"))
     (MUL . ,($post-concat "*"))
     (DIV . ,($post-concat "/"))
     (ADD . ,($post-concat "+"))
@@ -119,7 +120,7 @@
     (pre-concatenative-token . ,($memoize ($/ 'RPAREN 'RBRACE 'RBRACKET
                                               'COLON 'DOT 'COMMA 'MUL 'DIV
                                               'ADD 'SUB 'EQ 'NE 'GT 'GE 'LT
-                                              'LE 'ASSIGN)))
+                                              'LE 'ASSIGN 'ARROW)))
     (disabled-keyword . ,($memoize ($/ 'NEG 'NOT 'EQ 'NE 'IF 'ELIF 'ELSE
                                        'WHILE 'AND 'OR 'BREAK 'TRUE 'FALSE
                                        'NIL 'LOCAL 'DEF 'CLASS 'GLOBAL)))
@@ -140,20 +141,11 @@
                                         (list 'instance 'any)
                                         type))
                     p))
-    (named-function-parameter-list . ,($do ('LPAREN
-                                            [p <- ($sep-end-by 'parameter 'COMMA)]
-                                            'RPAREN)
-                                        p))
+    (parameter-list . ,($sep-end-by 'parameter 'COMMA))
     (named-function-argument-list . ,($do ('LPAREN
                                            [a <- ($sep-end-by 'relat-expression 'COMMA)]
                                            'RPAREN)
                                        a))
-    (nameless-function-parameter-list . ,($do ('HAT
-                                               [a <- 'named-function-parameter-list])
-                                           a))
-    (nameless-function-argument-list . ,($do ('HAT
-                                              [a <- 'named-function-argument-list])
-                                          a))
     (if-expression . ,($do ([if-clause <- ($seq 'IF 'implicit-delimiter
                                                 'relat-expression 'implicit-delimiter
                                                 'block)]
@@ -183,11 +175,11 @@
     (or-expression . ,($do ('OR 'implicit-delimiter
                             [b <- 'block])
                         (make <rh-or-expression> :code (~ b 'code))))
-    (nameless-function-literal . ,($do ([p <- 'nameless-function-parameter-list]
-                                        [b <- 'block])
+    (nameless-function-literal . ,($do ('HAT
+                                        [l <- 'lambda-block])
                                     (make <rh-function-literal>
-                                          :parameters p
-                                          :code b)))
+                                          :parameters (list-ref l 0)
+                                          :code (list-ref l 1))))
     (numeric-literal . ,($do ([n <- 'DIGIT])
                           (make <rh-integer-literal> :value n)))
     (STRING-CHARACTER . ,($/ ($do (($s "\\x")
@@ -274,7 +266,8 @@
                             [i <- 'relat-expression]
                             'RBRACKET)
                            (make <rh-index-reference> :index-expression i)))
-    (nameless-function-call-postfix . ,($do ([a <- 'nameless-function-argument-list])
+    (nameless-function-call-postfix . ,($do ('HAT
+                                             [a <- 'named-function-argument-list])
                                             (make <rh-nameless-function-call>
                                                   :arguments a)))
     (method-call-postfix . ,($do ('DOT
@@ -357,9 +350,17 @@
                    (make <rh-block>
                          :code (append (map car s)
                                        (if (null? t) '() (list t))))))
+    (lambda-block . ,($do ('LBRACE
+                           [p <- 'parameter-list]
+                           'ARROW
+                           [c <- ($sep-end-by 'statement 'delimiter)]
+                           'RBRACE)
+                       (list p (make <rh-block> :code c))))
     (function-definition . ,($do ('DEF
                                   [n <- 'IDENT] 'implicit-delimiter
-                                  [p <- 'named-function-parameter-list] 'implicit-delimiter
+                                  'LPAREN 'implicit-delimiter
+                                  [p <- 'parameter-list] 'implicit-delimiter
+                                  'RPAREN 'implicit-delimiter
                                   [b <- 'block])
                                  (make <rh-function>
                                        :id n

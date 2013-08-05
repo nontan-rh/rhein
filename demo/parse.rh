@@ -1,0 +1,276 @@
+
+class PegContext {
+  syntax_table, operator_table
+}
+
+global rhein_syntax = nil
+
+def pref(x < symbol) {
+  pdynamic(^(ctx, src) {
+    ctx.syntax_table[x].parse(ctx, src)
+  })
+}
+
+def ppost_concat(x < string) { pseq(pstr(x), pref(:implicit_delimiter)) }
+def pskip_spaces(x < string) { pseq(pstr(x), pref(:spaces)) }
+def pkeyword(x < string) { pseq(pstr(x), notp(pref(:ID_CONT))) }
+def psepby1(body, sep) { pseq(body, pseq(sep, body).pstar()) }
+def psependby(body, sep) { pseq(body, pseq(sep, body).pstar(), sep.popt()).popt() }
+
+def parse_binary_ops(ctx, src) {
+  local table = ctx.operator_table
+  local table_len = table.length()
+  local i = 0
+  while i < table_len {
+    local op = table[i]
+    if op.is_a(~BinaryOperator) {
+    }
+    i = i + 1
+  }
+}
+
+def parse_expression(ctx, src) {
+}
+
+def init_syntax() {
+  rhein_syntax = {
+    :NEWLINE = pchoice(pstr("\n\r"), pstr("\n"), pstr("\r"))
+    :WHITESPACES = pchar().add(?\s).add(?\t).pplus()
+    :implicit_delimiter = pchoice(pref(:NEWLINE), pref(:WHITESPACES)).pstar()
+    :delimiter =
+      pseq(
+        pref(:spaces),
+        pchoice(pstr(";"), pref(:NEWLINE)),
+        pchoice(pstr(";"), pref(:NEWLINE), pref(:WHITESPACES)).pstar())
+    :spaces =
+      pseq(
+        pref(:WHITESPACES),
+        popt(pseq(pref(:implicit_delimiter),
+                  andp(pref(:pre_concatenative_token)))))
+    :LPAREN = ppost_concat("(")
+    :RPAREN = pskip_spaces(")")
+    :LBRACE = ppost_concat("{")
+    :RBRACE = pskip_spaces("}")
+    :LBRACKET = ppost_concat("[")
+    :RBRACKET = pskip_spaces("]")
+    :COLON = ppost_concat(":")
+    :COLONEQ = ppost_concat(":=")
+    :RARROW = ppost_concat("->")
+    :DOT = ppost_concat(".")
+    :COMMA = ppost_concat(",")
+    :AND = pkeyword("and")
+    :BREAK = pkeyword("break")
+    :CLASS = pkeyword("class")
+    :DEF = pkeyword("def")
+    :ELIF = pkeyword("elif")
+    :ELSE = pkeyword("else")
+    :FALSE = pkeyword("false")
+    :GLOBAL = pkeyword("global")
+    :IF = pkeyword("if")
+    :LOCAL = pkeyword("local")
+    :NIL = pkeyword("nil")
+    :OR = pkeyword("or")
+    :REST = pkeyword("&rest")
+    :TRUE = pkeyword("true")
+    :WHILE = pkeyword("while")
+    :ASSIGN = ppost_concat("=")
+    :ID_BEGIN = pchar().add(?a, ?z).add(?A, ?Z).add(?_)
+    :ID_CONT = pchar().add(?a, ?z).add(?A, ?Z).add(?_).add(?0, ?9)
+    :ID =
+      pseq(
+        notp(pref(:disabled_keywords)),
+        pref(:ID_BEGIN),
+        pref(:ID_CONT).pstar()).pskip_spaces()
+    :DIGIT_BEGIN = pchar().add(?1, ?9)
+    :DIGIT_CONT = pchar().add(?0, ?9)
+    :DIGIT =
+      pchoice(
+        pseq(
+          pref(:DIGIT_BEGIN)
+          pref(:DIGIT_CONT).pstar()),
+        pstr("0")).pskip_spaces()
+    :HEXDIGIT = pchar().add(?0, ?9).add(?a, ?f).add(?A, ?F)
+    :pre_concatenative_token =
+      pchoice(
+        pref(:RPAREN), pref(:RBRACE), pref(:RBRACKET), pref(:COLON),
+        pref(:COLONEQ), pref(:RARROW), pref(:DOT), pref(:COMMA),
+        pref(:ASSIGN), pref(:binary_ops))
+    :disabled_keywords =
+      pchoice(
+        pref(:AND), pref(:BREAK), pref(:CLASS), pref(:DEF), pref(:ELIF),
+        pref(:ELSE), pref(:FALSE), pref(:GLOBAL), pref(:IF), pref(:LOCAL),
+        pref(:NIL), pref(:OR), pref(:TRUE), hpref(:WHILE))
+    :parameter_option =
+      pchoice(
+        pseq(pref(:REST), pref(:ID)),
+        pseq(pref(:ID)))
+    :parameter_type =
+      pchoice(
+        pseq(pref(:COLONEQ), pref(:ID)),
+        pseq(pref(:COLON), pref(:ID)))
+    :parameter =
+      pseq(pref(:parameter_option), popt(pref(:parameter_type)))
+    :parameter_list = psependby(pref(:parameter), pref(:COMMA))
+    :argument_list =
+      pseq(
+        pref(:LPAREN),
+        psependby(pref(:expression), pref(:COMMA)),
+        pref(:RPAREN))
+    :if_clause =
+      pseq(
+        pref(:IF), pref(:implicit_delimiter)
+        pref(:expression), pref(:implicit_delimiter),
+        pref(:block))
+    :elif_clause =
+      pseq(
+        pref(:implicit_delimiter),
+        pref(:ELIF), pref(:implicit_delimiter),
+        pref(:expression), pref(:implicit_delimiter),
+        pref(:block))
+    :else_clause =
+      pseq(
+        pref(:implicit_delimiter),
+        pref(:ELSE), pref(:implicit_delimiter),
+        pref(:expression), pref(:implicit_delimiter),
+        pref(:block))
+    :if_expression =
+      pseq(
+        pref(:if_clause),
+        pref(:elif_clause).pstar(),
+        pref(:else_clause).popt())
+    :while_expression =
+      pseq(
+        pref(:WHILE), pref(:implicit_delimiter),
+        pref(:expression), pref(:implicit_delimiter),
+        pref(:block))
+    :and_expression =
+      pseq(
+        pref(:AND), pref(:implicit_delimiter), pref(:block))
+    :or_expression = 
+      pseq(
+        pref(:OR), pref(:implicit_delimiter), pref(:block))
+    :lambda_block =
+      pseq(
+        pref(:LBRACE),
+        pref(:parameter_list), pref(:RARROW),
+        psependby(pref(:statement), pref(:delimiter)),
+        pref(:RBRACE))
+    :lambda_expression = pseq(pstr("^"), pref(:lambda_block))
+    :numeric_literal = pref(:DIGIT)
+    :ESCAPE_CHARACTER =
+      pchar().add(?s).add(?t).add(?n).add(?r).add(?\").add(?\')
+    :STRING_CHARACTER =
+      pchoice(
+        pseq(pstr("\\x"), pref(:HEXDIGIT).ptimes(2, 2)),
+        pseq(pstr("\\"), pref(:ESCAPE_CHARACTER)),
+        pseq(pchar().add(?\").inv()))
+    :LITERAL_CHARACTER =
+      pchoice(
+        pseq(pstr("\\x"), pref(:HEXDIGIT).ptimes(2, 2)),
+        pseq(pstr("\\"), pref(:ESCAPE_CHARACTER)),
+        pref(:PRINTABLE_CHARACTER))
+    :symbol_literal =
+      pseq(pstr(":"), pref(:ID))
+    :string_literal =
+      pseq(
+        pref(:DQUOTE), 
+        pref(:STRING_CHARACTER).pstar(),
+        pref(:DQUOTE)).pskip_spaces()
+    :character_literal =
+      pseq(pstr("?"), pref(:LITERAL_CHARACTER)).pskip_spaces()
+    :array_literal =
+      pseq(
+        pref(:LBRACKET),
+        psependby(pref(:expression), pref(:COMMA)).pstar(),
+        pref(:RBRACKET))
+    :key_value_pair =
+      pseq(pref(:expression), pref(:ASSIGN), pref(:expression))
+    :hash_literal =
+      pseq(
+        pref(:LBRACE),
+        psependby(pref(:key_value_pair), pref(:COMMA)),
+        pref(:RBRACE))
+    :referenece_prefix = pchoice(pstr("^"), pstr("~"))
+    :id_reference = pseq(pref(:referenece_prefix).popt(), pref(:ID))
+    :named_call = pseq(pref(:ID), pref(:argument_list))
+    :special_literal = pchoice(pref(:TRUE), pref(:FALSE), pref(:NIL))
+    :primary_expression =
+      pchoice(
+        pref(:if_expression),
+        pref(:while_expression),
+        pref(:and_expression),
+        pref(:or_expression),
+        pref(:lambda_expression),
+        pref(:numeric_literal),
+        pref(:character_literal),
+        pref(:array_literal),
+        pref(:hash_literal),
+        pref(:symbol_literal),
+        pref(:string_literal),
+        pref(:named_call),
+        pref(:special_literal),
+        pref(:id_reference),
+        pseq(pref(:LPAREN), pref(:expression), pref(:RPAREN)),)
+    :index_postfix =
+      pseq(pref(:LBRACKET), pref(:expression), pref(:RBRACKET))
+    :lambda_call_postfix = pseq(pstr("^"), pref(:argument_list))
+    :method_call_postfix = pseq(pref(:DOT), pref(:ID), pref(:argument_list))
+    :member_postfix = pseq(pref(:DOT), pref(:ID))
+    :postfix_expression =
+      pseq(
+        pref(:primary_expression),
+        pchoice(
+          pref(:method_call_postfix),
+          pref(:index_postfix),
+          pref(:lambda_call_postfix),
+          pref(:member_postfix)).pstar())
+    :binary_ops = pdynamic(^parse_binary_ops)
+    :expression = pdynamic(^parse_expression)
+    :assign_statement =
+      pseq(
+        pseq(pref(:postfix_expression), pref(:ASSIGN)).pplus(),
+        pref(:expression))
+    :break_statement = pseq(pref(:BREAK), pref(:expression))
+    :var_decl =
+      pseq(
+        pref(:ID),
+        pseq(pref(:ASSIGN), pref(:expression)).popt())
+    :var_decl_list = psepby1(pref(:var_decl), pref(:COMMA))
+    :local_decl = pseq(pref(:LOCAL), pref(:var_decl_list))
+    :global_decl = pseq(pref(:GLOBAL), pref(:var_decl_list))
+    :statement =
+      pchoice(
+        pref(:break_statement),
+        pref(:assign_statement),
+        pref(:expression),
+        pref(:local_decl),
+        pref(:global_decl),
+        pref(:function_decl),
+        pref(:class_decl))
+    :block =
+      pseq(
+        pref(:LBRACE),
+        psependby(pref(:statement), pref(:delimiter)),
+        pref(:RBRACE))
+    :function_decl =
+      pseq(
+        pref(:DEF), pref(:implicit_delimiter),
+        pref(:ID), pref(:implicit_delimiter),
+        pref(:LPAREN), pref(:parameter_list), pref(:RPAREN),
+        pref(:block))
+    :member_decl_list = psependby(pref(:ID), pref(:COMMA))
+    :class_block = pseq(pref(:LBRACE), pref(:member_decl_list), pref(:RBRACE))
+    :class_decl =
+      pseq(
+        pref(:CLASS), pref(:implicit_delimiter),
+        pref(:ID), pref(:implicit_delimiter),
+        pseq(pref(:COLON), pref(:ID).popt()), pref(:implicit_delimiter)
+        pref(:class_block))
+    :program =
+      pseq(
+        pref(:delimiter).pstar(),
+        psependby(pref(:statement), pref(:delimiter)))
+    :entry = pseq(pref(:program), pany().notp())
+  }
+}
+

@@ -21,7 +21,7 @@ def main() {
     varf^(2)
     print(x)
 
-    flit = ^(k){ x = k }
+    flit = ^{ k -> x = k }
     flit^(3)
     print(x)
 
@@ -31,5 +31,7 @@ def main() {
     callback(^extfun2)
 
     print (1+2+3+4)
+
+    print(^{ x, y -> x + y }^(1, 2))
 }
 
