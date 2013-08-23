@@ -483,7 +483,7 @@
     (let ([c (apply lappend (map generate-each (~ a 'conditional-clauses)))]
           [e (x->lseq (list (vector "label" exit-label)))])
       (if (null? (~ a 'else-clause))
-        (lappend c e)
+        (lappend c (x->lseq (list (vector "loadundef"))) e)
         (lappend c (generate-code (~ a 'else-clause)) e)))))
 
 (define-method generate-code ((a <rh-while-expression>))
@@ -725,6 +725,7 @@
               (lp (+ c 1) h)]
              [(pop)
               (unless (>= h 1)
+                (print bc)
                 (error "Stack underflow" c))
               (lp (+ c 1) (- h 1))]
              [(ret)
