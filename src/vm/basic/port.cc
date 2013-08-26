@@ -25,7 +25,7 @@ File::File(String* name, RWFlags rw, PosFlags pos)
             name->get_cstr(cstr, len);
             fp = fopen(cstr, "r");
             if (fp == nullptr) {
-                throw "";
+                assert(false);
             }
         } else if (pos == PosFlags::Tail) {
             fatal("not supported");

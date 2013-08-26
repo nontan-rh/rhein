@@ -163,7 +163,7 @@ fn_list_to_string(unsigned /* argc */, Value* args) {
 
     List* p = list;
     for (len = 0; p != nullptr; p = p->get_tail().get_obj<List>()) {
-        if (!p->get_head().is(Value::Type::Char)) { throw ""; }
+        if (!p->get_head().is(Value::Type::Char)) { return Value::k_nil(); }
         len++;
     }
     char* buf = new char[len + 1];
@@ -196,6 +196,12 @@ fn_append(unsigned argc, Value* args) {
         result = result->append(args[i].get_obj<String>());
     }
     return Value::by_object(result);
+}
+
+Value
+fn_array_append(unsigned argc, Value* args) {
+    args[0].get_obj<Array>()->append(args[1]);
+    return args[0];
 }
 
 Value
@@ -331,6 +337,37 @@ fn_to_list(unsigned, Value* args) {
     return Value::by_object(x);
 }
 
+Value
+fn_rest_to_array(unsigned, Value* args) {
+    Array* ary;
+    args[0].get_obj<RestArguments>()->to_array(ary);
+    return Value::by_object(ary);
+}
+
+Value
+fn_array_apply(unsigned, Value* args) {
+    Value fn = args[0];
+    Array* ary = args[1].get_obj<Array>();
+    int len = ary->get_length();
+    Value* buf = get_current_state()->allocate_raw_array(len);
+    for (int i = 0; i < len; i++) {
+        buf[i] = ary->elt_ref(i);
+    }
+    return execute(fn, len, buf);
+}
+
+Value
+fn_rest_apply(unsigned, Value* args) {
+    Value fn = args[0];
+    RestArguments* rest = args[1].get_obj<RestArguments>();
+    int len = rest->get_length();
+    Value* buf = get_current_state()->allocate_raw_array(len);
+    for (int i = 0; i < len; i++) {
+        buf[i] = rest->elt_ref(i);
+    }
+    return execute(fn, len, buf);
+}
+
 BasicModule*
 BasicModule::create() {
     State* R = get_current_state();
@@ -349,10 +386,12 @@ BasicModule::initialize() {
     R->add_native_function("new", false, 1, {"class"}, fn_new);
     R->add_native_function("literal", true, 0, {}, fn_literal);
     R->add_native_function("to_array", false, 1, {"string"}, fn_to_array);
+    R->add_native_function("to_array", false, 1, {"rest_arguments"}, fn_rest_to_array);
     R->add_native_function("to_string", false, 1, {"array"}, fn_to_string);
     R->add_native_function("to_string", false, 1, {"List"}, fn_list_to_string);
     R->add_native_function("to_string", false, 1, {"nil"}, fn_nil_to_string);
     R->add_native_function("append", true, 1, {"string"}, fn_append);
+    R->add_native_function("append", false, 2, {"array", "any"}, fn_array_append);
     R->add_native_function("head", false, 2, {"string", "int"}, fn_head);
     R->add_native_function("tail", false, 2, {"string", "int"}, fn_tail);
     R->add_native_function("sub", false, 3, {"string", "int", "int"}, fn_sub);
@@ -362,6 +401,8 @@ BasicModule::initialize() {
     R->add_native_function("load", false, 1, {"string"}, fn_load);
     R->add_native_function("cons", false, 2, {"any", "any"}, fn_cons);
     R->add_native_function("to_list", false, 1, {"string"}, fn_to_list);
+    R->add_native_function("apply", false, 2, {"any", "array"}, fn_array_apply);
+    R->add_native_function("apply", false, 2, {"any", "rest_arguments"}, fn_rest_apply);
     R->add_native_function("callback", false, 1, {"bytecode_function"}, fn_callback);
     return false;
 }
