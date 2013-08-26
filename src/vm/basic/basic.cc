@@ -199,7 +199,7 @@ fn_append(unsigned argc, Value* args) {
 }
 
 Value
-fn_array_append(unsigned argc, Value* args) {
+fn_array_append(unsigned, Value* args) {
     args[0].get_obj<Array>()->append(args[1]);
     return args[0];
 }
@@ -373,6 +373,40 @@ fn_make_array(unsigned, Value* args) {
     return Value::by_object(Array::create(args[0].get_int()));
 }
 
+Value
+fn_concatenate(unsigned argc, Value* args) {
+    State* R = get_current_state();
+    int size = 0;
+    for (unsigned i = 0; i < argc; i++) {
+        if (args[i].get_class() == R->get_array_class()) {
+            size += args[i].get_obj<Array>()->get_length();
+        } else if (args[i].get_class() == R->get_rest_arguments_class()) {
+            size += args[i].get_obj<RestArguments>()->get_length();
+        } else {
+            assert(false);
+        }
+    }
+    Array* r = Array::create(size);
+
+    int cnt = 0;
+    for (unsigned i = 0; i < argc; i++) {
+        if (args[i].get_class() == R->get_array_class()) {
+            Array* a = args[i].get_obj<Array>();
+            for (int j = 0; j < a->get_length(); j++) {
+                r->elt_set(cnt, a->elt_ref(j));
+                cnt++;
+            }
+        } else if (args[i].get_class() == R->get_rest_arguments_class()) {
+            RestArguments* ra = args[i].get_obj<RestArguments>();
+            for (int j = 0; j < ra->get_length(); j++) {
+                r->elt_set(cnt, ra->elt_ref(j));
+                cnt++;
+            }
+        }
+    }
+    return Value::by_object(r);
+}
+
 BasicModule*
 BasicModule::create() {
     State* R = get_current_state();
@@ -410,6 +444,7 @@ BasicModule::initialize() {
     R->add_native_function("apply", false, 2, {"any", "rest_arguments"}, fn_rest_apply);
     R->add_native_function("callback", false, 1, {"bytecode_function"}, fn_callback);
     R->add_native_function("make_array", false, 1, {"int"}, fn_make_array);
+    R->add_native_function("concatenate", true, 0, {}, fn_concatenate);
     return false;
 }
 

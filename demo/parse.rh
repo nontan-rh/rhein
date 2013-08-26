@@ -1,5 +1,5 @@
 
-def filter(pred, x : array) {
+def filter(x : array, pred) {
     local i = 0
     local length = x.length()
     local res = []
@@ -10,11 +10,11 @@ def filter(pred, x : array) {
     res
 }
 
-def map(proc, x : array) {
+def map(x : array, proc) {
     local i = 0
     local length = x.length()
     local res = make_array(length)
-    while i < length { res[i] = proc(x[i]) }
+    while i < length { res[i] = proc^(x[i]); i = i + 1 }
     res
 }
 
@@ -318,5 +318,8 @@ def init_syntax() {
         psependby(pref(:statement), pref(:delimiter))),
     :entry = pseq(pref(:program), pany().notp())
   }
+}
+
+def main() {
 }
 
