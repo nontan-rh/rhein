@@ -32,6 +32,7 @@ class PegContext {
 }
 
 global rhein_syntax = nil
+global default_operator_list = nil
 
 def pref(x : symbol) {
   pdynamic(^{ ctx, src -> ctx.syntax_table[x].parse(ctx, src) })
@@ -328,6 +329,25 @@ def init_syntax() {
         psependby(pref(:statement), pref(:delimiter))),
     :entry = pseq(pref(:program), pany().notp())
   }
+
+  default_operator_list = [
+    make_unary(pkeyword("not"), pkeyword("neg")),
+    make_binary(ppost_concat("*"), ppost_concat("/")),
+    make_binary(ppost_concat("+"), ppost_concat("-")),
+    make_binary(
+      pkeyword("eq"), pkeyword("ne"),
+      ppost_concat(">="), ppost_concat(">"),
+      ppost_concat("<="), ppost_concat("<"))
+  ]
+}
+
+def generate_ctx(list) {
+  local ctx = ~PegContext.new()
+  ctx.syntax_table = rhein_syntax
+  ctx.expression_grammar = gen_expression_grammar(list)
+  ctx.unary_operator_list = gen_unary_list(list)
+  ctx.binary_operator_list = gen_binary_list(list)
+  ctx
 }
 
 def main() {

@@ -118,7 +118,7 @@ State::read_class(FILE* fp) {
     BinaryReader::readSymbol(fp, parent_name);
     BinaryReader::readBER(fp, slot_num);
 
-    auto slots = new Symbol*[slot_num];
+    auto slots = allocate_block<Symbol*>(slot_num);
     for (unsigned long i = 0; i < slot_num; i++) {
         BinaryReader::readSymbol(fp, slots[i]);
     }
@@ -146,8 +146,8 @@ State::read_function(FILE* fp) {
     BinaryReader::readSymbol(fp, function_name);
     BinaryReader::readByte(fp, variable_arg);
     BinaryReader::readBER(fp, argument_num);
-    argument_dispatch_kinds = new FunctionInfo::ArgDispatchKind[argument_num];
-    argument_type_ids = new Symbol*[argument_num];
+    argument_dispatch_kinds = allocate_block<FunctionInfo::ArgDispatchKind>(argument_num);
+    argument_type_ids = allocate_block<Symbol*>(argument_num);
     for (unsigned long i = 0; i < argument_num; i++) {
         unsigned char kind;
         BinaryReader::readByte(fp, kind);
@@ -171,7 +171,7 @@ State::read_function(FILE* fp) {
     unsigned long constant_table_size;
     Value* constant_table;
     BinaryReader::readBER(fp, constant_table_size);
-    constant_table = new Value[constant_table_size];
+    constant_table = allocate_raw_array(constant_table_size);
     for (unsigned long i = 0; i < constant_table_size; i++) {
         unsigned char type;
         BinaryReader::readByte(fp, type);
