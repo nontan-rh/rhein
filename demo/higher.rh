@@ -18,6 +18,14 @@ def map(x : array, proc) {
     res
 }
 
+def foldl(proc, knil, x : array) {
+    local i = 0
+    local length = x.length()
+    local obj = knil
+    while i < length { obj = proc^(obj, x[i]); i = i + 1 }
+    obj
+}
+
 def f(a, b, c) {
     print(a + b + c)
 }
@@ -25,6 +33,7 @@ def f(a, b, c) {
 def main() {
     [1, 2, 3, 4, 5].filter(^{ x -> x < 3 }).map(^print)
     [1, 2, 3, 4, 5].map(^{ x -> (x + 1).print() })
+    foldl(^{ x, y -> x - y }, 0, [1, 2, 3, 4]).print()
     ^f.apply([1, 2, 3])
 }
 

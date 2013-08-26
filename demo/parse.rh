@@ -18,6 +18,14 @@ def map(x : array, proc) {
     res
 }
 
+def foldl(proc, knil, x : array) {
+    local i = 0
+    local length = x.length()
+    local obj = knil
+    while i < length { obj = proc(obj, x[i]); i = i + 1 }
+    obj
+}
+
 class PegContext {
   syntax_table, expression_grammar,
   unary_operator_list, binary_operator_list
@@ -31,9 +39,10 @@ def pref(x : symbol) {
 
 def ppost_concat(x : string) { pseq(pstr(x), pref(:implicit_delimiter)) }
 def pskip_spaces(x : string) { pseq(pstr(x), pref(:spaces)) }
+def pskip_spaces(x : PegSyntax) { pseq(x, pref(:spaces)) }
 def pkeyword(x : string) { pseq(pstr(x), notp(pref(:ID_CONT))) }
-def psepby1(body, sep) { pseq(body, pseq(sep, body).pstar()) }
-def psependby(body, sep) { pseq(body, pseq(sep, body).pstar(), sep.popt()).popt() }
+def psepby1(body, sep) { pseq(body, pseq(sep, body).star()) }
+def psependby(body, sep) { pseq(body, pseq(sep, body).star(), sep.opt()).opt() }
 
 class UnaryOperator { syntax }
 class BinaryOperator { syntax }
@@ -52,46 +61,47 @@ def make_binary(&rest s) {
 
 def gen_syntax(child, ops : UnaryOperator) {
   pseq(
-    ^pchoice.apply(ops.syntax).pstar(),
+    ^pchoice.apply(ops.syntax).star(),
     child)
 }
 
 def gen_syntax(child, ops : BinaryOperator) {
   pchain_left(
     child,
-    ^pchoice.apply(ops.syntax).pstar(),
+    ^pchoice.apply(ops.syntax).star(),
     ^{ x, y -> x })
 }
 
 def gen_unary_list(list) {
-  local unary_layers = filter(^{ x -> x.is_a(~UnaryOperator) }, list)
-  local unary_ops = ^append.apply(map(^{ x -> x.syntax }, unary_layers))
+  local unary_layers = filter(list, ^{ x -> x.is_a(~UnaryOperator) })
+  local unary_ops = ^concatenate.apply(map(unary_layers, ^{ x -> x.syntax }))
   ^pchoice.apply(unary_ops)
 }
 
 def gen_binary_list(list) {
-  local binary_layers = filter(^{ x -> x.is_a(~UnaryOperator) }, list)
-  local binary_ops = ^append.apply(map(^{ x -> x.syntax }, binary_layers))
+  local binary_layers = filter(list, ^{ x -> x.is_a(~BinaryOperator) })
+  local binary_ops = ^concatenate.apply(map(binary_layers, ^{ x -> x.syntax }))
   ^pchoice.apply(binary_ops)
 }
 
-def with_operator_list(list) {
+def gen_expression_grammar(list) {
+  ^gen_syntax.foldl(pref(:postfix_expression), list)
 }
 
 def init_syntax() {
   rhein_syntax = {
     :NEWLINE = pchoice(pstr("\n\r"), pstr("\n"), pstr("\r")),
-    :WHITESPACES = pchar().add(?\s).add(?\t).pplus(),
-    :implicit_delimiter = pchoice(pref(:NEWLINE), pref(:WHITESPACES)).pstar(),
+    :WHITESPACES = pchar().add(?\s).add(?\t).plus(),
+    :implicit_delimiter = pchoice(pref(:NEWLINE), pref(:WHITESPACES)).star(),
     :delimiter =
       pseq(
         pref(:spaces),
         pchoice(pstr(";"), pref(:NEWLINE)),
-        pchoice(pstr(";"), pref(:NEWLINE), pref(:WHITESPACES)).pstar()),
+        pchoice(pstr(";"), pref(:NEWLINE), pref(:WHITESPACES)).star()),
     :spaces =
       pseq(
         pref(:WHITESPACES),
-        popt(pseq(pref(:implicit_delimiter),
+        opt(pseq(pref(:implicit_delimiter),
                   andp(pref(:pre_concatenative_token))))),
     :LPAREN = ppost_concat("("),
     :RPAREN = pskip_spaces(")"),
@@ -126,14 +136,14 @@ def init_syntax() {
       pseq(
         notp(pref(:disabled_keywords)),
         pref(:ID_BEGIN),
-        pref(:ID_CONT).pstar()).pskip_spaces(),
+        pref(:ID_CONT).star()).pskip_spaces(),
     :DIGIT_BEGIN = pchar().add(?1, ?9),
     :DIGIT_CONT = pchar().add(?0, ?9),
     :DIGIT =
       pchoice(
         pseq(
           pref(:DIGIT_BEGIN),
-          pref(:DIGIT_CONT).pstar()),
+          pref(:DIGIT_CONT).star()),
         pstr("0")).pskip_spaces(),
     :HEXDIGIT = pchar().add(?0, ?9).add(?a, ?f).add(?A, ?F),
     :pre_concatenative_token =
@@ -145,7 +155,7 @@ def init_syntax() {
       pchoice(
         pref(:AND), pref(:BREAK), pref(:CLASS), pref(:DEF), pref(:ELIF),
         pref(:ELSE), pref(:FALSE), pref(:GLOBAL), pref(:IF), pref(:LOCAL),
-        pref(:NIL), pref(:OR), pref(:TRUE), hpref(:WHILE)),
+        pref(:NIL), pref(:OR), pref(:TRUE), pref(:WHILE)),
     :parameter_option =
       pchoice(
         pseq(pref(:REST), pref(:ID)),
@@ -155,7 +165,7 @@ def init_syntax() {
         pseq(pref(:COLONEQ), pref(:ID)),
         pseq(pref(:COLON), pref(:ID))),
     :parameter =
-      pseq(pref(:parameter_option), popt(pref(:parameter_type))),
+      pseq(pref(:parameter_option), opt(pref(:parameter_type))),
     :parameter_list = psependby(pref(:parameter), pref(:COMMA)),
     :argument_list =
       pseq(
@@ -182,8 +192,8 @@ def init_syntax() {
     :if_expression =
       pseq(
         pref(:if_clause),
-        pref(:elif_clause).pstar(),
-        pref(:else_clause).popt()),
+        pref(:elif_clause).star(),
+        pref(:else_clause).opt()),
     :while_expression =
       pseq(
         pref(:WHILE), pref(:implicit_delimiter),
@@ -207,12 +217,12 @@ def init_syntax() {
       pchar().add(?s).add(?t).add(?n).add(?r).add(?\").add(?\'),
     :STRING_CHARACTER =
       pchoice(
-        pseq(pstr("\\x"), pref(:HEXDIGIT).ptimes(2, 2)),
+        pseq(pstr("\\x"), pref(:HEXDIGIT).times(2, 2)),
         pseq(pstr("\\"), pref(:ESCAPE_CHARACTER)),
         pseq(pchar().add(?\").inv())),
     :LITERAL_CHARACTER =
       pchoice(
-        pseq(pstr("\\x"), pref(:HEXDIGIT).ptimes(2, 2)),
+        pseq(pstr("\\x"), pref(:HEXDIGIT).times(2, 2)),
         pseq(pstr("\\"), pref(:ESCAPE_CHARACTER)),
         pref(:PRINTABLE_CHARACTER)),
     :symbol_literal =
@@ -220,14 +230,14 @@ def init_syntax() {
     :string_literal =
       pseq(
         pref(:DQUOTE), 
-        pref(:STRING_CHARACTER).pstar(),
+        pref(:STRING_CHARACTER).star(),
         pref(:DQUOTE)).pskip_spaces(),
     :character_literal =
       pseq(pstr("?"), pref(:LITERAL_CHARACTER)).pskip_spaces(),
     :array_literal =
       pseq(
         pref(:LBRACKET),
-        psependby(pref(:expression), pref(:COMMA)).pstar(),
+        psependby(pref(:expression), pref(:COMMA)),
         pref(:RBRACKET)),
     :key_value_pair =
       pseq(pref(:expression), pref(:ASSIGN), pref(:expression)),
@@ -237,7 +247,7 @@ def init_syntax() {
         psependby(pref(:key_value_pair), pref(:COMMA)),
         pref(:RBRACE)),
     :referenece_prefix = pchoice(pstr("^"), pstr("~")),
-    :id_reference = pseq(pref(:referenece_prefix).popt(), pref(:ID)),
+    :id_reference = pseq(pref(:referenece_prefix).opt(), pref(:ID)),
     :named_call = pseq(pref(:ID), pref(:argument_list)),
     :special_literal = pchoice(pref(:TRUE), pref(:FALSE), pref(:NIL)),
     :primary_expression =
@@ -269,18 +279,18 @@ def init_syntax() {
           pref(:method_call_postfix),
           pref(:index_postfix),
           pref(:lambda_call_postfix),
-          pref(:member_postfix)).pstar()),
+          pref(:member_postfix)).star()),
     :binary_ops = pdynamic(^{ ctx, src -> ctx.binary_operator_list.parse(ctx, src) }),
     :expression = pdynamic(^{ ctx, src -> ctx.expression_grammar.parse(ctx, src) }),
     :assign_statement =
       pseq(
-        pseq(pref(:postfix_expression), pref(:ASSIGN)).pplus(),
+        pseq(pref(:postfix_expression), pref(:ASSIGN)).plus(),
         pref(:expression)),
     :break_statement = pseq(pref(:BREAK), pref(:expression)),
     :var_decl =
       pseq(
         pref(:ID),
-        pseq(pref(:ASSIGN), pref(:expression)).popt()),
+        pseq(pref(:ASSIGN), pref(:expression)).opt()),
     :var_decl_list = psepby1(pref(:var_decl), pref(:COMMA)),
     :local_decl = pseq(pref(:LOCAL), pref(:var_decl_list)),
     :global_decl = pseq(pref(:GLOBAL), pref(:var_decl_list)),
@@ -310,16 +320,17 @@ def init_syntax() {
       pseq(
         pref(:CLASS), pref(:implicit_delimiter),
         pref(:ID), pref(:implicit_delimiter),
-        pseq(pref(:COLON), pref(:ID).popt()), pref(:implicit_delimiter),
+        pseq(pref(:COLON), pref(:ID).opt()), pref(:implicit_delimiter),
         pref(:class_block)),
     :program =
       pseq(
-        pref(:delimiter).pstar(),
+        pref(:delimiter).star(),
         psependby(pref(:statement), pref(:delimiter))),
     :entry = pseq(pref(:program), pany().notp())
   }
 }
 
 def main() {
+  init_syntax()
 }
 

@@ -263,6 +263,12 @@ fn_pchar(unsigned /* argc */, Value* /* args */) {
 }
 
 Value
+fn_pchar_add1(unsigned, Value* args) {
+    args[0].get_obj<PegCharClass>()->add(args[1].get_char(), args[1].get_char());
+    return args[0];
+}
+
+Value
 fn_pchar_add(unsigned /* argc */, Value* args) {
     args[0].get_obj<PegCharClass>()->add(args[1].get_char(),
             args[2].get_char());
@@ -292,6 +298,13 @@ fn_times(unsigned /* argc */, Value* args) {
     return Value::by_object(
             PegTimes::create(
                 args[1].get_int(), args[2].get_int(),
+                args[0].get_obj<PegSyntax>()));
+}
+
+Value
+fn_opt(unsigned /* argc */, Value* args) {
+    return Value::by_object(
+            PegTimes::create( 0, 1,
                 args[0].get_obj<PegSyntax>()));
 }
 
@@ -373,10 +386,12 @@ PegModule::initialize() {
     R->add_native_function("pstr", false, 1, {"string"}, fn_pstr);
     R->add_native_function("pchar", false, 0, { }, fn_pchar);
     R->add_native_function("add", false, 3, {"PegCharClass", "char", "char"}, fn_pchar_add);
+    R->add_native_function("add", false, 2, {"PegCharClass", "char"}, fn_pchar_add1);
     R->add_native_function("inv", false, 1, {"PegCharClass"}, fn_pchar_inv);
     R->add_native_function("star", false, 1, {"PegSyntax"}, fn_star);
     R->add_native_function("plus", false, 1, {"PegSyntax"}, fn_plus);
     R->add_native_function("times", false, 3, {"PegSyntax", "int", "int"}, fn_times);
+    R->add_native_function("opt", false, 1, {"PegSyntax"}, fn_opt);
     R->add_native_function("andp", false, 1, {"PegSyntax"}, fn_andp);
     R->add_native_function("notp", false, 1, {"PegSyntax"}, fn_notp);
     R->add_native_function("pseq", true, 0, {}, fn_pseq);
