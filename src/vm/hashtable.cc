@@ -50,8 +50,8 @@ HashTable::literal(Array* keys, Array* values) {
 
     for (Int i = 0; i < keys->get_length(); i++) {
         Value key, value;
-        keys->elt_ref(i, key);
-        values->elt_ref(i, value);
+        key = keys->elt_ref(i);
+        value = values->elt_ref(i);
         ht->insert_if_absent(key, value);
     }
     return ht;

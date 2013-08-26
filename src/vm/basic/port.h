@@ -18,7 +18,7 @@ using namespace rhein::basic;
 
 class Port : public Object {
 public:
-    Port(Class* klass, NativeClass* nc) : Object(klass, nc) {}
+    Port(Class* klass) : Object(klass) {}
     virtual Byte read_byte() = 0;
     virtual Char read_char() = 0;
     virtual size_t read_bytes_as_possible_to_buffer(char* buf, size_t size) = 0;

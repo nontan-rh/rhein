@@ -343,7 +343,7 @@ State::add_function(Function* func, const Symbol* name) {
         } else if (old->get_class() == method_class_) {
             return static_cast<Method*>(old)->add_function(func);
         } else {
-            throw "";
+            fatal("Error");
         }
     }
 

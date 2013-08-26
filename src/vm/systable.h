@@ -61,7 +61,7 @@ public:
         unsigned hash_value = get_sys_hash(key);
         unsigned index_begin = hash_value % table_size_;
 
-        if (table_[index_begin].status == EntryStatus::Empty) { throw ""; }
+        if (table_[index_begin].status == EntryStatus::Empty) { assert(false); }
 
         if (entry_is(index_begin, key)) {
             return table_[index_begin].value;
@@ -73,7 +73,7 @@ public:
             if (entry_is(i, key)) { return table_[i].value; }
         }
 
-        throw "";
+        assert(false);
     }
 
     void insert(const K& key, const V& value) {
@@ -109,12 +109,12 @@ public:
     }
 
     void insert_if_absent(const K& key, const V& value) {
-        if (exists(key)) { throw ""; }
+        if (exists(key)) { return; }
         else { insert(key, value); }
     }
 
     void assign(const K& key, const V& value) {
-        if (!exists(key)) { throw ""; }
+        if (!exists(key)) { return; }
         else { insert(key, value); }
     }
 
@@ -122,9 +122,7 @@ public:
         unsigned hash_value = get_sys_hash(key);
         unsigned index_begin = hash_value % table_size_;
 
-        if (table_[index_begin].status == EntryStatus::Empty) {
-            throw "";
-        }
+        if (table_[index_begin].status == EntryStatus::Empty) { assert(false); }
         
         if (entry_is(index_begin, key)) {
             table_[index_begin].status = EntryStatus::Deleted;
@@ -142,7 +140,7 @@ public:
             }
         }
 
-        throw "";
+        assert(false);
     }
 
     void import(const SysTable<K,V>* other) {

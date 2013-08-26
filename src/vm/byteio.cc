@@ -161,7 +161,7 @@ State::read_function(FILE* fp) {
                     FunctionInfo::ArgDispatchKind::Instance;
                 break;
             default:
-                throw "";
+                assert(false);
         }
         BinaryReader::readSymbol(fp, argument_type_ids[i]);
     }

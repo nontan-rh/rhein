@@ -262,8 +262,8 @@ public:
     void get_cstr(const char*& body, size_t& length) const;
 
     char elt_ref(Int index) {
-        if (index >= 0
-                && static_cast<unsigned>(index) >= length_) { throw ""; }
+        assert (index >= 0 && static_cast<unsigned>(index) < length_);
+        return body_[index];
         return body_[index];
     }
 
@@ -296,32 +296,30 @@ public:
 
     Int get_length() const { return size_; }
 
-    bool elt_ref(Int index, Value& dest) {
-        if (0 <= index && index < size_) {
-            dest = body_[index];
-            return true;
-        }
-        return false;
+    Value elt_ref(Int index) {
+        assert(bound_ok(index));
+        return body_[index];
     }
 
-    bool elt_set(Int index, Value value) {
-        if (0 <= index && index < size_) {
-            body_[index] = value;
-            return true;
-        }
-        return false;
+    void elt_set(Int index, Value value) {
+        assert(bound_ok(index));
+        body_[index] = value;
     }
 
     // Override
     bool index_ref(Value index, Value& dest) {
-        if (!index.is(Value::Type::Int)) { return false; }
-        return elt_ref(index.get_int(), dest);
+        if (!(index.is(Value::Type::Int) && bound_ok(index.get_int()))) {
+            return false;
+        }
+        dest = elt_ref(index.get_int());
+        return true;
     }
 
     // Override
     bool index_set(Value index, Value value) {
         if (!index.is(Value::Type::Int)) { return false; }
-        return elt_set(index.get_int(), value);
+        elt_set(index.get_int(), value);
+        return true;
     }
 
     void append(Value value);
@@ -333,6 +331,8 @@ private:
     Int allocated_size_;
 
     Array(Int size_);
+
+    bool bound_ok(Int index) { return (0 <= index && index < size_); }
 };
 
 class RestArguments : public Object {
@@ -343,33 +343,34 @@ public:
 
     Int get_length() const { return size_; }
 
-    bool elt_ref(Int index, Value& dest) {
-        if (0 <= index && index < size_) {
-            dest = body_[index];
-            return true;
-        }
-        return false;
+    Value elt_ref(Int index) {
+        assert(bound_ok(index));
+        return body_[index];
     }
 
-    bool elt_set(Int index, Value value) {
-        if (0 <= index && index < size_) {
-            body_[index] = value;
-            return true;
-        }
-        return false;
+    void elt_set(Int index, Value value) {
+        assert(bound_ok(index));
+        body_[index] = value;
     }
 
     // Override
     bool index_ref(Value index, Value& dest) {
-        if (!index.is(Value::Type::Int)) { return false; }
-        return elt_ref(index.get_int(), dest);
+        if (!(index.is(Value::Type::Int) && bound_ok(index.get_int()))) {
+            return false;
+        }
+        dest = elt_ref(index.get_int());
+        return true;
     }
 
     // Override
     bool index_set(Value index, Value value) {
-        if (!index.is(Value::Type::Int)) { return false; }
-        return elt_set(index.get_int(), value);
+        if (!(index.is(Value::Type::Int) && bound_ok(index.get_int()))) {
+            return false;
+        }
+        elt_set(index.get_int(), value);
+        return true;
     }
+
 
     bool to_array(Array*& dest) const;
 private:
@@ -378,6 +379,8 @@ private:
     Int allocated_size_;
 
     RestArguments(Int size_);
+
+    bool bound_ok(Int index) { return (0 <= index && index < size_); }
 };
 
 struct HashTableNode;

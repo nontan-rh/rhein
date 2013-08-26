@@ -59,25 +59,19 @@ String::append(String* rht) const {
 
 String*
 String::head(size_t end) const {
-    if (end > length_) {
-        throw;
-    }
+    assert(end <= length_);
     return String::create(body_, end);
 }
 
 String*
 String::tail(size_t begin) const {
-    if (begin >= length_) {
-        throw;
-    }
+    assert(begin < length_);
     return String::create(body_ + begin, length_ - begin);
 }
 
 String*
 String::sub(size_t begin, size_t end) const {
-    if (end > length_ || begin >= length_ || end < begin) {
-        throw;
-    }
+    assert(end <= length_ && begin < length_ && begin <= end);
     return String::create(body_ + begin, end - begin);
 }
 

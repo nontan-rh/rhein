@@ -35,10 +35,8 @@ public:
     }
 
 protected:
-    List(Class* klass, NativeClass* nc) : Object(klass, nc) { }
+    List(Class* klass) : Object(klass) { }
 };
-
-extern NativeClass* single_list_nc_;
 
 class SingleList : public List {
 public:
@@ -60,7 +58,7 @@ private:
     SingleList* tail_;
 
     SingleList(Value head, SingleList* tail)
-        : List(get_current_state()->get_class("List"), single_list_nc_),
+        : List(get_current_state()->get_class("List")),
           head_(head), tail_(tail) { }
 };
 

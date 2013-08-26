@@ -44,7 +44,7 @@ FunctionInfo*
 FunctionInfo::create(Symbol* id, bool variadic, unsigned num_args,
         std::initializer_list<ArgDispatchKind> kinds,
         std::initializer_list<const char*> ids) {
-    if (ids.size() != kinds.size()) { throw ""; }
+    assert(ids.size() == kinds.size());
 
     State* R = get_current_state();
     Symbol** s = R->allocate_block<Symbol*>(ids.size());

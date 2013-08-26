@@ -368,6 +368,11 @@ fn_rest_apply(unsigned, Value* args) {
     return execute(fn, len, buf);
 }
 
+Value
+fn_make_array(unsigned, Value* args) {
+    return Value::by_object(Array::create(args[0].get_int()));
+}
+
 BasicModule*
 BasicModule::create() {
     State* R = get_current_state();
@@ -404,6 +409,7 @@ BasicModule::initialize() {
     R->add_native_function("apply", false, 2, {"any", "array"}, fn_array_apply);
     R->add_native_function("apply", false, 2, {"any", "rest_arguments"}, fn_rest_apply);
     R->add_native_function("callback", false, 1, {"bytecode_function"}, fn_callback);
+    R->add_native_function("make_array", false, 1, {"int"}, fn_make_array);
     return false;
 }
 

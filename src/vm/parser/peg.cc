@@ -204,14 +204,17 @@ PegDynamic::parse(List* src, Value& ctx, Value& obj, List*& next) {
     args[0] = ctx;
     args[1] = Value::by_object(src);
     obj = execute(fn_, 2, args);
-    if (obj.get_class() != get_current_state()->get_array_class()) { throw ""; }
+    if (obj.get_class() != get_current_state()->get_array_class()) {
+        fprintf(stderr, "Type error\n");
+        return false;
+    }
 
     Array* ary = obj.get_obj<Array>();
 
     Value v_succ, v_next;
-    ary->elt_ref(0, v_succ);
-    ary->elt_ref(1, obj);
-    ary->elt_ref(2, v_next);
+    v_succ = ary->elt_ref(0);
+    obj = ary->elt_ref(1);
+    v_next = ary->elt_ref(2);
     next = v_next.get_obj<List>();
 
     return v_succ.get_bool();

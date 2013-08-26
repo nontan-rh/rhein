@@ -11,6 +11,7 @@ String*
 Object::get_string_representation() {
     return String::create("#<obj>");
 }
+
 Class::Class(Symbol* name_, Class* parent_, RecordInfo* record_info_)
     : Object(get_current_state()->get_class_class()), id_(name_), parent_(parent_), record_info_(record_info_) { }
 
