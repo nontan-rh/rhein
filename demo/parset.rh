@@ -1,23 +1,4 @@
 
-def filter(pred, x : array) {
-    local i = 0
-    local length = x.length()
-    local res = []
-    while i < length {
-        if pred^(x[i]) { res.append(x[i]) }
-        i = i + 1
-    }
-    res
-}
-
-def map(proc, x : array) {
-    local i = 0
-    local length = x.length()
-    local res = make_array(length)
-    while i < length { res[i] = proc(x[i]) }
-    res
-}
-
 class PegContext {
   syntax_table, expression_grammar,
   unary_operator_list, binary_operator_list
@@ -25,58 +6,15 @@ class PegContext {
 
 global rhein_syntax = nil
 
-def pref(x : symbol) {
+def pref(x < symbol) {
   pdynamic(^{ ctx, src -> ctx.syntax_table[x].parse(ctx, src) })
 }
 
-def ppost_concat(x : string) { pseq(pstr(x), pref(:implicit_delimiter)) }
-def pskip_spaces(x : string) { pseq(pstr(x), pref(:spaces)) }
-def pkeyword(x : string) { pseq(pstr(x), notp(pref(:ID_CONT))) }
+def ppost_concat(x < string) { pseq(pstr(x), pref(:implicit_delimiter)) }
+def pskip_spaces(x < string) { pseq(pstr(x), pref(:spaces)) }
+def pkeyword(x < string) { pseq(pstr(x), notp(pref(:ID_CONT))) }
 def psepby1(body, sep) { pseq(body, pseq(sep, body).pstar()) }
 def psependby(body, sep) { pseq(body, pseq(sep, body).pstar(), sep.popt()).popt() }
-
-class UnaryOperator { syntax }
-class BinaryOperator { syntax }
-
-def make_unary(&rest s) {
-  local o = ~UnaryOperator.new()
-  o.syntax = s.to_array()
-  o
-}
-
-def make_binary(&rest s) {
-  local o = ~UnaryOperator.new()
-  o.syntax = s.to_array()
-  o
-}
-
-def gen_syntax(child, ops : UnaryOperator) {
-  pseq(
-    ^pchoice.apply(ops.syntax).pstar(),
-    child)
-}
-
-def gen_syntax(child, ops : BinaryOperator) {
-  pchain_left(
-    child,
-    ^pchoice.apply(ops.syntax).pstar(),
-    ^{ x, y -> x })
-}
-
-def gen_unary_list(list) {
-  local unary_layers = filter(^{ x -> x.is_a(~UnaryOperator) }, list)
-  local unary_ops = ^append.apply(map(^{ x -> x.syntax }, unary_layers))
-  ^pchoice.apply(unary_ops)
-}
-
-def gen_binary_list(list) {
-  local binary_layers = filter(^{ x -> x.is_a(~UnaryOperator) }, list)
-  local binary_ops = ^append.apply(map(^{ x -> x.syntax }, binary_layers))
-  ^pchoice.apply(binary_ops)
-}
-
-def with_operator_list(list) {
-}
 
 def init_syntax() {
   rhein_syntax = {
@@ -317,6 +255,7 @@ def init_syntax() {
         pref(:delimiter).pstar(),
         psependby(pref(:statement), pref(:delimiter))),
     :entry = pseq(pref(:program), pany().notp())
+
   }
 }
 

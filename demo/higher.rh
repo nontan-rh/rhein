@@ -1,0 +1,30 @@
+
+def filter(x : array, pred) {
+    local i = 0
+    local length = x.length()
+    local res = []
+    while i < length {
+        if pred^(x[i]) { res.append(x[i]) }
+        i = i + 1
+    }
+    res
+}
+
+def map(x : array, proc) {
+    local i = 0
+    local length = x.length()
+    local res = make_array(length)
+    while i < length { res[i] = proc(x[i]) }
+    res
+}
+
+def f(a, b, c) {
+    print(a + b + c)
+}
+
+def main() {
+    [1, 2, 3, 4, 5].filter(^{ x -> x < 3 }).map(^print)
+    [1, 2, 3, 4, 5].map(^{ x -> (x + 1).print() })
+    [1, 2, 3].apply(^f)
+}
+
