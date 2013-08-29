@@ -22,8 +22,20 @@ def foldl(proc, knil, x : array) {
     local i = 0
     local length = x.length()
     local obj = knil
-    while i < length { obj = proc(obj, x[i]); i = i + 1 }
+    while i < length { obj = proc^(obj, x[i]); i = i + 1 }
     obj
+}
+
+def foldl(proc, knil, x : array, y : array) {
+    local i = 0
+    local length = x.length()
+    local obj = knil
+    while i < length { obj = proc^(obj, x[i], y[i]); i = i + 1 }
+    obj
+}
+
+def pchain_left(operand, op, proc) {
+    pseq(operand, pseq(op, operand).star())
 }
 
 class PegContext {
@@ -55,7 +67,7 @@ def make_unary(&rest s) {
 }
 
 def make_binary(&rest s) {
-  local o = ~UnaryOperator.new()
+  local o = ~BinaryOperator.new()
   o.syntax = s.to_array()
   o
 }
@@ -352,5 +364,6 @@ def generate_ctx(list) {
 
 def main() {
   init_syntax()
+  local ctx = generate_ctx(default_operator_list)
 }
 

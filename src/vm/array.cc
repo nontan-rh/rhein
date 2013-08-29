@@ -35,6 +35,7 @@ Array::append(Value value) {
         for (Int i = 0; i < allocated_size_; i++) {
             newbody[i] = body_[i];
         }
+        allocated_size_ = newallocated_size;
         body_ = newbody;
     }
     body_[size_ - 1] = value;

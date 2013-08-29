@@ -36,6 +36,16 @@ print_value(Value v) {
         for (unsigned i = 0; i < len; i++) {
             printf("%c", cstr[i]);
         }
+    } else if (v.is(Value::Type::Record)) {
+        Record* rec = v.get_rec();
+        const char* cstr;
+        size_t len;
+        rec->get_class()->get_id()->get_cstr(cstr, len);
+        printf("#r<");
+        for (unsigned i = 0; i < len; i++) {
+            printf("%c", cstr[i]);
+        }
+        printf(">");
     } else {
         fatal("Cannot print");
     }
