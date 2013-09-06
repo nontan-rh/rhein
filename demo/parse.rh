@@ -127,6 +127,7 @@ def init_syntax() {
     :RARROW = ppost_concat("->"),
     :DOT = ppost_concat("."),
     :COMMA = ppost_concat(","),
+    :DQUOTE = pchar().add(?\"),
     :AND = pkeyword("and"),
     :BREAK = pkeyword("break"),
     :CLASS = pkeyword("class"),
@@ -365,5 +366,8 @@ def generate_ctx(list) {
 def main() {
   init_syntax()
   local ctx = generate_ctx(default_operator_list)
+  local src = "( t".to_list()
+  local result = rhein_syntax[:LPAREN].parse(ctx, src)
+  print(result[0], result[1], result[2].to_string())
 }
 

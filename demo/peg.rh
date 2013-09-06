@@ -7,7 +7,7 @@ def report(x) {
     print(x[0], x[1], x[2].to_string())
 }
 
-def pref(x < symbol) {
+def pref(x : symbol) {
     pdynamic(^{ ctx, src -> ctx.syntax_table[x].parse(ctx, src) })
 }
 
@@ -27,6 +27,9 @@ def main() {
     pchar().add(?a, ?z).times(1, 4).parse(nil, "Hello".to_list()).report()
     pchar().add(?a, ?z).times(1, 4).parse(nil, "helLo".to_list()).report()
     pchar().add(?a, ?z).times(4, 4).parse(nil, "hellO".to_list()).report()
+
+    print("pstr")
+    pstr(";").parse(nil, ";".to_list()).report()
 
     pstr("he").andp().parse(nil, "hello".to_list()).report()
     pstr("he").andp().parse(nil, "Hello".to_list()).report()

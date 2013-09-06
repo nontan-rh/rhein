@@ -101,7 +101,7 @@ bool
 FileModule::initialize() {
     State* R = get_current_state();
     R->add_class("File", "any");
-    R->add_class("PortSeq", "any");
+    R->add_class("PortSeq", "List");
     R->add_native_function("open", false, 1, {"string"}, fn_open);
     R->add_native_function("read_char", false, 1, {"File"}, fn_read_char);
     R->add_native_function("read_byte", false, 1, {"File"}, fn_read_byte);

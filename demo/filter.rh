@@ -1,0 +1,21 @@
+
+def filter(x : array, pred) {
+    local i = 0
+    local length = x.length()
+    local res = []
+    while i < length {
+        if pred^(x[i]) { res.append(x[i]) }
+        i = i + 1
+    }
+    res
+}
+
+def main() {
+    local a = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].filter(^{ x -> x / 3 * 3 eq x })
+    local i = 0
+    while i < a.length() {
+        a[i].print()
+        i = i + 1
+    }
+}
+

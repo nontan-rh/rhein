@@ -109,7 +109,7 @@ PegTimes::parse(List* src, Value& ctx, Value& obj, List*& next) {
     }
 
     for (; i != upper_; i++) {
-        if (!syn_->parse(s, ctx, obj, n)) {
+        if (!syn_->parse(s, ctx, buf, n)) {
             break;
         }
         ary->append(buf);
@@ -149,6 +149,7 @@ PegSequence::parse(List* src, Value& ctx, Value& obj, List*& next) {
             return false;
         }
         ary->append(buf);
+        s = next;
     }
 
     obj = Value::by_object(ary);
