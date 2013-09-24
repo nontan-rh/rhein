@@ -248,7 +248,7 @@ fn_parse(unsigned /* argc */, Value* args) {
     if (rest != nullptr) {
         ary->elt_set(2, Value::by_object(rest));
     } else {
-        ary->elt_set(2, Value::k_nil(get_current_state()->get_class("List")));
+        ary->elt_set(2, Value::k_nil());
     }
     return Value::by_object(ary);
 }

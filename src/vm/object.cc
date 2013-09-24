@@ -34,7 +34,6 @@ Value::get_class() const {
     State* R = get_current_state();
     switch (type_id_) {
     case Type::Nil:
-        if (u_.v_class_) { return u_.v_class_; }
         return R->get_any_class();
     case Type::Bool:
         return R->get_bool_class();

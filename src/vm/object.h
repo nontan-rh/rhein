@@ -33,12 +33,7 @@ public:
         Record,
     };
 
-    static Value k_nil() { return k_nil(nullptr); }
-    static Value k_nil(Class* klass) {
-        Value v = Value(Type::Nil);
-        v.u_.v_class_ = klass;
-        return v;
-    }
+    static Value k_nil() { return Value(Type::Nil); }
     static Value k_true() { return Value(true); }
     static Value k_false() { return Value(false); }
     static Value k_undef() { return Value(Type::Undef); }

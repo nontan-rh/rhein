@@ -338,7 +338,7 @@ fn_to_list(unsigned, Value* args) {
     String* s = args[0].get_obj<String>();
     SingleList* x = nullptr;
 
-    if (s->get_length() == 0) { return Value::k_nil(get_current_state()->get_class("List")); }
+    if (s->get_length() == 0) { return Value::k_nil(); }
 
     for (int i = s->get_length() - 1; i >= 0; i--) {
         x = SingleList::create(Value::by_char(s->elt_ref(i)), x);
