@@ -113,7 +113,7 @@ def init_syntax() {
         pchoice(pstr(";"), pref(:NEWLINE), pref(:WHITESPACES)).star()),
     :spaces =
       pseq(
-        pref(:WHITESPACES),
+        pref(:WHITESPACES).opt(),
         opt(pseq(pref(:implicit_delimiter),
                   andp(pref(:pre_concatenative_token))))),
     :LPAREN = ppost_concat("("),
@@ -366,7 +366,7 @@ def generate_ctx(list) {
 def main() {
   init_syntax()
   local ctx = generate_ctx(default_operator_list)
-  local src = ") t".to_list()
+  local src = ")".to_list()
   local result = rhein_syntax[:RPAREN].parse(ctx, src)
   print(result[0], result[1], result[2].to_string())
 }

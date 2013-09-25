@@ -12,7 +12,7 @@ bool
 PegString::parse(List* src, Value&, Value& obj, List*& next) {
     List* prev = src;
     for (Int i = 0; i < str_->get_length(); i++) {
-        if (src == nullptr) {
+        if (src == end_of_list) {
             next = prev;
             obj = Value::k_nil();
             return false;
@@ -68,9 +68,9 @@ PegCharClass::invert() {
 
 bool
 PegCharClass::parse(List* src, Value&, Value& obj, List*& next) {
-    if (src == nullptr) {
+    if (src == end_of_list) {
         obj = Value::k_nil();
-        next = nullptr;
+        next = end_of_list;
         return false;
     }
 
@@ -189,9 +189,9 @@ PegAction::parse(List* src, Value& ctx, Value& obj, List*& next) {
 
 bool
 PegAny::parse(List* src, Value&, Value& obj, List*& next) {
-    if (src == nullptr) {
+    if (src == end_of_list) {
         obj = Value::k_nil();
-        next = nullptr;
+        next = end_of_list;
         return false;
     }
     obj = src->get_head();
@@ -245,10 +245,10 @@ fn_parse(unsigned /* argc */, Value* args) {
 
     ary->elt_set(0, Value::by_bool(succ));
     ary->elt_set(1, res);
-    if (rest != nullptr) {
+    if (rest != end_of_list) {
         ary->elt_set(2, Value::by_object(rest));
     } else {
-        ary->elt_set(2, Value::k_nil());
+        ary->elt_set(2, Value::by_object(end_of_list));
     }
     return Value::by_object(ary);
 }

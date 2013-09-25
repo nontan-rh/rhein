@@ -14,6 +14,8 @@
 namespace rhein {
 namespace basic {
 
+SingleList* end_of_list;
+
 void
 print_value(Value v) {
     if (v.is(Value::Type::Int)) {
@@ -172,14 +174,14 @@ fn_list_to_string(unsigned /* argc */, Value* args) {
     List* list = args[0].get_obj<List>();
 
     List* p = list;
-    for (len = 0; p != nullptr; p = p->get_tail().get_obj<List>()) {
+    for (len = 0; p != end_of_list; p = p->get_tail().get_obj<List>()) {
         if (!p->get_head().is(Value::Type::Char)) { return Value::k_nil(); }
         len++;
     }
     char* buf = new char[len + 1];
 
     List* q = list;
-    for (int i = 0; q != nullptr; i++, q = q->get_tail().get_obj<List>()) {
+    for (int i = 0; q != end_of_list; i++, q = q->get_tail().get_obj<List>()) {
         buf[i] = q->get_head().get_char();
     }
     buf[len] = '\0';
@@ -322,7 +324,7 @@ fn_cons(unsigned, Value* args) {
     SingleList* tail;
 
     if (args[1].is(Value::Type::Nil)) {
-        tail = nullptr;
+        tail = end_of_list;
     } else if (args[1].get_class()
             == get_current_state()->get_class("List")) {
         tail = args[1].get_obj<SingleList>();
@@ -336,7 +338,7 @@ fn_cons(unsigned, Value* args) {
 Value
 fn_to_list(unsigned, Value* args) {
     String* s = args[0].get_obj<String>();
-    SingleList* x = nullptr;
+    SingleList* x = end_of_list;
 
     if (s->get_length() == 0) { return Value::k_nil(); }
 
@@ -455,6 +457,11 @@ BasicModule::initialize() {
     R->add_native_function("callback", false, 1, {"bytecode_function"}, fn_callback);
     R->add_native_function("make_array", false, 1, {"int"}, fn_make_array);
     R->add_native_function("concatenate", true, 0, {}, fn_concatenate);
+
+    end_of_list = SingleList::create(Value::k_undef(), nullptr);
+
+    R->add_variable(R->get_symbol("end_of_list"), Value::by_object(end_of_list));
+
     return false;
 }
 

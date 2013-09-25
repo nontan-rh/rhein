@@ -41,12 +41,7 @@ protected:
 class SingleList : public List {
 public:
     Value get_head() { return head_; }
-    Value get_tail() {
-        if (tail_ == nullptr) {
-            return Value::k_nil();
-        }
-        return Value::by_object(tail_);
-    }
+    Value get_tail() { return Value::by_object(tail_); }
 
     static SingleList* create(Value head, SingleList* tail) {
         void* p = get_current_state()->allocate_object<SingleList>();
@@ -61,6 +56,8 @@ private:
         : List(get_current_state()->get_class("List")),
           head_(head), tail_(tail) { }
 };
+
+extern SingleList* end_of_list;
 
 }
 
