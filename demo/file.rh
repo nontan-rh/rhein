@@ -1,7 +1,7 @@
 
 def main() {
     local x = make_portseq(open("../rhein/demo/calc.rh"))
-    while x ne nil {
+    while x ne end_of_list {
         print(x.head)
         x = x.tail
     }

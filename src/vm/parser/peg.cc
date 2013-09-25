@@ -40,22 +40,22 @@ PegString::parse(List* src, Value&, Value& obj, List*& next) {
 void
 PegCharClass::add(char begin, char end) {
     end++;
-    unsigned b_x = begin / kIntBits;
-    unsigned b_y = begin % kIntBits;
-    unsigned e_x = end / kIntBits;
-    unsigned e_y = end % kIntBits;
+    int b_x = begin / kIntBits;
+    int b_y = begin % kIntBits;
+    int e_x = end / kIntBits;
+    int e_y = end % kIntBits;
     if (b_x == e_x) {
-        for (unsigned i = b_y; i < e_y; i++) {
+        for (int i = b_y; i < e_y; i++) {
             table_[b_x] |= 1 << i;
         }
     } else {
-        for (unsigned i = b_y; i < kIntBits; i++) {
+        for (int i = b_y; i < static_cast<int>(kIntBits); i++) {
             table_[b_x] |= 1 << i;
         }
-        for (unsigned i = b_x + 1; i < e_x - 1; i++) {
+        for (int i = b_x + 1; i < e_x - 1; i++) {
             table_[i]   =  0xffffffff;
         }
-        for (unsigned i = 0; i < e_y; i++) {
+        for (int i = 0; i < e_y; i++) {
             table_[e_x] |= 1 << i;
         }
     }
@@ -166,10 +166,13 @@ PegChoice::parse(List* src, Value& ctx, Value& obj, List*& next) {
         if (syns_[i]->parse(s, ctx, obj, next)) {
             return true;
         } else {
+            // Automatic backtrack enabled
+#if 0
             // Check if parser head did not go ahead
             if (s == next) { continue; }
             // else
             break;
+#endif
         }
     }
 

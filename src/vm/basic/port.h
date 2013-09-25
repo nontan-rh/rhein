@@ -65,7 +65,7 @@ public:
     Value get_head() { return Value::by_char(get_head_char()); }
     Value get_tail() {
         PortSeq* t = get_tail_native();
-        if (!t) { return Value::k_nil(); }
+        if (!t) { return Value::by_object(end_of_list); }
         return Value::by_object(get_tail_native());
     }
 

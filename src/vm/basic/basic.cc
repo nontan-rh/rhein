@@ -21,7 +21,7 @@ print_value(Value v) {
     if (v.is(Value::Type::Int)) {
         printf("%d", v.get_int());
     } else if (v.is(Value::Type::Char)) {
-        printf("?%c", v.get_char());
+        printf("?%c(%d)", v.get_char(), v.get_char());
     } else if (v.is(Value::Type::Bool)) {
         if (v.get_bool()) {
             printf("true");
@@ -48,6 +48,8 @@ print_value(Value v) {
             printf("%c", cstr[i]);
         }
         printf(">");
+    } else if (v.is(Value::Type::Undef)) {
+        printf("Undef");
     } else {
         fatal("Cannot print");
     }

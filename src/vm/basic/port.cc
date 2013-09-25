@@ -4,6 +4,7 @@
 
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 
 using namespace std;
 
@@ -23,10 +24,14 @@ File::File(String* name, RWFlags rw, PosFlags pos)
             const char* cstr;
             size_t len;
             name->get_cstr(cstr, len);
-            fp = fopen(cstr, "r");
+            char* buf = new char[len + 1];
+            strncpy(buf, cstr, len);
+            buf[len] = '\0';
+            fp = fopen(buf, "r");
             if (fp == nullptr) {
                 assert(false);
             }
+            delete[] buf;
         } else if (pos == PosFlags::Tail) {
             fatal("not supported");
         }
@@ -43,6 +48,8 @@ File::create(String* name, RWFlags rw, PosFlags pos) {
 
 Byte
 File::read_byte() {
+    int x = fgetc(fp);
+    if (x == EOF) { assert(false); }
     return fgetc(fp);
 }
 
@@ -58,7 +65,12 @@ File::read_bytes_as_possible_to_buffer(char* buf, size_t size) {
 
 bool
 File::eof() {
-    return feof(fp);
+    int ch = fgetc(fp);
+    if (!feof(fp) && ch != EOF) {
+        ungetc(ch, fp);
+        return false;
+    }
+    return true;
 }
 
 Value

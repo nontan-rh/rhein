@@ -172,7 +172,7 @@ def init_syntax() {
         pref(:NIL), pref(:OR), pref(:TRUE), pref(:WHILE)),
     :parameter_option =
       pchoice(
-        pseq(pref(:REST), pref(:ID)),
+        pseq(pref(:REST), pref(:implicit_delimiter), pref(:ID)),
         pseq(pref(:ID))),
     :parameter_type =
       pchoice(
@@ -239,6 +239,8 @@ def init_syntax() {
         pseq(pstr("\\x"), pref(:HEXDIGIT).times(2, 2)),
         pseq(pstr("\\"), pref(:ESCAPE_CHARACTER)),
         pref(:PRINTABLE_CHARACTER)),
+    :PRINTABLE_CHARACTER =
+      pchar().add(?\x00, ?\x21).add(?\x7e, ?\xff).add(?\").add(?\').inv(),
     :symbol_literal =
       pseq(pstr(":"), pref(:ID)),
     :string_literal =
@@ -366,8 +368,8 @@ def generate_ctx(list) {
 def main() {
   init_syntax()
   local ctx = generate_ctx(default_operator_list)
-  local src = ")".to_list()
-  local result = rhein_syntax[:RPAREN].parse(ctx, src)
+  local src = "".to_list()
+  local result = rhein_syntax[:entry].parse(ctx, src)
   print(result[0], result[1], result[2].to_string())
 }
 
