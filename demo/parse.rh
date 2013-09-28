@@ -51,6 +51,9 @@ def pref(x : symbol) {
 }
 
 def ppost_concat(x : string) { pseq(pstr(x), pref(:implicit_delimiter)) }
+def ppost_concat_keyword(x : string) {
+  pseq(pstr(x), notp(pref(:ID_CONT)), pref(:implicit_delimiter))
+}
 def pskip_spaces(x : string) { pseq(pstr(x), pref(:spaces)) }
 def pskip_spaces(x : PegSyntax) { pseq(x, pref(:spaces)) }
 def pkeyword(x : string) { pseq(pstr(x), notp(pref(:ID_CONT))) }
@@ -81,7 +84,7 @@ def gen_syntax(child, ops : UnaryOperator) {
 def gen_syntax(child, ops : BinaryOperator) {
   pchain_left(
     child,
-    ^pchoice.apply(ops.syntax).star(),
+    ^pchoice.apply(ops.syntax),
     ^{ x, y -> x })
 }
 
@@ -201,7 +204,6 @@ def init_syntax() {
       pseq(
         pref(:implicit_delimiter),
         pref(:ELSE), pref(:implicit_delimiter),
-        pref(:expression), pref(:implicit_delimiter),
         pref(:block)),
     :if_expression =
       pseq(
@@ -265,7 +267,7 @@ def init_syntax() {
     :referenece_prefix = pchoice(pstr("^"), pstr("~")),
     :id_reference = pseq(pref(:referenece_prefix).opt(), pref(:ID)),
     :named_call = pseq(pref(:ID), pref(:argument_list)),
-    :special_literal = pchoice(pref(:TRUE), pref(:FALSE), pref(:NIL)),
+    :special_literal = pchoice(pref(:TRUE), pref(:FALSE), pref(:NIL)).pskip_spaces(),
     :primary_expression =
       pchoice(
         pref(:if_expression),
@@ -302,14 +304,14 @@ def init_syntax() {
       pseq(
         pseq(pref(:postfix_expression), pref(:ASSIGN)).plus(),
         pref(:expression)),
-    :break_statement = pseq(pref(:BREAK), pref(:expression)),
+    :break_statement = pseq(pref(:BREAK).pskip_spaces(), pref(:expression).opt()),
     :var_decl =
       pseq(
         pref(:ID),
         pseq(pref(:ASSIGN), pref(:expression)).opt()),
     :var_decl_list = psepby1(pref(:var_decl), pref(:COMMA)),
-    :local_decl = pseq(pref(:LOCAL), pref(:var_decl_list)),
-    :global_decl = pseq(pref(:GLOBAL), pref(:var_decl_list)),
+    :local_decl = pseq(pref(:LOCAL).pskip_spaces(), pref(:var_decl_list)),
+    :global_decl = pseq(pref(:GLOBAL).pskip_spaces(), pref(:var_decl_list)),
     :statement =
       pchoice(
         pref(:break_statement),
@@ -330,13 +332,13 @@ def init_syntax() {
         pref(:ID), pref(:implicit_delimiter),
         pref(:LPAREN), pref(:parameter_list), pref(:RPAREN),
         pref(:block)),
-    :member_decl_list = psependby(pref(:ID), pref(:COMMA)),
+    :member_decl_list = pseq(psependby(pref(:ID), pref(:COMMA)), pref(:implicit_delimiter)),
     :class_block = pseq(pref(:LBRACE), pref(:member_decl_list), pref(:RBRACE)),
     :class_decl =
       pseq(
         pref(:CLASS), pref(:implicit_delimiter),
         pref(:ID), pref(:implicit_delimiter),
-        pseq(pref(:COLON), pref(:ID).opt()), pref(:implicit_delimiter),
+        pseq(pref(:COLON), pref(:ID)).opt(), pref(:implicit_delimiter),
         pref(:class_block)),
     :program =
       pseq(
@@ -346,11 +348,13 @@ def init_syntax() {
   }
 
   default_operator_list = [
-    make_unary(pkeyword("not"), pkeyword("neg")),
+    make_unary(
+      ppost_concat_keyword("not"),
+      ppost_concat_keyword("neg")),
     make_binary(ppost_concat("*"), ppost_concat("/")),
     make_binary(ppost_concat("+"), ppost_concat("-")),
     make_binary(
-      pkeyword("eq"), pkeyword("ne"),
+      ppost_concat_keyword("eq"), ppost_concat_keyword("ne"),
       ppost_concat(">="), ppost_concat(">"),
       ppost_concat("<="), ppost_concat("<"))
   ]
@@ -368,7 +372,7 @@ def generate_ctx(list) {
 def main() {
   init_syntax()
   local ctx = generate_ctx(default_operator_list)
-  local src = "".to_list()
+  local src = make_portseq(open("../rhein/demo/vaarg.rh"))
   local result = rhein_syntax[:entry].parse(ctx, src)
   print(result[0], result[1], result[2].to_string())
 }

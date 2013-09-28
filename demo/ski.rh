@@ -43,7 +43,7 @@ def map(fn, list) {
     }
 }
 
-def write(l < list) {
+def write(l : list) {
     write("(")
     while l ne nil {
         write(l.car)
@@ -52,7 +52,7 @@ def write(l < list) {
     write(")")
 }
 
-def print(l < list) {
+def print(l : list) {
     write("(")
     while l ne nil {
         write(l.car)
@@ -73,7 +73,7 @@ class parse_result {
     v, p
 }
 
-def new(obj < parse_result, v, p) {
+def new(obj : parse_result, v, p) {
     obj = ~parse_result.new()
     obj.v = v
     obj.p = p

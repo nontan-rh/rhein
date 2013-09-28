@@ -1,5 +1,5 @@
 
-class klass < int {
+class klass : int {
     a,b,c
 }
 
