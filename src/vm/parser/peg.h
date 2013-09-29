@@ -220,6 +220,27 @@ private:
           syn_(syn), num_(num) { }
 };
 
+class PegPermute : public PegSyntax {
+public:
+    static PegPermute* create(PegSyntax* syn) {
+        return new (get_current_state()->allocate_object<PegPermute>()) PegPermute(syn);
+    }
+
+    bool parse(List* src, Value& ctx, Value& obj, List*& next);
+
+    void add(int index);
+
+private:
+    PegSyntax* syn_;
+    Array* permute_table_;
+
+    PegPermute(PegSyntax* syn)
+        : PegSyntax(get_current_state()->get_class("PegPermute")),
+          syn_(syn) {
+        permute_table_ = Array::create(0);
+    }
+};
+
 }
 }
 

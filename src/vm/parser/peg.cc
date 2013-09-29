@@ -249,6 +249,33 @@ PegDrop::parse(List* src, Value& ctx, Value& obj, List*& next) {
     return true;
 }
 
+void
+PegPermute::add(int index) {
+    permute_table_->append(Value::by_int(index));
+}
+
+bool
+PegPermute::parse(List* src, Value& ctx, Value& obj, List*& next) {
+    if (!syn_->parse(src, ctx, obj, next)) {
+        return false;
+    }
+
+    if (obj.get_class() != get_current_state()->get_array_class()) {
+        fprintf(stderr, "Type error\n");
+        return false;
+    }
+
+    Array* obj_ary = obj.get_obj<Array>();
+    Array* res = Array::create(permute_table_->get_length());
+
+    for (int i = 0; i < permute_table_->get_length(); i++) {
+        int x = permute_table_->elt_ref(i).get_int();
+        res->elt_set(i, obj_ary->elt_ref(x));
+    }
+
+    obj = Value::by_object(res);
+    return true;
+}
 
 Value
 fn_parse(unsigned /* argc */, Value* args) {
@@ -387,6 +414,20 @@ fn_pdrop(unsigned /* argc */, Value* args) {
                 args[1].get_int()));
 }
 
+Value
+fn_pperm(unsigned argc, Value* args) {
+    PegPermute* perm = PegPermute::create(args[0].get_obj<PegSyntax>());
+    for (unsigned i = 1; i < argc; i++) {
+        Value index_v = args[i];
+        if (!index_v.is(Value::Type::Int)) {
+            fprintf(stderr, "pperm: Integer required\n");
+            return Value::k_nil();
+        }
+        perm->add(index_v.get_int());
+    }
+    return Value::by_object(perm);
+}
+
 PegModule*
 PegModule::create() {
     State* R = get_current_state();
@@ -409,6 +450,7 @@ PegModule::initialize() {
     R->add_class("PegDynamic", "PegSyntax");
     R->add_class("PegTry", "PegSyntax");
     R->add_class("PegDrop", "PegSyntax");
+    R->add_class("PegPermute", "PegSyntax");
     R->add_native_function("parse", false, 3, {"PegSyntax", "any", "List"}, fn_parse);
     R->add_native_function("pstr", false, 1, {"string"}, fn_pstr);
     R->add_native_function("pchar", false, 0, { }, fn_pchar);
@@ -428,6 +470,7 @@ PegModule::initialize() {
     R->add_native_function("pany", false, 0, {}, fn_pany);
     R->add_native_function("ptry", false, 1, {"PegSyntax"}, fn_ptry);
     R->add_native_function("pdrop", false, 2, {"PegSyntax", "int"}, fn_pdrop);
+    R->add_native_function("pperm", true, 1, {"PegSyntax"}, fn_pperm);
     return false;
 }
 

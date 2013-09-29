@@ -56,5 +56,8 @@ def main() {
     local ctx = ~PegContext.new()
     ctx.syntax_table = { :hello = pstr("hello") }
     pref(:hello).parse(ctx, "hello".to_list()).report()
+
+    local r = pseq(pstr("he"), pstr("l"), pstr("lo")).pperm(2,0).parse(nil, "hello".to_list())[1]
+    print(r[0], r[1])
 }
 
