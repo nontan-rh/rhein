@@ -319,6 +319,8 @@ public:
 
     void append(Value value);
 
+    void drop(int length);
+
     bool to_string(String*& dest) const;
 private:
     Value* body_;

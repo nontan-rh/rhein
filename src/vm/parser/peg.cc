@@ -234,6 +234,22 @@ PegTry::parse(List* src, Value& ctx, Value& obj, List*& next) {
     return true;
 }
 
+bool
+PegDrop::parse(List* src, Value& ctx, Value& obj, List*& next) {
+    if (!syn_->parse(src, ctx, obj, next)) {
+        return false;
+    }
+
+    if (obj.get_class() != get_current_state()->get_array_class()) {
+        fprintf(stderr, "Type error\n");
+        return false;
+    }
+
+    obj.get_obj<Array>()->drop(num_);
+    return true;
+}
+
+
 Value
 fn_parse(unsigned /* argc */, Value* args) {
     Value res;
@@ -365,6 +381,12 @@ fn_ptry(unsigned /* argc */, Value* args) {
     return Value::by_object(PegTry::create(args[0].get_obj<PegSyntax>()));
 }
 
+Value
+fn_pdrop(unsigned /* argc */, Value* args) {
+    return Value::by_object(PegDrop::create(args[0].get_obj<PegSyntax>(),
+                args[1].get_int()));
+}
+
 PegModule*
 PegModule::create() {
     State* R = get_current_state();
@@ -386,6 +408,7 @@ PegModule::initialize() {
     R->add_class("PegAny", "PegSyntax");
     R->add_class("PegDynamic", "PegSyntax");
     R->add_class("PegTry", "PegSyntax");
+    R->add_class("PegDrop", "PegSyntax");
     R->add_native_function("parse", false, 3, {"PegSyntax", "any", "List"}, fn_parse);
     R->add_native_function("pstr", false, 1, {"string"}, fn_pstr);
     R->add_native_function("pchar", false, 0, { }, fn_pchar);
@@ -404,6 +427,7 @@ PegModule::initialize() {
     R->add_native_function("pdynamic", false, 1, {"any"}, fn_pdynamic);
     R->add_native_function("pany", false, 0, {}, fn_pany);
     R->add_native_function("ptry", false, 1, {"PegSyntax"}, fn_ptry);
+    R->add_native_function("pdrop", false, 2, {"PegSyntax", "int"}, fn_pdrop);
     return false;
 }
 

@@ -203,6 +203,23 @@ private:
           syn_(syn) { }
 };
 
+class PegDrop : public PegSyntax {
+public:
+    static PegDrop* create(PegSyntax* syn, int num) {
+        return new (get_current_state()->allocate_object<PegDrop>()) PegDrop(syn, num);
+    }
+
+    bool parse(List* src, Value& ctx, Value& obj, List*& next);
+
+private:
+    PegSyntax* syn_;
+    int num_;
+
+    PegDrop(PegSyntax* syn, int num)
+        : PegSyntax(get_current_state()->get_class("PegDrop")),
+          syn_(syn), num_(num) { }
+};
+
 }
 }
 

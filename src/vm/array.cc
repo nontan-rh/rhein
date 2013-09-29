@@ -41,6 +41,11 @@ Array::append(Value value) {
     body_[size_ - 1] = value;
 }
 
+void
+Array::drop(int length) {
+    size_ = length;
+}
+
 bool
 Array::to_string(String*& dest) const {
     State* R = get_current_state();
