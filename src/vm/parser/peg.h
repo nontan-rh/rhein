@@ -241,6 +241,36 @@ private:
     }
 };
 
+class PegNull : public PegSyntax {
+public:
+    static PegNull* create() {
+        return new (get_current_state()->allocate_object<PegNull>()) PegNull();
+    }
+
+    bool parse(List* src, Value& ctx, Value& obj, List*& next);
+
+private:
+    PegNull()
+        : PegSyntax(get_current_state()->get_class("PegNull")) { }
+};
+
+class PegConstant : public PegSyntax {
+public:
+    static PegConstant* create(PegSyntax* syn, const Value& v) {
+        return new (get_current_state()->allocate_object<PegConstant>()) PegConstant(syn, v);
+    }
+
+    bool parse(List* src, Value& ctx, Value& obj, List*& next);
+
+private:
+    PegSyntax* syn_;
+    Value value_;
+
+    PegConstant(PegSyntax* syn, const Value& value)
+        : PegSyntax(get_current_state()->get_class("PegConstant")),
+          syn_(syn), value_(value) { }
+};
+
 }
 }
 

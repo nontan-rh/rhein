@@ -51,6 +51,13 @@ def main() {
     pany().parse(nil, "hello".to_list()).report()
     pany().parse(nil, "".to_list()).report()
 
+    print("pconst")
+    pany().pconst(:hello).parse(nil, "aaaa".to_list()).report()
+    pany().pconst(:hello).parse(nil, "".to_list()).report()
+
+    print("pnull")
+    pnull.parse(nil, "".to_list()).report()
+
     pdynamic(^{ ctx, src -> pstr("hello").parse(ctx, src) }).parse(nil, "hello".to_list()).report()
 
     local ctx = ~PegContext.new()

@@ -277,6 +277,23 @@ PegPermute::parse(List* src, Value& ctx, Value& obj, List*& next) {
     return true;
 }
 
+bool
+PegNull::parse(List* src, Value& /* ctx */, Value& obj, List*& next) {
+    obj = Value::k_nil();
+    next = src;
+    return true;
+}
+
+bool
+PegConstant::parse(List* src, Value& ctx, Value& obj, List*& next) {
+    if (!syn_->parse(src, ctx, obj, next)) {
+        return false;
+    }
+
+    obj = value_;
+    return true;
+}
+
 Value
 fn_parse(unsigned /* argc */, Value* args) {
     Value res;
@@ -428,6 +445,12 @@ fn_pperm(unsigned argc, Value* args) {
     return Value::by_object(perm);
 }
 
+Value
+fn_pconst(unsigned /* argc */, Value* args) {
+    return Value::by_object(PegConstant::create(args[0].get_obj<PegSyntax>(),
+            args[1]));
+}
+
 PegModule*
 PegModule::create() {
     State* R = get_current_state();
@@ -451,6 +474,8 @@ PegModule::initialize() {
     R->add_class("PegTry", "PegSyntax");
     R->add_class("PegDrop", "PegSyntax");
     R->add_class("PegPermute", "PegSyntax");
+    R->add_class("PegNull", "PegSyntax");
+    R->add_class("PegConstant", "PegSyntax");
     R->add_native_function("parse", false, 3, {"PegSyntax", "any", "List"}, fn_parse);
     R->add_native_function("pstr", false, 1, {"string"}, fn_pstr);
     R->add_native_function("pchar", false, 0, { }, fn_pchar);
@@ -471,6 +496,10 @@ PegModule::initialize() {
     R->add_native_function("ptry", false, 1, {"PegSyntax"}, fn_ptry);
     R->add_native_function("pdrop", false, 2, {"PegSyntax", "int"}, fn_pdrop);
     R->add_native_function("pperm", true, 1, {"PegSyntax"}, fn_pperm);
+    R->add_native_function("pconst", false, 2, {"PegSyntax", "any"}, fn_pconst);
+
+    PegNull* pnull = PegNull::create();
+    R->add_variable(R->get_symbol("pnull"), Value::by_object(pnull));
     return false;
 }
 
