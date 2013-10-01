@@ -294,6 +294,39 @@ PegConstant::parse(List* src, Value& ctx, Value& obj, List*& next) {
     return true;
 }
 
+bool
+PegSpacing::parse(List* src, Value& ctx, Value& obj, List*& next) {
+    List* s = src;
+    Array* ary = Array::create(0);
+    Value buf;
+
+    next = src;
+    for (Int i = 0; i < num_; i++) {
+        if (begin_ <= i && i <= end_) {
+            if (space_->parse(s, ctx, buf, next)) {
+                s = next;
+            }
+        }
+
+        if (!syns_[i]->parse(s, ctx, buf, next)) {
+            obj = Value::k_nil();
+            return false;
+        }
+
+        ary->append(buf);
+        s = next;
+    }
+
+    if (num_ <= end_) {
+        if (space_->parse(s, ctx, buf, next)) {
+            s = next;
+        }
+    }
+
+    obj = Value::by_object(ary);
+    return true;
+}
+
 Value
 fn_parse(unsigned /* argc */, Value* args) {
     Value res;
@@ -451,6 +484,16 @@ fn_pconst(unsigned /* argc */, Value* args) {
             args[1]));
 }
 
+Value
+fn_psseq(unsigned argc, Value* args) {
+    State* R = get_current_state();
+    PegSyntax** syns = R->allocate_block<PegSyntax*>(argc - 3);
+    for (unsigned i = 0; i + 3 < argc; i++) {
+        syns[i] = args[i + 3].get_obj<PegSyntax>();
+    }
+    return Value::by_object(PegSpacing::create(argc - 3, syns, args[0].get_obj<PegSyntax>(), args[1].get_int(), args[2].get_int()));
+}
+
 PegModule*
 PegModule::create() {
     State* R = get_current_state();
@@ -476,6 +519,7 @@ PegModule::initialize() {
     R->add_class("PegPermute", "PegSyntax");
     R->add_class("PegNull", "PegSyntax");
     R->add_class("PegConstant", "PegSyntax");
+    R->add_class("PegSpacing", "PegSyntax");
     R->add_native_function("parse", false, 3, {"PegSyntax", "any", "List"}, fn_parse);
     R->add_native_function("pstr", false, 1, {"string"}, fn_pstr);
     R->add_native_function("pchar", false, 0, { }, fn_pchar);
@@ -497,6 +541,7 @@ PegModule::initialize() {
     R->add_native_function("pdrop", false, 2, {"PegSyntax", "int"}, fn_pdrop);
     R->add_native_function("pperm", true, 1, {"PegSyntax"}, fn_pperm);
     R->add_native_function("pconst", false, 2, {"PegSyntax", "any"}, fn_pconst);
+    R->add_native_function("psseq", true, 3, {"PegSyntax", "int", "int"}, fn_psseq);
 
     PegNull* pnull = PegNull::create();
     R->add_variable(R->get_symbol("pnull"), Value::by_object(pnull));

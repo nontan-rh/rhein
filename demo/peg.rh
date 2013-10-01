@@ -66,5 +66,7 @@ def main() {
 
     local r = pseq(pstr("he"), pstr("l"), pstr("lo")).pperm(2,0).parse(nil, "hello".to_list())[1]
     print(r[0], r[1])
+
+    psseq(pstr(" "), 0, 1, pstr("he"), pstr("l"), pstr("lo")).parse(nil, "he l lo a".to_list()).report()
 }
 

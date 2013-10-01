@@ -271,6 +271,26 @@ private:
           syn_(syn), value_(value) { }
 };
 
+class PegSpacing : public PegSyntax {
+public:
+    static PegSpacing* create(Int num, PegSyntax** syns, PegSyntax* space, Int begin, Int end) {
+        return new (get_current_state()->allocate_object<PegSpacing>()) PegSpacing(num, syns, space, begin, end);
+    }
+
+    bool parse(List* src, Value& ctx, Value& obj, List*& next);
+
+private:
+    Int num_;
+    PegSyntax** syns_;
+    PegSyntax* space_;
+    Int begin_;
+    Int end_;
+
+    PegSpacing(Int num, PegSyntax** syns, PegSyntax* space, Int begin, Int end)
+        : PegSyntax(get_current_state()->get_class("PegSpacing")),
+          num_(num), syns_(syns), space_(space), begin_(begin), end_(end) { }
+};
+
 }
 }
 
