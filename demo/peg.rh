@@ -11,6 +11,22 @@ def pref(x : symbol) {
     pdynamic(^{ ctx, src -> ctx.syntax_table[x].parse(ctx, src) })
 }
 
+def print_ast(x : array) {
+    local i = 0
+    write("[")
+    while i < x.length() - 1 {
+        print_ast(x[i])
+        write(",")
+        i = i + 1
+    }
+    print_ast(x[i])
+    write("]")
+}
+
+def print_ast(x : any) {
+    write(x)
+}
+
 def main() {
     pstr("hello").parse(nil, "hello".to_list()).report()
 
@@ -68,5 +84,9 @@ def main() {
     print(r[0], r[1])
 
     psseq(pstr(" "), 0, 1, pstr("he"), pstr("l"), pstr("lo")).parse(nil, "he l lo a".to_list()).report()
+
+    pchain_left(pstr("1"), pstr("+"), :binary_expr).parse(nil, "1+1+1+1+1+".to_list())[1].print_ast()
+    print()
+    pskip(pstr("1"), pstr(" "), pstr(" ")).parse(nil, "11".to_list()).report()
 }
 

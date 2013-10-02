@@ -291,6 +291,42 @@ private:
           num_(num), syns_(syns), space_(space), begin_(begin), end_(end) { }
 };
 
+class PegChainLeft : public PegSyntax {
+public:
+    static PegChainLeft* create(PegSyntax* syn, PegSyntax* op, const Value& tag) {
+        return new (get_current_state()->allocate_object<PegChainLeft>()) PegChainLeft(syn, op, tag);
+    }
+
+    bool parse(List* src, Value& ctx, Value& obj, List*& next);
+
+private:
+    PegSyntax* syn_;
+    PegSyntax* op_;
+    Value tag_;
+
+    PegChainLeft(PegSyntax* syn, PegSyntax* op, const Value& tag)
+        : PegSyntax(get_current_state()->get_class("PegChainLeft")),
+          syn_(syn), op_(op), tag_(tag) { }
+};
+
+class PegSkip : public PegSyntax {
+public:
+    static PegSkip* create(PegSyntax* syn, PegSyntax* pre, PegSyntax* post) {
+        return new (get_current_state()->allocate_object<PegSkip>()) PegSkip(syn, pre, post);
+    }
+
+    bool parse(List* src, Value& ctx, Value& obj, List*& next);
+
+private:
+    PegSyntax* syn_;
+    PegSyntax* pre_;
+    PegSyntax* post_;
+
+    PegSkip(PegSyntax* syn, PegSyntax* pre, PegSyntax* post)
+        : PegSyntax(get_current_state()->get_class("PegSkip")),
+          syn_(syn), pre_(pre), post_(post) { }
+};
+
 }
 }
 
