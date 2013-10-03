@@ -327,6 +327,26 @@ private:
           syn_(syn), pre_(pre), post_(post) { }
 };
 
+class PegSepBy : public PegSyntax {
+public:
+    static PegSepBy* create(PegSyntax* syn, PegSyntax* sep, Int lower, Int upper, bool end) {
+        return new (get_current_state()->allocate_object<PegSepBy>()) PegSepBy(syn, sep, lower, upper, end);
+    }
+
+    bool parse(List* src, Value& ctx, Value& obj, List*& next);
+
+private:
+    PegSyntax* syn_;
+    PegSyntax* sep_;
+    Int lower_;
+    Int upper_;
+    bool end_;
+
+    PegSepBy(PegSyntax* syn, PegSyntax* sep, Int lower, Int upper, bool end)
+        : PegSyntax(get_current_state()->get_class("PegSepBy")),
+          syn_(syn), sep_(sep), lower_(lower), upper_(upper), end_(end) { }
+};
+
 }
 }
 

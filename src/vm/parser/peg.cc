@@ -376,6 +376,41 @@ PegSkip::parse(List* src, Value& ctx, Value& obj, List*& next) {
     return true;
 }
 
+bool
+PegSepBy::parse(List* src, Value& ctx, Value& obj, List*& next) {
+    List* s = src;
+    List* p = src;
+    Array* ary = Array::create(0);
+    Value buf;
+
+    for (int i = 0; ; i++) {
+        if (i == upper_ || !syn_->parse(s, ctx, buf, next)) {
+            if (end_) { next = s; }
+            else { next = p; }
+            if (i >= lower_) { goto success; }
+            else { goto failure; }
+        }
+
+        ary->append(buf);
+        p = next;
+
+        if (!sep_->parse(p, ctx, buf, next)) {
+            if (i >= lower_) { goto success; }
+            else { goto failure; }
+        }
+
+        s = next;
+    }
+
+success:
+    obj = Value::by_object(ary);
+    return true;
+
+failure:
+    obj = Value::k_nil();
+    return false;
+}
+
 Value
 fn_parse(unsigned /* argc */, Value* args) {
     Value res;
@@ -556,6 +591,16 @@ fn_pskip(unsigned /* argc */, Value* args) {
                 args[2].get_obj<PegSyntax>()));
 }
 
+Value
+fn_psepby(unsigned /* argc */, Value* args) {
+    return Value::by_object(PegSepBy::create(
+                args[0].get_obj<PegSyntax>(),
+                args[1].get_obj<PegSyntax>(),
+                args[2].get_int(),
+                args[3].get_int(),
+                args[4].get_bool()));
+}
+
 PegModule*
 PegModule::create() {
     State* R = get_current_state();
@@ -584,6 +629,8 @@ PegModule::initialize() {
     R->add_class("PegSpacing", "PegSyntax");
     R->add_class("PegChainLeft", "PegSyntax");
     R->add_class("PegSkip", "PegSyntax");
+    R->add_class("PegSepBy", "PegSyntax");
+
     R->add_native_function("parse", false, 3, {"PegSyntax", "any", "List"}, fn_parse);
     R->add_native_function("pstr", false, 1, {"string"}, fn_pstr);
     R->add_native_function("pchar", false, 0, { }, fn_pchar);
@@ -608,6 +655,7 @@ PegModule::initialize() {
     R->add_native_function("psseq", true, 3, {"PegSyntax", "int", "int"}, fn_psseq);
     R->add_native_function("pchain_left", false, 3, {"PegSyntax", "PegSyntax", "any"}, fn_pchain_left);
     R->add_native_function("pskip", false, 3, {"PegSyntax", "PegSyntax", "PegSyntax"}, fn_pskip);
+    R->add_native_function("psepby", false, 5, {"PegSyntax", "PegSyntax", "int", "int", "bool"}, fn_psepby);
 
     PegNull* pnull = PegNull::create();
     R->add_variable(R->get_symbol("pnull"), Value::by_object(pnull));
