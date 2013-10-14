@@ -89,6 +89,6 @@ def main() {
     print()
     pskip(pstr("1"), pstr(" "), pstr(" ")).parse(nil, "11".to_list()).report()
 
-    psepby(pstr("1"), pstr(","), 1, 1, true).parse(nil, "01,1,1,1,".to_list()).report()
+    psepby(pstr("1"), pstr(","), 0, 100000, true).parse(nil, "1,1,1,1,".to_list())[1].print_ast()
 }
 

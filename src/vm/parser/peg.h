@@ -347,6 +347,23 @@ private:
           syn_(syn), sep_(sep), lower_(lower), upper_(upper), end_(end) { }
 };
 
+class PegUnwrap : public PegSyntax {
+public:
+    static PegUnwrap* create(PegSyntax* syn, Int index) {
+        return new (get_current_state()->allocate_object<PegUnwrap>()) PegUnwrap(syn, index);
+    }
+
+    bool parse(List* src, Value& ctx, Value& obj, List*& next);
+
+private:
+    PegSyntax* syn_;
+    Int index_;
+
+    PegUnwrap(PegSyntax* syn, Int index)
+        : PegSyntax(get_current_state()->get_class("PegUnwrap")),
+          syn_(syn), index_(index) { }
+};
+
 }
 }
 

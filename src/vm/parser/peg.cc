@@ -411,6 +411,23 @@ failure:
     return false;
 }
 
+bool
+PegUnwrap::parse(List* src, Value& ctx, Value& obj, List*& next) {
+    Value buf;
+    if (!syn_->parse(src, ctx, buf, next)) {
+        obj = Value::k_nil();
+        return false;
+    }
+
+    if (buf.get_class() != get_current_state()->get_array_class()) {
+        fprintf(stderr, "Result object is not array\n");
+        return false;
+    }
+
+    obj = buf.get_obj<Array>()->elt_ref(index_);
+    return true;
+}
+
 Value
 fn_parse(unsigned /* argc */, Value* args) {
     Value res;
@@ -601,6 +618,13 @@ fn_psepby(unsigned /* argc */, Value* args) {
                 args[4].get_bool()));
 }
 
+Value
+fn_unwrap(unsigned /* argc */, Value* args) {
+    return Value::by_object(PegUnwrap::create(
+                args[0].get_obj<PegSyntax>(),
+                args[1].get_int()));
+}
+
 PegModule*
 PegModule::create() {
     State* R = get_current_state();
@@ -630,6 +654,7 @@ PegModule::initialize() {
     R->add_class("PegChainLeft", "PegSyntax");
     R->add_class("PegSkip", "PegSyntax");
     R->add_class("PegSepBy", "PegSyntax");
+    R->add_class("PegUnwrap", "PegSyntax");
 
     R->add_native_function("parse", false, 3, {"PegSyntax", "any", "List"}, fn_parse);
     R->add_native_function("pstr", false, 1, {"string"}, fn_pstr);
@@ -656,6 +681,8 @@ PegModule::initialize() {
     R->add_native_function("pchain_left", false, 3, {"PegSyntax", "PegSyntax", "any"}, fn_pchain_left);
     R->add_native_function("pskip", false, 3, {"PegSyntax", "PegSyntax", "PegSyntax"}, fn_pskip);
     R->add_native_function("psepby", false, 5, {"PegSyntax", "PegSyntax", "int", "int", "bool"}, fn_psepby);
+    R->add_native_function("unwrap", false, 2, {"PegSyntax", "int"}, fn_unwrap);
+
 
     PegNull* pnull = PegNull::create();
     R->add_variable(R->get_symbol("pnull"), Value::by_object(pnull));

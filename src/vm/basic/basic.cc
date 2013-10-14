@@ -271,6 +271,8 @@ fn_length(unsigned argc, Value* args) {
         return Value::by_int(args[0].get_obj<String>()->get_length());
     } else if (args[0].get_class() == R->get_array_class()) {
         return Value::by_int(args[0].get_obj<Array>()->get_length());
+    } else if (args[0].get_class() == R->get_rest_arguments_class()) {
+        return Value::by_int(args[0].get_obj<RestArguments>()->get_length());
     } else {
         fatal("Cannot get length");
     }
