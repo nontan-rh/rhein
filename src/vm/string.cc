@@ -28,6 +28,14 @@ String::create(const char *str, size_t len) {
     return new (p) String(str, len);
 }
 
+String*
+String::create(char ch) {
+    char buf[2];
+    buf[0] = ch;
+    buf[1] = '\0';
+    return String::create(buf);
+}
+
 bool
 String::index_ref(Value index, Value& value) {
     value = Value::by_char(body_[index.get_int()]);

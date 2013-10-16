@@ -364,6 +364,22 @@ private:
           syn_(syn), index_(index) { }
 };
 
+class PegTreeToString : public PegSyntax {
+public:
+    static PegTreeToString* create(PegSyntax* syn) {
+        return new (get_current_state()->allocate_object<PegTreeToString>()) PegTreeToString(syn);
+    }
+
+    bool parse(List* src, Value& ctx, Value& obj, List*& next);
+
+private:
+    PegSyntax* syn_;
+
+    PegTreeToString(PegSyntax* syn)
+        : PegSyntax(get_current_state()->get_class("PegTreeToString")),
+          syn_(syn) { }
+};
+
 }
 }
 

@@ -251,6 +251,7 @@ class String : public Object {
 public:
     static String* create(const char* str);
     static String* create(const char* cstr, size_t len);
+    static String* create(char ch);
 
     unsigned long get_hash() { return hash_value_; }
     String* get_string_representation();

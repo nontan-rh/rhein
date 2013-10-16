@@ -8,6 +8,27 @@
 namespace rhein {
 namespace peg {
 
+static String*
+tree_to_string(Value obj) {
+    State* R = get_current_state();
+    if (obj.get_class() == R->get_array_class()) {
+        Array* ary = obj.get_obj<Array>();
+        String* res = String::create("");
+        for (int i = 0; i < ary->get_length(); i++) {
+            res = res->append(tree_to_string(ary->elt_ref(i)));
+        }
+        return res;
+    } else if (obj.get_class() == R->get_string_class()) {
+        return obj.get_obj<String>();
+    } else if (obj.get_class() == R->get_char_class()) {
+        char ch = obj.get_char();
+        return String::create(ch);
+    }
+
+    fprintf(stderr, "Not suitable object\n");
+    throw "";
+}
+
 bool
 PegString::parse(List* src, Value&, Value& obj, List*& next) {
     List* prev = src;
@@ -395,7 +416,10 @@ PegSepBy::parse(List* src, Value& ctx, Value& obj, List*& next) {
         p = next;
 
         if (!sep_->parse(p, ctx, buf, next)) {
-            if (i >= lower_) { goto success; }
+            if (i >= lower_ || (!end_ && i >= lower_ - 1)) {
+                next = p;
+                goto success;
+            }
             else { goto failure; }
         }
 
@@ -425,6 +449,18 @@ PegUnwrap::parse(List* src, Value& ctx, Value& obj, List*& next) {
     }
 
     obj = buf.get_obj<Array>()->elt_ref(index_);
+    return true;
+}
+
+bool
+PegTreeToString::parse(List* src, Value& ctx, Value& obj, List*& next) {
+    Value buf;
+    if (!syn_->parse(src, ctx, buf, next)) {
+        obj = Value::k_nil();
+        return false;
+    }
+
+    obj = Value::by_object(tree_to_string(buf));
     return true;
 }
 
@@ -625,6 +661,12 @@ fn_unwrap(unsigned /* argc */, Value* args) {
                 args[1].get_int()));
 }
 
+Value
+fn_t2s(unsigned /* argc */, Value* args) {
+    return Value::by_object(PegTreeToString::create(
+                args[0].get_obj<PegSyntax>()));
+}
+
 PegModule*
 PegModule::create() {
     State* R = get_current_state();
@@ -655,6 +697,7 @@ PegModule::initialize() {
     R->add_class("PegSkip", "PegSyntax");
     R->add_class("PegSepBy", "PegSyntax");
     R->add_class("PegUnwrap", "PegSyntax");
+    R->add_class("PegTreeToString", "PegSyntax");
 
     R->add_native_function("parse", false, 3, {"PegSyntax", "any", "List"}, fn_parse);
     R->add_native_function("pstr", false, 1, {"string"}, fn_pstr);
@@ -682,7 +725,7 @@ PegModule::initialize() {
     R->add_native_function("pskip", false, 3, {"PegSyntax", "PegSyntax", "PegSyntax"}, fn_pskip);
     R->add_native_function("psepby", false, 5, {"PegSyntax", "PegSyntax", "int", "int", "bool"}, fn_psepby);
     R->add_native_function("unwrap", false, 2, {"PegSyntax", "int"}, fn_unwrap);
-
+    R->add_native_function("t2s", false, 1, {"PegSyntax"}, fn_t2s);
 
     PegNull* pnull = PegNull::create();
     R->add_variable(R->get_symbol("pnull"), Value::by_object(pnull));
